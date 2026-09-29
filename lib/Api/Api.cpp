@@ -13,6 +13,7 @@
 #include "Grill.h"
 #include "JsonUtilities.h"
 #include "SharedLock.h"
+#include "Updater.h"
 #include "Web.h"
 
 // Set this to config::json_buffer_size, cant do this dynamically
@@ -39,6 +40,12 @@ void setup_api_routes()
     web::webserver.on("/api/history", HTTP_GET, get_api_history);
     web::webserver.on("/api/history/clear", HTTP_POST, post_api_history_clear);
     web::webserver.on("/api/history/clear", HTTP_OPTIONS, cors_api_history_clear);
+
+    web::webserver.on("/api/update/latest", HTTP_GET, get_api_update_latest);
+    web::webserver.on("/api/update/check", HTTP_POST, post_api_update_check);
+    web::webserver.on("/api/update/check", HTTP_OPTIONS, cors_api_update_check);
+    web::webserver.on("/api/update/install", HTTP_POST, post_api_update_install);
+    web::webserver.on("/api/update/install", HTTP_OPTIONS, cors_api_update_install);
 
     web::webserver.on("/api/update", HTTP_POST, post_api_update, upload_api_update);
 }
@@ -154,6 +161,69 @@ void post_api_alarm_mute(){
 void cors_api_alarm_mute(){
     web::webserver.send(204);
     return;
+}
+
+// Updating from GitHub releases. The check runs in the background, installing restarts into an update mode.
+void get_api_update_latest(){
+    JsonDocument jsondoc;
+    updater::status_json(jsondoc.to<JsonObject>());
+    serializeJson(jsondoc, api_json_buffer, sizeof(api_json_buffer));
+    allow_cross_origin_read();
+    web::webserver.send(200, "application/json", api_json_buffer);
+}
+
+void post_api_update_check(){
+    if(!is_json_request()) { return; }
+
+    if(!updater::request_check()){
+        web::webserver.send(429, "application/json", "{\"error\": \"Checked less than a minute ago\"}");
+        return;
+    }
+    web::webserver.send(202, "application/json", "{\"success\": true}");
+}
+
+void cors_api_update_check(){
+    web::webserver.send(204);
+}
+
+void post_api_update_install(){
+    if(!is_json_request()) { return; }
+
+    // Same admin check as post_api_settings
+    String admin_password = current_admin_password();
+    bool admin_authorized = admin_password.isEmpty()
+                         || web::webserver.authenticate("admin", admin_password.c_str());
+    if(!admin_authorized){
+        web::webserver.send(401, "application/json", "{\"error\": \"Wrong admin password\"}");
+        return;
+    }
+
+    JsonDocument jsondoc;
+    DeserializationError parse_error = deserializeJson(jsondoc, web::webserver.arg("plain"));
+    const char* version = jsondoc["version"] | "";
+    if(parse_error || version[0] == '\0'){
+        web::webserver.send(400, "application/json", "{\"error\": \"Body should be json with a version\"}");
+        return;
+    }
+
+    String error;
+    int status = updater::request_install(String(version), error);
+    if(status != 202){
+        JsonDocument reply;
+        reply["error"] = error;
+        String body;
+        serializeJson(reply, body);
+        web::webserver.send(status, "application/json", body);
+        return;
+    }
+
+    web::webserver.send(202, "application/json", "{\"success\": true}");
+    delay(500);     // let the response go out before restarting into the update mode
+    ESP.restart();
+}
+
+void cors_api_update_install(){
+    web::webserver.send(204);
 }
 
 // Firmware updates, replaces ElegantOTA. upload_api_update runs for every chunk while the file comes

@@ -21,6 +21,12 @@ void get_api_history();
 void post_api_history_clear();
 void cors_api_history_clear();
 
+void get_api_update_latest();
+void post_api_update_check();
+void cors_api_update_check();
+void post_api_update_install();
+void cors_api_update_install();
+
 void post_api_update();
 void upload_api_update();
 
