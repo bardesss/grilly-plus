@@ -144,6 +144,10 @@ components:
           type: boolean
           example: false
           description: True while a probe alarm is actively beeping. Mute it with POST /alarm/mute or over MQTT.
+        update_available:
+          type: string
+          example: ""
+          description: Version of a newer GitHub release found by the last update check, empty when there is none. See GET /update/latest.
         probes:
           type: array
           minItems: 8
@@ -707,12 +711,13 @@ paths:
                     type: array
                     items:
                       type: string
-                      enum: [history, eta, clear_history, alarm_mute, alarm_probes, calibration_offset, diagnostics, ota_upload]
+                      enum: [history, eta, clear_history, alarm_mute, alarm_probes, calibration_offset, diagnostics, ota_upload, github_update]
                     description: >
                       history = GET /history; eta = eta_seconds per probe; clear_history = POST /history/clear and
                       MQTT config/clear_history; alarm_mute = POST /alarm/mute and MQTT config/mute; alarm_probes =
                       alarm per probe in /grill; calibration_offset = offset_celcius per probe; diagnostics = reset,
-                      off reason and battery millivolts in /grill; ota_upload = POST /update.
+                      off reason and battery millivolts in /grill; ota_upload = POST /update; github_update = update_available
+                      in /grill and the /update/latest, /update/check and /update/install endpoints.
 
   /wifiscan:
     get:
@@ -741,8 +746,8 @@ paths:
         Mutes a currently sounding alarm, the same as pressing the grill's button. Harmless, so no
         admin auth is needed. It can take up to about 2 seconds for `alarm_sounding` to turn false.
       requestBody:
-        required: true
-        description: Empty body
+        required: false
+        description: Body is ignored
         content:
           application/json:
             schema:
@@ -758,6 +763,203 @@ paths:
                   success:
                     type: boolean
                     example: true
+        '415':
+          description: Content-Type was not application/json
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Content-Type should be application/json"
+
+  /update/latest:
+    get:
+      tags:
+        - utility
+      summary: Newest GitHub release and the state of the update check
+      description: >
+        The result of the last check for a newer release on GitHub. Start a check with POST /update/check.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  current:
+                    type: string
+                    example: "26.09.28.2"
+                  latest:
+                    type: string
+                    example: "26.10.03"
+                    description: Newest release version, empty when no check has succeeded yet.
+                  available:
+                    type: boolean
+                    example: true
+                    description: True when latest is newer than current.
+                  checked_seconds_ago:
+                    type: integer
+                    example: 1234
+                    description: Seconds since the last successful check, -1 before the first one.
+                  state:
+                    type: string
+                    enum: [idle, checking, error]
+                    example: idle
+                    description: What the updater is doing.
+                  error:
+                    type: string
+                    example: ""
+                    description: Why the last check failed, empty when it worked.
+                  notes:
+                    type: string
+                    example: "Adds the update check"
+                    description: Release notes of the latest release, cut off at 600 bytes.
+                  size:
+                    type: integer
+                    example: 1262368
+                    description: Size of the firmware file in bytes.
+                  last_install_error:
+                    type: string
+                    example: ""
+                    description: Why the last install attempt failed, empty when there was none.
+
+  /update/check:
+    post:
+      tags:
+        - utility
+      summary: Check GitHub for a newer release now
+      description: >
+        Starts a check in the background, read the result with GET /update/latest. Allowed once a minute.
+        Needs no admin auth, it only reads from GitHub.
+      requestBody:
+        required: true
+        description: Empty body
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '415':
+          description: Content-Type was not application/json
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Content-Type should be application/json"
+        '409':
+          description: The grill isn't connected to WiFi
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "The grill isn't connected to WiFi"
+        '429':
+          description: Checked less than a minute ago
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Checked less than a minute ago"
+
+  /update/install:
+    post:
+      tags:
+        - utility
+      summary: Install a GitHub release
+      description: >
+        Downloads and installs the given release. The grill answers 202 and restarts into an update mode,
+        which keeps its web server and MQTT off until the update is done or has failed, so expect it to
+        be unreachable for a few minutes. Needs the admin password as basic auth (user admin) when one
+        is set.
+      security:
+        - {}
+        - basicAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [version]
+              properties:
+                version:
+                  type: string
+                  example: "26.10.03"
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '400':
+          description: Body was not json or has no version
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Body should be json with a version"
+        '401':
+          description: Wrong admin password
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Wrong admin password"
+        '409':
+          description: Not the offered version, or no WiFi
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    examples:
+                      - "That version isn't on offer, check for updates again"
+                      - "The grill isn't connected to WiFi"
+        '412':
+          description: Battery below 30 % and not charging
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Charge the grill first (at least 30 %)"
         '415':
           description: Content-Type was not application/json
           content:

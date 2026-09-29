@@ -20,6 +20,7 @@
 #include "Web.h"
 #include "Display.h"
 #include "SharedLock.h"
+#include "Updater.h"
 #include "Util.h"
 
 #include "esp_heap_caps.h"
@@ -135,6 +136,10 @@ void setup() {
         }
     }
 
+    // An install from GitHub asked for a restart into the update mode. It runs before any other task
+    // or the web server starts, because the download needs the memory they use. Never returns then.
+    updater::run_update_mode_if_requested();
+
     // ***********************************
     // * Startup Buzzer
     // ***********************************
@@ -233,6 +238,7 @@ void task_webserver(void* pvParameters) {
 
     while (true){
         web::webserver.handleClient();
+        updater::tick();
         delay(1);
     }
 }

@@ -9,6 +9,7 @@
 #include "JsonUtilities.h"
 #include "Probe.h"
 #include "SharedLock.h"
+#include "Updater.h"
 
 // Every function uses its own JsonDocument. The api, mqtt and opengrill tasks call these at the same
 // time, a shared document got cleared and filled by one task while another was serializing it.
@@ -189,6 +190,7 @@ void JsonUtilities::load_json_status(char *buffer){
     jsondoc["local_ap_ip"]        = config::local_ap_ip;
     jsondoc["temperature_unit"]   = config::temperature_unit;
     jsondoc["alarm_sounding"]     = grill::alarm_sounding;
+    jsondoc["update_available"]   = updater::update_available();
 
     JsonArray probeData = jsondoc["probes"].to<JsonArray>();
 
@@ -772,7 +774,7 @@ void JsonUtilities::load_json_info(char* buffer){
     // Features added on top of Free-Grilly. A client checks for a name before using the feature.
     JsonArray capabilities = jsondoc["capabilities"].to<JsonArray>();
     for (const char* capability : {"history", "eta", "clear_history", "alarm_mute", "alarm_probes",
-                                   "calibration_offset", "diagnostics", "ota_upload"}) {
+                                   "calibration_offset", "diagnostics", "ota_upload", "github_update"}) {
         capabilities.add(capability);
     }
 
