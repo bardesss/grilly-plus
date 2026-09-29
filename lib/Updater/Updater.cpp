@@ -29,9 +29,11 @@ constexpr uint32_t TASK_STACK_SIZE       = 16384;    // TLS needs ~6 KB of stack
 constexpr uint32_t TICK_INTERVAL_MS      = 1000;     // tick() runs every webserver loop, the schedule only needs seconds
 constexpr uint32_t FIRST_CHECK_DELAY_MS  = 30000;    // after WiFi connects, so the boot has settled
 constexpr uint32_t CHECK_INTERVAL_MS     = 24UL * 60 * 60 * 1000;
+constexpr uint32_t CHECK_RETRY_MS        = 60UL * 60 * 1000;         // after a failed check
 constexpr uint32_t CHECK_REQUEST_GAP_MS  = 60000;    // GitHub allows 60 unauthenticated API calls an hour
 constexpr uint32_t WIFI_WAIT_MS          = 30000;
 constexpr uint32_t STALL_MS              = 20000;
+constexpr uint32_t INSTALL_DEADLINE_MS   = 5UL * 60 * 1000;
 constexpr size_t   CHUNK_SIZE            = 2048;
 
 // The check. Guarded by the SharedLock: written by the check task, read by the webserver task.
@@ -41,6 +43,9 @@ const char* state                = "idle";   // "idle", "checking" or "error", a
 String      check_error;
 uint32_t    last_check_start_ms  = 0;
 bool        ever_checked         = false;
+uint32_t    last_success_ms      = 0;
+bool        ever_succeeded       = false;
+bool        last_check_failed    = false;
 bool        check_requested      = false;
 String      last_install_error;
 bool        install_error_loaded = false;
@@ -132,11 +137,15 @@ void run_check(){
         has_offer = true;
         state     = "idle";
         check_error = "";
+        last_success_ms   = millis();
+        ever_succeeded    = true;
+        last_check_failed = false;
         Serial.printf("Update check: latest release is %s\n", offered.version);
     } else {
         // The previous offer stays, a failed check doesn't make a known release go away
         state       = "error";
         check_error = error;
+        last_check_failed = true;
         Serial.printf("Update check failed: %s\n", error.c_str());
     }
 }
@@ -226,9 +235,11 @@ String write_stream(HTTPClient& http){
     expected.setCharAt(0, expected.charAt(0) == '0' ? '1' : '0');
 #endif
 
-    // The digest comes from the same API answer as the url, so this catches a damaged or cut off
-    // download, not a compromised release
-    if(total != job.size || !expected.equalsIgnoreCase(hex)){
+    if(total != job.size){ return "The download was cut off"; }
+
+    // The digest comes from the same API answer as the url, so this catches a damaged download, not
+    // a compromised release
+    if(!expected.equalsIgnoreCase(hex)){
         return "The download doesn't match its checksum";
     }
     return "";
@@ -245,7 +256,9 @@ String download(){
 
     String error;
     int code = http.GET();
-    if(code != 200){
+    if(code < 0){
+        error = "Couldn't reach the download (" + HTTPClient::errorToString(code) + ")";
+    } else if(code != 200){
         error = "Download failed (HTTP " + String(code) + ")";
     } else if(http.getSize() != (int)job.size){
         error = "The download has the wrong size";
@@ -308,7 +321,7 @@ void tick(){
         if(check_running){ return; }
         bool due = check_requested
                 || (!ever_checked && now - wifi_since_ms >= FIRST_CHECK_DELAY_MS)
-                || (ever_checked && now - last_check_start_ms >= CHECK_INTERVAL_MS);
+                || (ever_checked && now - last_check_start_ms >= (last_check_failed ? CHECK_RETRY_MS : CHECK_INTERVAL_MS));
         if(!due){ return; }
 
         check_running       = true;
@@ -327,11 +340,12 @@ void tick(){
     }
 }
 
-bool request_check(){
+int request_check(){
+    if(!grill::wifi_connected){ return 409; }
     SharedLock lock;    // the check state
-    if(check_running || (ever_checked && millis() - last_check_start_ms < CHECK_REQUEST_GAP_MS)){ return false; }
+    if(check_running || (ever_checked && millis() - last_check_start_ms < CHECK_REQUEST_GAP_MS)){ return 429; }
     check_requested = true;
-    return true;
+    return 202;
 }
 
 int request_install(const String& version, String& error){
@@ -391,7 +405,7 @@ void status_json(JsonObject out){
     out["current"]             = current;
     out["latest"]              = has_offer ? (const char*)offered.version : "";
     out["available"]           = available;
-    out["checked_seconds_ago"] = ever_checked ? (long)((millis() - last_check_start_ms) / 1000) : -1L;
+    out["checked_seconds_ago"] = ever_succeeded ? (long)((millis() - last_success_ms) / 1000) : -1L;
     out["state"]               = state;
     out["error"]               = check_error;
     out["notes"]               = has_offer ? (const char*)offered.notes : "";
@@ -424,6 +438,8 @@ void run_update_mode_if_requested(){
     config::settings_storage.remove("upd_url");
     config::settings_storage.remove("upd_sha");
     config::settings_storage.remove("upd_size");
+    // Replaced by the real error or removed on success. Left behind by a crash, watchdog or power cut.
+    config::settings_storage.putString("upd_err", "The update was interrupted");
 
     if(job.version == ""){ return; }
 
@@ -431,6 +447,7 @@ void run_update_mode_if_requested(){
 
     battery.init();
     power.startup();
+    delay(100);     // let the power rails settle, as in the normal boot
     display.init();
     power.setScreenBrightness(1);   // dimmed, the download takes a while on battery
     display.draw_update(job.version.c_str(), -1, "Connecting");
@@ -439,17 +456,29 @@ void run_update_mode_if_requested(){
     if(xTaskCreatePinnedToCore(install_task, "Update", TASK_STACK_SIZE, NULL, 1, NULL, 1) != pdPASS){
         install_error = "Not enough memory to update";
     } else {
-        while(!install_done){ delay(100); }
+        uint32_t wait_start = millis();
+        while(!install_done){
+            if(millis() - wait_start >= INSTALL_DEADLINE_MS){
+                // The install task is left alone: stopping it inside Update.write is unsafe, and the
+                // new slot is only activated by Update.end(true)
+                install_error = "The update took too long";
+                break;
+            }
+            delay(100);
+        }
     }
 
     if(install_error == ""){
         Serial.printf("Update mode: %s installed, restarting\n", job.version.c_str());
+        config::settings_storage.remove("upd_err");
         display.draw_update(job.version.c_str(), 100, "Restarting");
         delay(1500);
     } else {
         Serial.printf("Update mode failed: %s\n", install_error.c_str());
         config::settings_storage.putString("upd_err", install_error);
-        display.draw_update(job.version.c_str(), -1, "Failed, restarting");
+        char shown[26];     // about 25 characters fit at profont10
+        strlcpy(shown, install_error.c_str(), sizeof(shown));
+        display.draw_update(job.version.c_str(), -1, shown);
         delay(4000);
     }
     ESP.restart();

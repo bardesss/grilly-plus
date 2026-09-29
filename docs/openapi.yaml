@@ -746,8 +746,8 @@ paths:
         Mutes a currently sounding alarm, the same as pressing the grill's button. Harmless, so no
         admin auth is needed. It can take up to about 2 seconds for `alarm_sounding` to turn false.
       requestBody:
-        required: true
-        description: Empty body
+        required: false
+        description: Body is ignored
         content:
           application/json:
             schema:
@@ -803,11 +803,12 @@ paths:
                   checked_seconds_ago:
                     type: integer
                     example: 1234
-                    description: Seconds since the last check, -1 when there was none yet.
+                    description: Seconds since the last successful check, -1 before the first one.
                   state:
                     type: string
+                    enum: [idle, checking, error]
                     example: idle
-                    description: What the updater is doing, for example idle or checking.
+                    description: What the updater is doing.
                   error:
                     type: string
                     example: ""
@@ -861,6 +862,16 @@ paths:
                   error:
                     type: string
                     example: "Content-Type should be application/json"
+        '409':
+          description: The grill isn't connected to WiFi
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "The grill isn't connected to WiFi"
         '429':
           description: Checked less than a minute ago
           content:
@@ -882,6 +893,9 @@ paths:
         which keeps its web server and MQTT off until the update is done or has failed, so expect it to
         be unreachable for a few minutes. Needs the admin password as basic auth (user admin) when one
         is set.
+      security:
+        - {}
+        - basicAuth: []
       requestBody:
         required: true
         content:
@@ -925,7 +939,7 @@ paths:
                     type: string
                     example: "Wrong admin password"
         '409':
-          description: The update can not start now
+          description: Not the offered version, or no WiFi
           content:
             application/json:
               schema:
@@ -933,9 +947,11 @@ paths:
                 properties:
                   error:
                     type: string
-                    example: "An update is already in progress"
+                    examples:
+                      - "That version isn't on offer, check for updates again"
+                      - "The grill isn't connected to WiFi"
         '412':
-          description: The version can not be installed, for example it is not the latest release
+          description: Battery below 30 % and not charging
           content:
             application/json:
               schema:
@@ -943,7 +959,7 @@ paths:
                 properties:
                   error:
                     type: string
-                    example: "Version is not the latest release"
+                    example: "Charge the grill first (at least 30 %)"
         '415':
           description: Content-Type was not application/json
           content:

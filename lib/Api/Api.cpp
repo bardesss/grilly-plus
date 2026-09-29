@@ -175,7 +175,12 @@ void get_api_update_latest(){
 void post_api_update_check(){
     if(!is_json_request()) { return; }
 
-    if(!updater::request_check()){
+    int status = updater::request_check();
+    if(status == 409){
+        web::webserver.send(409, "application/json", "{\"error\": \"The grill isn't connected to WiFi\"}");
+        return;
+    }
+    if(status != 202){
         web::webserver.send(429, "application/json", "{\"error\": \"Checked less than a minute ago\"}");
         return;
     }
@@ -218,7 +223,7 @@ void post_api_update_install(){
     }
 
     web::webserver.send(202, "application/json", "{\"success\": true}");
-    delay(500);     // let the response go out before restarting into the update mode
+    delay(1000);    // let the response go out before restarting into the update mode
     ESP.restart();
 }
 
@@ -333,6 +338,7 @@ void post_api_update(){
 
     web::webserver.send(200, "application/json", "{\"success\": true}");
     Serial.println("Firmware update installed, restarting");
+    config::settings_storage.remove("upd_err");     // a manual update clears an old GitHub install error
     config::config_helper.save_off_reason("update");
     delay(1000);    // Let the response reach the browser
     ESP.restart();
