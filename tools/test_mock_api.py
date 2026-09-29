@@ -76,5 +76,66 @@ class HistoryTest(unittest.TestCase):
         self.assertEqual({"error": "Could not deserialize json"}, data)
 
 
+class UpdateTest(unittest.TestCase):
+    JSON = {"Content-Type": "application/json"}
+
+    def setUp(self):
+        mock_api.reset_update()
+
+    def tearDown(self):
+        mock_api.reset_update()
+
+    def test_latest_offers_a_newer_version(self):
+        status, data = mock_api.handle("GET", "/api/update/latest", None)
+        self.assertEqual(200, status)
+        self.assertEqual("26.10.03", data["latest"])
+        self.assertTrue(data["available"])
+        self.assertEqual("idle", data["state"])
+        self.assertEqual(mock_api.SETTINGS["firmware_version"], data["current"])
+        self.assertGreater(data["size"], 0)
+
+    def test_grill_reports_update_available(self):
+        _, data = mock_api.handle("GET", "/api/grill", None)
+        self.assertEqual("26.10.03", data["update_available"])
+
+    def test_check_is_accepted_once_a_minute(self):
+        status, data = mock_api.handle("POST", "/api/update/check", b"{}", self.JSON)
+        self.assertEqual((202, {"success": True}), (status, data))
+        _, latest = mock_api.handle("GET", "/api/update/latest", None)
+        self.assertEqual("checking", latest["state"])
+        status, data = mock_api.handle("POST", "/api/update/check", b"{}", self.JSON)
+        self.assertEqual(429, status)
+        self.assertEqual("Checked less than a minute ago", data["error"])
+
+    def test_install_refuses_another_version(self):
+        body = json.dumps({"version": "1.2.3"}).encode()
+        status, data = mock_api.handle("POST", "/api/update/install", body, self.JSON)
+        self.assertEqual(409, status)
+        self.assertIn("error", data)
+
+    def test_install_needs_the_admin_password(self):
+        mock_api.ADMIN_PASSWORD = "secret"
+        try:
+            body = json.dumps({"version": "26.10.03"}).encode()
+            status, _ = mock_api.handle("POST", "/api/update/install", body, self.JSON)
+            self.assertEqual(401, status)
+        finally:
+            mock_api.ADMIN_PASSWORD = ""
+
+    def test_install_is_accepted_and_finishes_later(self):
+        body = json.dumps({"version": "26.10.03"}).encode()
+        status, data = mock_api.handle("POST", "/api/update/install", body, self.JSON)
+        self.assertEqual((202, {"success": True}), (status, data))
+        status, _ = mock_api.handle("GET", "/api/grill", None)
+        self.assertEqual(503, status)   # restarting
+        mock_api.INSTALL_DONE_AT = 0   # pretend the 20 s have passed
+        _, latest = mock_api.handle("GET", "/api/update/latest", None)
+        self.assertEqual("26.10.03", latest["current"])
+        self.assertFalse(latest["available"])
+        _, grill = mock_api.handle("GET", "/api/grill", None)
+        self.assertEqual("", grill["update_available"])
+        mock_api.SETTINGS["firmware_version"] = "26.09.27"
+
+
 if __name__ == "__main__":
     unittest.main()

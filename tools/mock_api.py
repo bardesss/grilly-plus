@@ -25,6 +25,45 @@ SETTINGS = {
     "local_ap_gateway": "192.168.200.10", "local_ap_password_set": True, "admin_password_set": False,
 }
 
+# Mock-only: the update offered by "GitHub". check flips state to "checking" for 3 s; install "finishes" after 20 s.
+UPDATE_LATEST = "26.10.03"
+UPDATE_NOTES = "## 2026-10-03" + chr(10) + "- Update straight from GitHub" + chr(10) + "- Small fixes"
+UPDATE_CHECKED_AT = time.time() - 2 * 3600
+UPDATE_CHECKING_UNTIL = 0.0
+LAST_CHECK_REQUEST = 0.0
+INSTALL_DONE_AT = None
+MOCK_START_VERSION = SETTINGS["firmware_version"]
+
+
+def reset_update():
+    global UPDATE_CHECKED_AT, UPDATE_CHECKING_UNTIL, LAST_CHECK_REQUEST, INSTALL_DONE_AT
+    UPDATE_CHECKED_AT = time.time() - 2 * 3600
+    UPDATE_CHECKING_UNTIL = 0.0
+    LAST_CHECK_REQUEST = 0.0
+    INSTALL_DONE_AT = None
+    SETTINGS["firmware_version"] = MOCK_START_VERSION
+
+
+def finish_install_when_due():
+    if INSTALL_DONE_AT is not None and time.time() >= INSTALL_DONE_AT:
+        SETTINGS["firmware_version"] = UPDATE_LATEST
+
+
+def update_available():
+    finish_install_when_due()
+    return UPDATE_LATEST if SETTINGS["firmware_version"] != UPDATE_LATEST else ""
+
+
+def update_latest():
+    available = update_available() != ""
+    return {
+        "current": SETTINGS["firmware_version"], "latest": UPDATE_LATEST, "available": available,
+        "checked_seconds_ago": int(time.time() - UPDATE_CHECKED_AT),
+        "state": "checking" if time.time() < UPDATE_CHECKING_UNTIL else "idle", "error": "",
+        "notes": UPDATE_NOTES, "size": 1262368, "last_install_error": "",
+    }
+
+
 PROBES = [
     {"probe_id": 1, "name": "Brisket", "target_temperature": 95.0, "minimum_temperature": 0.0, "connected": True,
      "probe_type": "grilleye_iris", "reference_kohm": 100, "reference_celcius": 25, "reference_beta": 4250,
@@ -100,6 +139,7 @@ def eta_seconds(probe):
 def grill():
     return {
         "name": SETTINGS["name"], "unique_id": SETTINGS["uuid"], "firmware_version": SETTINGS["firmware_version"],
+        "update_available": update_available(),
         "hostname": "grilly-plus-%s.local" % SETTINGS["uuid"].replace("-", "")[:8].lower(),
         "battery_percentage": 82, "battery_charging": True, "battery_millivolts": 3950,
         "last_reset_reason": "software", "last_off_reason": "update",
@@ -148,7 +188,33 @@ WIFI_SCAN = [
 def handle(method, path, body, headers=None, query=""):
     """Returns (status, json_body) for an /api request."""
     global ADMIN_PASSWORD, ALARM_SOUNDING, ALARM_PROBE_ID
+    global UPDATE_CHECKED_AT, UPDATE_CHECKING_UNTIL, LAST_CHECK_REQUEST, INSTALL_DONE_AT
     headers = headers or {}
+    finish_install_when_due()
+    if INSTALL_DONE_AT is not None and SETTINGS["firmware_version"] != UPDATE_LATEST and path in ("/api/grill", "/api/info"):
+        return 503, {"error": "The grill is updating"}   # the real grill doesn't answer while it restarts
+    if method == "GET" and path == "/api/update/latest":
+        return 200, update_latest()
+    if method == "POST" and path == "/api/update/check":
+        if time.time() - LAST_CHECK_REQUEST < 60:
+            return 429, {"error": "Checked less than a minute ago"}
+        LAST_CHECK_REQUEST = time.time()
+        UPDATE_CHECKING_UNTIL = LAST_CHECK_REQUEST + 3
+        UPDATE_CHECKED_AT = UPDATE_CHECKING_UNTIL
+        return 202, {"success": True}
+    if method == "POST" and path == "/api/update/install":
+        if "json" not in headers.get("Content-Type", ""):
+            return 415, {"error": "Content-Type should be application/json"}
+        if not admin_authorized(headers):
+            return 401, {"error": "Wrong admin password"}
+        try:
+            version = json.loads(body or b"{}").get("version")
+        except (ValueError, AttributeError):
+            return 400, {"error": "Could not deserialize json"}
+        if update_available() == "" or version != UPDATE_LATEST:
+            return 409, {"error": "That version isn't on offer, check for updates first"}
+        INSTALL_DONE_AT = time.time() + 20
+        return 202, {"success": True}
     if method == "GET" and path == "/api/grill":
         return 200, grill()
     if method == "GET" and path == "/api/history":
