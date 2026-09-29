@@ -119,6 +119,12 @@ a { color: var(--accent-text); }
 .tabs a[aria-current="page"] { color: var(--accent-text); }
 .tabs a[aria-current="page"] .tab-icon { background: var(--accent-soft); }
 
+.tab-icon { position: relative; }
+.tabs a.has-update .tab-icon::after {
+  content: ""; position: absolute; top: 2px; right: 12px; width: 9px; height: 9px; border-radius: 50%;
+  background: var(--accent); box-shadow: 0 0 0 2px var(--surface);
+}
+
 main { max-width: 1100px; margin: 0 auto; padding: 4px 16px calc(112px + env(safe-area-inset-bottom)); }
 
 .banner {
@@ -169,6 +175,7 @@ body.offline .live { opacity: .4; }
   }
   .tabs a { flex-direction: row; gap: 6px; min-width: 0; min-height: 44px; padding: 0 12px; font-size: 15px; border-radius: 12px; }
   .tab-icon { width: auto; height: auto; }
+  .tabs a.has-update .tab-icon::after { top: -3px; right: -5px; box-shadow: 0 0 0 2px var(--bg, var(--surface)); }
   .tabs a[aria-current="page"] { background: var(--accent-soft); }
   .tabs a[aria-current="page"] .tab-icon { background: none; }
   main { padding: 0 24px 40px; }
@@ -338,6 +345,13 @@ details.probe-type[open] summary .icon { transform: rotate(90deg); }
 .hint { margin: 6px 0 0; }
 .warning { margin: 10px 0 0; font-size: 13px; color: var(--warn); }
 .notice { margin: 10px 0 0; font-size: 14px; }
+.subheading.first { margin-top: 12px; }
+.update-status { margin: 8px 0 0; }
+.update-status.update-available { font-weight: 600; color: var(--accent-text); }
+.update-notes { margin: 8px 0; font-size: 14px; }
+.update-status + .button, .update-notes + .button, .warning + .button { margin-top: 10px; }
+.update-notes summary { cursor: pointer; min-height: 32px; }
+.update-notes p { margin: 4px 0 0; white-space: pre-wrap; color: var(--muted); }
 .subheading { margin: 18px 0 0; font-size: 15px; }
 
 /* Network card */

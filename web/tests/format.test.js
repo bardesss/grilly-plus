@@ -90,3 +90,22 @@ test("off reason labels include the low battery switch-off", () => {
   assert.equal(Format.offReasonText("low_battery"), "Battery empty");
   assert.equal(Format.offReasonText("something_new"), "Unknown");
 });
+
+test("checkedAgo words", () => {
+  assert.equal(Format.checkedAgo(-1), "Never checked");
+  assert.equal(Format.checkedAgo(undefined), "Never checked");
+  assert.equal(Format.checkedAgo(5), "checked just now");
+  assert.equal(Format.checkedAgo(59), "checked just now");
+  assert.equal(Format.checkedAgo(300), "checked 5 min ago");
+  assert.equal(Format.checkedAgo(7300), "checked 2 h ago");
+  assert.equal(Format.checkedAgo(3 * 86400 + 100), "checked 3 days ago");
+});
+
+test("updateStatus kinds and texts", () => {
+  assert.deepEqual(Format.updateStatus({ state: "checking" }), { kind: "checking", text: "Checking GitHub…" });
+  assert.deepEqual(Format.updateStatus({ state: "error", error: "No network" }), { kind: "error", text: "Couldn't check: No network" });
+  assert.deepEqual(Format.updateStatus({ state: "idle", available: true, latest: "26.10.03" }), { kind: "available", text: "26.10.03 is available" });
+  assert.deepEqual(Format.updateStatus({ state: "idle", available: false, latest: "26.09.28", checked_seconds_ago: 7300 }),
+    { kind: "current", text: "You have the newest version · checked 2 h ago" });
+  assert.deepEqual(Format.updateStatus({ state: "idle", latest: "", checked_seconds_ago: -1 }), { kind: "unknown", text: "Not checked yet" });
+});
