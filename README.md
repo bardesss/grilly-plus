@@ -29,6 +29,7 @@ Grilly+ is the same firmware Free-Grilly users already know, with a new web app 
 * **Time to target:** "ready in ~1h 20m" on the card, in the editor, on the grill's own screen and over MQTT, worked out from how fast the probe has been heating up.
 * **Blinking alarm label** on the grill's screen, so you can see which probe is beeping.
 * **Low-battery protection:** the grill switches itself off cleanly before an empty battery causes brownouts.
+* **Update from GitHub:** the grill finds new Grilly+ releases by itself; one tap on **Install** in the app downloads and installs it, no file juggling.
 
 See the [Features](#features) list below for the full picture, and [changelog.md](changelog.md) for the detailed history.
 
@@ -85,7 +86,8 @@ Grilly+ is developed with the help of AI coding agents (Anthropic's Claude). Eve
     * **Pre-configured Probes:** Includes ready-to-use settings for popular probes like the Ikea Fantast.
     * **Calibration offset:** Fine-tune a probe that reads a little high or low with a per-probe offset (-10..10 °C), applied to every reading before it's shown, alarmed on or sent out.
     * Empty probe sockets no longer flicker between connected and disconnected.
-* **Firmware updates from the web app:** install a new `-ota.bin` from the Settings view. An optional admin password can protect updates; changing or removing it requires the current one, and it can't be changed over MQTT.
+* **Update from GitHub:** the grill checks the Grilly+ releases on GitHub once a day (and when you tap **Check now**), and the app shows a dot on the Settings tab when a newer version is out. Tap **Install** and the grill restarts into a lean update mode with a dimmed screen and a progress bar, downloads the release over HTTPS, checks its size and SHA-256 checksum, and restarts into the new version after about a minute. If anything goes wrong (no WiFi, a cut-off download, a wrong checksum) it keeps the old version and the app tells you why. It only starts with at least 30 % battery or on the charger, and it needs the admin password when one is set.
+* **Firmware updates from a file:** install a new `-ota.bin` from the Settings view. An optional admin password can protect updates; changing or removing it requires the current one, and it can't be changed over MQTT.
 * **Local REST API:** Provides a RESTful API endpoint on the device for integration with custom scripts, home automation systems, or other applications. Passwords are never returned by the API, and cross-site pages can't change your settings or push a firmware update.
 * **MQTT support:** All data (grill status/probes/settings/`connected_seconds`) is sent to an mqtt topic. You can also configure probes and settings via mqtt, including partial updates that only change the keys you send.
   * [Mqtt documentation](docs/mqtt.md)
@@ -117,6 +119,7 @@ Open the grill's address in a browser on your phone or computer. The dashboard s
 - You can also view this [online](https://editor-next.swagger.io/?url=https://raw.githubusercontent.com/bardesss/grilly-plus/refs/heads/master/docs/openapi.yaml)
 - `GET /api/info` tells an app or integration which firmware runs and which Grilly+ features (`capabilities`) it has.
 - `GET /api/history` returns the temperature history of the connected probes, `POST /api/history/clear` clears one.
+- `GET /api/update/latest`, `POST /api/update/check` and `POST /api/update/install` check GitHub for a newer release and install it; `/api/grill` and MQTT carry `update_available`.
 
 ## Installation
 
@@ -150,14 +153,27 @@ For installation please refer to the [Flashing guide](docs/how_to_flash.md)
 
 ## Updating Firmware (OTA)
 
-Once Grilly+ is installed, you can update to newer versions wirelessly:
+### From GitHub (recommended)
+
+  1. Open the web interface and go to **Settings**, then **Firmware updates**. When a newer release is out it says "*version* is available" (the Settings tab shows a dot); **What's new** shows the release notes, and **Check now** checks right away instead of waiting for the daily check.
+  2. If you set an admin password, enter it under **Current admin password**.
+  3. Tap **Install** and confirm. Keep the grill on the charger or above 30 % battery.
+  4. The grill restarts into update mode: the screen dims and shows the version and a progress bar. After about a minute it restarts into the new version and the page reloads. If the update fails, the grill keeps running the old version and the app shows the reason.
+
+The grill only downloads from this repository's releases, and only installs a file whose size and SHA-256 checksum match what GitHub lists for it. An interrupted update is safe: the new firmware is written next to the running one and only takes over after a complete, verified write.
+
+**First time:** the GitHub update arrives in the first release that contains it, so install that one release from a file (below). Every release after it can come straight from GitHub.
+
+### From a file
 
   1. Download the latest `grilly-plus-yyyy-mm-dd-ota.bin` from Releases.
   2. Open the web interface and go to **Settings**, then **Firmware updates**.
-  3. Choose the downloaded `-ota.bin` file and press **Update**. If you set an admin password, enter it under **Current admin password** first.
+  3. Under **Install from a file**, choose the downloaded `-ota.bin` file and press **Update**. If you set an admin password, enter it under **Current admin password** first.
   4. Wait while it uploads and installs. The grill restarts on its own and the page reloads.
 
-Set an admin password in the same card so only you can install firmware. Once it is set, changing or removing it needs the current one (the web app asks for it, the API takes it as Basic auth with user `admin`). It can't be changed over MQTT.
+### Admin password
+
+Set an admin password at the bottom of the same card so only you can install firmware, from GitHub or from a file. Once it is set, changing or removing it needs the current one (the web app asks for it, the API takes it as Basic auth with user `admin`). It can't be changed over MQTT. If you forget it, the only way back is a factory reset (hold the button for 10 seconds), which also clears your other settings.
 
 ## Supported probes
 
