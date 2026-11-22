@@ -37,6 +37,11 @@ public:
     *	@return true
     */
     bool wake(void);
+    /**
+    *	@brief Full screen progress for the update mode: title, version, bar and a short status line
+    *   @param percent 0-100, or -1 to leave the bar out
+    */
+    void draw_update(const char* version, int percent, const char* status);
 
 
 

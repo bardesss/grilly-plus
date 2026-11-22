@@ -83,6 +83,21 @@ bool disp::wake(void){
     return true;
 }
 
+void disp::draw_update(const char* version, int percent, const char* status){
+    screen.clearBuffer();
+    screen.setFont(u8g2_font_profont12_tr);
+    screen.drawStr(3, 14, "Updating");
+    screen.setFont(u8g2_font_profont10_tr);
+    screen.drawStr(3, 26, version);
+    if (percent >= 0) {
+        screen.drawFrame(3, 32, 122, 10);
+        screen.drawBox(5, 34, (118 * percent) / 100, 6);
+        screen.setCursor(3, 53); screen.printf("%d%%", percent);
+    }
+    screen.drawStr(3, 63, status);
+    screen.sendBuffer();
+}
+
 bool disp::screen_background_pwr(status_type type){
     switch (type) {
 	case ENABLE:

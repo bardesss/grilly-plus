@@ -25,7 +25,7 @@ The default prefix is `grilly-plus` and the uuid is in the format of a UUIDv4 ge
 
 A full example looks like `grilly-plus/43c62ed2-4dc0-41a5-8f71-16db60155739/grill`.
 
-The `grill` topic is sent every second and includes an `alarm_sounding` field that is `true` while a probe alarm is actively beeping, and each entry in its `probes` array has its own `alarm` field that is `true` for the probe(s) causing the sounding alarm. Each probe in the `grill` and `probes` topics also has `eta_seconds`, the number of seconds until the target temperature at the current rate, or `-1` when unknown. The `probes` and `settings` topic is only used if you change your probe or your grill settings on grilly-plus.
+The `grill` topic is sent every second and includes an `alarm_sounding` field that is `true` while a probe alarm is actively beeping, and each entry in its `probes` array has its own `alarm` field that is `true` for the probe(s) causing the sounding alarm. Each probe in the `grill` and `probes` topics also has `eta_seconds`, the number of seconds until the target temperature at the current rate, or `-1` when unknown. The `grill` topic also has `update_available`, the version of a newer GitHub release or an empty string. Updates can't be installed over MQTT, use the web interface or the API. The `probes` and `settings` topic is only used if you change your probe or your grill settings on grilly-plus.
 
 Sending any payload (the content is ignored) to `/config/mute` mutes a sounding alarm, the same as pressing the grill's button.
 
