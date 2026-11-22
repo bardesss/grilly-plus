@@ -234,7 +234,12 @@ static bool url_host(const char* url, const char** host, const char** host_end){
     else if(strncmp(url, "http://", 7) == 0){ *host = url + 7; }
     else { return false; }
     const char* end = *host;
-    while(*end && *end != '/' && *end != '?' && *end != '#'){ end++; }
+    // Like HTTPClient: the host runs up to the first '/'. Anything that would make it read the host
+    // differently (user@, ?, #, backslash) is refused, so the server shown is the server called.
+    while(*end && *end != '/'){
+        if(*end == '@' || *end == '?' || *end == '#' || *end == '\\'){ return false; }
+        end++;
+    }
     if(end == *host){ return false; }
     *host_end = end;
     return true;

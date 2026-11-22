@@ -218,12 +218,17 @@ void test_pushover_priority_and_errors(){
 void test_webhook_urls(){
     TEST_ASSERT_TRUE(webhook_url_ok("https://ha.example.com/api/webhook/grill-8f3k2"));
     TEST_ASSERT_TRUE(webhook_url_ok("http://192.168.1.10:8123/api/webhook/grill?x=1"));
+    TEST_ASSERT_TRUE(webhook_url_ok("https://example.com"));
     TEST_ASSERT_FALSE(webhook_url_ok("ftp://example.com/x"));
     TEST_ASSERT_FALSE(webhook_url_ok("https:///x"));
     TEST_ASSERT_FALSE(webhook_url_ok("https://me:pw@example.com/x"));
     TEST_ASSERT_FALSE(webhook_url_ok("https://example.com/a b"));
     TEST_ASSERT_EQUAL_STRING("http://192.168.1.10:8123", url_server_of("http://192.168.1.10:8123/api/webhook/x").c_str());
-    TEST_ASSERT_EQUAL_STRING("https://ha.example.com", url_server_of("https://HA.example.com?x").c_str());
+    TEST_ASSERT_EQUAL_STRING("https://ha.example.com", url_server_of("https://HA.example.com/x").c_str());
+    TEST_ASSERT_FALSE(webhook_url_ok("https://a.example.com?x@b.example.com/p"));
+    TEST_ASSERT_FALSE(webhook_url_ok("https://a.example.com#@b.example.com/p"));
+    TEST_ASSERT_FALSE(webhook_url_ok("https://a.example.com?x=1"));
+    TEST_ASSERT_EQUAL_STRING("", url_server_of("https://a.example.com?x@b.example.com/p").c_str());
     TEST_ASSERT_EQUAL_STRING("", url_server_of("nonsense").c_str());
 }
 

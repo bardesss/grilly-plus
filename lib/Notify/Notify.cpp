@@ -181,7 +181,20 @@ int post_json(const String& url, const String& bearer, const String& payload, St
 
     int status = http.POST(payload);
     // A refusal's answer, capped: a webhook can be any server
-    if(status >= 300 && http.getSize() <= 2048){ *answer = http.getString(); }
+    // whatever Content-Length says (or a chunked answer without one): at most 1 KB, 2 s
+    if(status >= 300){
+        WiFiClient* stream = http.getStreamPtr();
+        char buffer[1025];
+        size_t used = 0;
+        unsigned long started = millis();
+        while(stream != nullptr && used < sizeof(buffer) - 1 && millis() - started < 2000 &&
+              (stream->connected() || stream->available())){
+            int got = stream->read((uint8_t*)buffer + used, sizeof(buffer) - 1 - used);
+            if(got > 0){ used += got; } else { delay(10); }
+        }
+        buffer[used] = 0;
+        *answer = buffer;
+    }
     http.end();
     return status;
 }

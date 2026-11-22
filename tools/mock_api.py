@@ -144,7 +144,7 @@ WEBHOOK_URL = ""
 
 
 def url_server(value):
-    match = re.match(r"^(https?://[^\s/?#@]+)([/?#]\S*)?$", (value or "").strip())
+    match = re.match(r"^(https?://[^\s/?#@\\]+)(/\S*)?$", (value or "").strip())
     return match.group(1).lower() if match else ""
 
 
