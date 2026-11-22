@@ -27,7 +27,7 @@ Grilly+ is a fork of [Free-Grilly](https://github.com/epiecs/free-grilly) by [Ep
 | ⏱️ **Know when it's done** | Grilly+ watches how fast each probe heats up and tells you when it'll reach its target: "ready in ~1h 20m" in the app, "in 1:20" on the grill's own screen. During the stall it says so instead of guessing. |
 | 🔔 **Alarms that make sense** | It beeps when food is ready or the grill leaves its range, and sends a Telegram, ntfy or Pushover message (or calls your webhook) when you're away from it. Mute it from your phone, and the app shows which probe went off. The probe's label blinks on the grill too. |
 | 🔄 **Updates with one tap** | The grill checks GitHub for new releases once a day. Tap **Install**, and a minute later it runs the new version. Every download is checksum-verified, and a failed update leaves the old version running. |
-| 🏠 **Plays well with your smart home** | MQTT for Home Assistant and friends, plus a documented local REST API. |
+| 🏠 **Plays well with your smart home** | Shows up in Home Assistant by itself over MQTT, plus a documented local REST API. |
 | 🔒 **Yours, and only yours** | No cloud. An admin password protects updates, the hotspot gets its own password, and a forgotten admin password can be reset with a code from the grill's screen. |
 
 ## See it in action
@@ -230,7 +230,9 @@ Point the grill at your MQTT broker under **Settings** and it publishes the gril
 
 ### Home Assistant
 
-Grilly+ works with Home Assistant through MQTT; for now you create the entities yourself. The example below, based on a starting point by [@woutercoppens](https://github.com/woutercoppens) (see [Free-Grilly issue #5](https://github.com/epiecs/free-grilly/issues/5)), adds a temperature and target sensor for all 8 probes plus the battery. Replace the device id in `state_topic` with your grill's (shown under the MQTT topic in the settings). If you upgraded from Free-Grilly, your topic prefix is still `free-grilly` unless you changed it.
+Once the grill is connected to the same MQTT broker as Home Assistant (with the MQTT integration set up), it shows up by itself under **Settings › Devices & services › MQTT** as one device named after your grill. You get, for each probe, the temperature, target, time to target, stalled and alarm, plus the battery, charging, WiFi signal, alarm, update available and a **Mute alarm** button. A probe's entities are unavailable while it isn't plugged in, and the whole device while the grill is off. Turn **Home Assistant discovery** off under **Settings › MQTT** to remove the device again.
+
+If you'd rather make the entities yourself, turn discovery off and start from the example below. It is based on a starting point by [@woutercoppens](https://github.com/woutercoppens) (see [Free-Grilly issue #5](https://github.com/epiecs/free-grilly/issues/5)), and adds a temperature and target sensor for all 8 probes plus the battery. Replace the device id in `state_topic` with your grill's (shown under the MQTT topic in the settings). If you upgraded from Free-Grilly, your topic prefix is still `free-grilly` unless you changed it.
 
 <details>
 <summary>Home Assistant MQTT sensors (YAML)</summary>

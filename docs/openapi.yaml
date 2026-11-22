@@ -653,6 +653,12 @@ components:
           readOnly: true
           example: true
           description: Whether a mqtt password is saved.
+        mqtt_ha_discovery:
+          type: boolean
+          example: true
+          description: >-
+            Announce the grill to Home Assistant through MQTT discovery (homeassistant/... topics), so
+            it shows up as a device. Off removes the device again. See docs/mqtt.md.
         wifi_ssid:
           type: string
           example: my-home-wifi

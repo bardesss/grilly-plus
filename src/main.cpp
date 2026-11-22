@@ -341,6 +341,7 @@ void task_mqtt(void* pvParameters) {
     String mqtt_topic = "";
     String mqtt_user = "";
     String mqtt_password = "";
+    String discovery_key = "";     // what the discovery messages depend on, besides the connection
     bool first_run = true;
 
     unsigned long last_mqtt_publish_time = 0;
@@ -363,6 +364,12 @@ void task_mqtt(void* pvParameters) {
                 mqtt_topic = config::mqtt_topic;
                 mqtt_user = config::mqtt_user;
                 mqtt_password = config::mqtt_password;
+            }
+            String key = String(config::mqtt_ha_discovery) + "|" + config::temperature_unit + "|" + config::grill_name;
+            if(key != discovery_key){
+                // The first time is covered by connecting
+                if(discovery_key != ""){ config::mqtt_client.request_publish_discovery(); }
+                discovery_key = key;
             }
         }
 
