@@ -87,7 +87,7 @@ Grilly+ is a fork of [Free-Grilly](https://github.com/epiecs/free-grilly) by [Ep
 - **Reliable:** it starts back up by itself after an update, a crash or a factory reset. Empty probe sockets don't flicker, and the button is debounced so electrical noise can't fake a press.
 
 ### In the web app
-- **Dashboard** with a card per connected probe: temperature, a graph of the whole cook, the target line or range band, and "ready in ~1h 20m".
+- **Dashboard** with a card per connected probe: temperature, a graph of the whole cook with a dot at the current reading, the target line (labelled) or range band, and "ready in ~1h 20m". With a time to target, a dotted forecast runs from now up to the target and ends at the clock time it'll be ready.
 - **Food presets:** pick steak medium-rare, pulled pork, chicken breast or one of about 20 other foods, and the target fills in. Safe temperatures follow the USDA.
 - **Probe editor:** name, alarm (off / target / range) with large steppers, probe type, calibration offset, and a large chart with temperature labels, a "30 min / Whole cook" switch, **Download CSV** and **Clear history**.
 - **Temperature history** on the grill: the last 30 minutes at 10 seconds per reading plus the whole cook at a coarser step, in a fixed ~5 KB, so even a 24-hour cook fits. It's kept until a restart, until a probe has been unplugged for more than 10 minutes, or until you clear it.

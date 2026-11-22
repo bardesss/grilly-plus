@@ -96,6 +96,13 @@ const Format = (() => {
     return "";
   }
 
+  // The clock time the target is reached, "18:05", for the end of the forecast
+  function readyAt(etaSeconds, nowMs = Date.now()) {
+    if (!(etaSeconds > 0)) return "";
+    const at = new Date(nowMs + etaSeconds * 1000);
+    return String(at.getHours()).padStart(2, "0") + ":" + String(at.getMinutes()).padStart(2, "0");
+  }
+
   // What goes where the time to target is shown: "In the stall", "ready in ~1h 20m" or ""
   function progressNote(probe) {
     if (probe.stalled) return "In the stall";
@@ -183,7 +190,7 @@ const Format = (() => {
     return Math.floor(left / 60) + ":" + String(left % 60).padStart(2, "0");
   }
 
-  return { progressNote, alarmMessage, countdown, checkedAgo, updateStatus, unitSymbol, number, temperature, signal, battery, batteryDiagnostics, resetReasonText,
+  return { readyAt, progressNote, alarmMessage, countdown, checkedAgo, updateStatus, unitSymbol, number, temperature, signal, battery, batteryDiagnostics, resetReasonText,
            offReasonText, alarmMode, probeStatus, alarmLabel, duration, ago, eta, emptySockets, changedFields };
 })();
 

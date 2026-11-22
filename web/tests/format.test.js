@@ -131,3 +131,10 @@ test("progressNote shows the stall instead of the time to target", () => {
   assert.equal(Format.progressNote({ stalled: false, eta_seconds: -1 }), "");
   assert.equal(Format.progressNote({ stalled: false, eta_seconds: 4800 }), Format.eta(4800));
 });
+
+test("readyAt is the clock time the target is reached", () => {
+  const now = new Date(2026, 10, 22, 17, 30, 0).getTime();
+  assert.equal(Format.readyAt(2100, now), "18:05");
+  assert.equal(Format.readyAt(5 * 3600, now), "22:30");
+  assert.equal(Format.readyAt(-1, now), "");
+});

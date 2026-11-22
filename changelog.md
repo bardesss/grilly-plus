@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### New
+- The graph on a probe card shows where the cook is going: with a time to target, a dotted forecast runs from the current reading to the target and ends at the clock time it'll be ready ("now … 18:05"). A dot marks the current reading, and the target line has its temperature on it. The lowest-highest label under the graph only stays for probes without an alarm
 - Stall detection: when a probe in target mode stays within 1.5° for 20 minutes somewhere between 60 and 80 °C, with the target at least 5° higher, the app shows "In the stall" where the time to target goes and the grill's screen shows STALL. It ends by itself once the temperature climbs again
 
 ### API and MQTT
