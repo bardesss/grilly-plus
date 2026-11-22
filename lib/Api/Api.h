@@ -27,6 +27,10 @@ void cors_api_update_check();
 void post_api_update_install();
 void cors_api_update_install();
 
+void get_api_notify();
+void post_api_notify_test();
+void cors_api_notify_test();
+
 void post_api_admin_reset_start();
 void post_api_admin_reset();
 void post_api_admin_reset_cancel();

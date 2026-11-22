@@ -1,0 +1,182 @@
+#include <unity.h>
+#include <string.h>
+#include "NotifyEvents.h"
+
+using namespace notify;
+
+static ProbeWatch watch;
+static BatteryWatch battery;
+static uint32_t now_ms;
+
+void setUp(){ watch = ProbeWatch(); battery = BatteryWatch(); now_ms = 1000; }
+void tearDown(){}
+
+static ProbeInput target_mode(float temperature, float target = 93, int almost = 5){
+    return ProbeInput{true, temperature, target, 0, false, false, true, almost};
+}
+
+static ProbeInput range_mode(float temperature, float minimum = 100, float maximum = 120){
+    return ProbeInput{true, temperature, maximum, minimum, false, false, true, 0};
+}
+
+// Feeds a reading every second, returns all events that started
+static uint8_t feed(const ProbeInput& in, int seconds = 1){
+    uint8_t events = 0;
+    for(int i = 0; i < seconds; i++){ events |= watch.update(in, now_ms); now_ms += 1000; }
+    return events;
+}
+
+void test_almost_then_ready_once(){
+    TEST_ASSERT_EQUAL(0, feed(target_mode(80)));
+    TEST_ASSERT_EQUAL(ALMOST, feed(target_mode(88)));
+    TEST_ASSERT_EQUAL(0, feed(target_mode(90), 10));
+    TEST_ASSERT_EQUAL(READY, feed(target_mode(93)));
+    TEST_ASSERT_EQUAL(0, feed(target_mode(95), 60));
+}
+
+void test_straight_past_almost_only_says_ready(){
+    TEST_ASSERT_EQUAL(READY, feed(target_mode(95)));
+}
+
+void test_ready_again_only_after_dropping_by_the_hysteresis(){
+    feed(target_mode(93));
+    TEST_ASSERT_EQUAL(0, feed(target_mode(91.5f)));
+    TEST_ASSERT_EQUAL(0, feed(target_mode(93)));
+    TEST_ASSERT_EQUAL(0, feed(target_mode(90.5f)));
+    TEST_ASSERT_EQUAL(READY, feed(target_mode(93)));
+}
+
+void test_no_almost_when_switched_off(){
+    TEST_ASSERT_EQUAL(0, feed(target_mode(90, 93, 0)));
+    TEST_ASSERT_EQUAL(READY, feed(target_mode(93, 93, 0)));
+}
+
+void test_a_new_target_starts_over(){
+    feed(target_mode(93));
+    TEST_ASSERT_EQUAL(READY, feed(target_mode(93, 90)));
+}
+
+void test_off_and_unplugged_probes_are_quiet(){
+    TEST_ASSERT_EQUAL(0, feed(target_mode(150, 0)));
+    ProbeInput unplugged = target_mode(150);
+    unplugged.connected = false;
+    TEST_ASSERT_EQUAL(0, feed(unplugged));
+}
+
+void test_stall_once_when_it_starts(){
+    ProbeInput in = target_mode(70);
+    in.stalled = true;
+    TEST_ASSERT_EQUAL(STALL, feed(in));
+    TEST_ASSERT_EQUAL(0, feed(in, 30));
+    in.stalled = false;
+    feed(in);
+    in.stalled = true;
+    TEST_ASSERT_EQUAL(STALL, feed(in));
+}
+
+void test_too_hot_once_and_again_after_coming_back(){
+    TEST_ASSERT_EQUAL(0, feed(range_mode(110)));
+    TEST_ASSERT_EQUAL(TOO_HOT, feed(range_mode(121)));
+    TEST_ASSERT_EQUAL(0, feed(range_mode(125), 60));
+    feed(range_mode(110));
+    TEST_ASSERT_EQUAL(TOO_HOT, feed(range_mode(121)));
+}
+
+void test_too_cold_waits_30_seconds_with_the_lid_pause(){
+    TEST_ASSERT_EQUAL(0, feed(range_mode(95), 31));
+    TEST_ASSERT_EQUAL(TOO_COLD, feed(range_mode(95)));
+}
+
+void test_too_cold_right_away_without_the_lid_pause(){
+    ProbeInput in = range_mode(95);
+    in.lid_pause_on = false;
+    TEST_ASSERT_EQUAL(TOO_COLD, feed(in));
+}
+
+void test_too_cold_waits_while_the_lid_is_open(){
+    ProbeInput in = range_mode(80);
+    in.lid_open = true;
+    TEST_ASSERT_EQUAL(0, feed(in, 300));
+    in.lid_open = false;
+    TEST_ASSERT_EQUAL(TOO_COLD, feed(in));
+}
+
+void test_battery_warns_at_20_and_10_once(){
+    for(int i = 0; i < 9; i++){ TEST_ASSERT_EQUAL(0, battery.update(true, 20, false)); }
+    TEST_ASSERT_EQUAL(20, battery.update(true, 20, false));
+    for(int i = 0; i < 100; i++){ TEST_ASSERT_EQUAL(0, battery.update(true, 15, false)); }
+    for(int i = 0; i < 9; i++){ TEST_ASSERT_EQUAL(0, battery.update(true, 10, false)); }
+    TEST_ASSERT_EQUAL(10, battery.update(true, 10, false));
+    for(int i = 0; i < 100; i++){ TEST_ASSERT_EQUAL(0, battery.update(true, 8, false)); }
+}
+
+void test_battery_ignores_a_single_low_reading(){
+    for(int i = 0; i < 9; i++){ battery.update(true, 19, false); }
+    battery.update(true, 40, false);
+    for(int i = 0; i < 9; i++){ TEST_ASSERT_EQUAL(0, battery.update(true, 19, false)); }
+    TEST_ASSERT_EQUAL(20, battery.update(true, 19, false));
+}
+
+void test_battery_rearms_after_charging(){
+    for(int i = 0; i < 10; i++){ battery.update(true, 18, false); }
+    battery.update(true, 18, true);
+    for(int i = 0; i < 9; i++){ battery.update(true, 18, false); }
+    TEST_ASSERT_EQUAL(20, battery.update(true, 18, false));
+}
+
+void test_battery_ignores_failed_readings_and_charging(){
+    for(int i = 0; i < 50; i++){ TEST_ASSERT_EQUAL(0, battery.update(false, 0, false)); }
+    for(int i = 0; i < 50; i++){ TEST_ASSERT_EQUAL(0, battery.update(true, 5, true)); }
+}
+
+void test_messages(){
+    char out[160];
+    probe_message(out, sizeof(out), READY, "Grilly+", "Brisket", 93.4f, 93, 0, "°C");
+    TEST_ASSERT_EQUAL_STRING("✅ Brisket is ready: 93 °C (Grilly+)", out);
+    probe_message(out, sizeof(out), TOO_COLD, "Grilly+", "Pit", 94.6f, 120, 100, "°C");
+    TEST_ASSERT_EQUAL_STRING("\U0001F9CA Pit is too cold: 95 °C, below 100 °C (Grilly+)", out);
+    battery_message(out, sizeof(out), "Grilly+", 10);
+    TEST_ASSERT_EQUAL_STRING("\U0001FAAB Grilly+ battery at 10 %, plug in the charger", out);
+}
+
+void test_message_is_cut_not_overflowed(){
+    char out[12];
+    probe_message(out, sizeof(out), READY, "Grilly+", "A very long probe name", 93, 93, 0, "°C");
+    TEST_ASSERT_EQUAL(11, strlen(out));
+    char tiny[3];                                       // room for 2 of the 3 bytes of the emoji
+    probe_message(tiny, sizeof(tiny), READY, "Grilly+", "Brisket", 93, 93, 0, "°C");
+    TEST_ASSERT_EQUAL_STRING("", tiny);                 // no half character for Telegram to refuse
+}
+
+void test_telegram_errors(){
+    char out[160];
+    telegram_error(out, sizeof(out), 401, "{\"ok\":false,\"error_code\":401,\"description\":\"Unauthorized\"}");
+    TEST_ASSERT_EQUAL_STRING("Telegram: Unauthorized, check the bot token", out);
+    telegram_error(out, sizeof(out), 400, "{\"ok\":false,\"description\":\"Bad Request: chat not found\"}");
+    TEST_ASSERT_EQUAL_STRING("Telegram: Bad Request: chat not found, check the chat ID and send the bot a message first", out);
+    telegram_error(out, sizeof(out), 502, "<html>");
+    TEST_ASSERT_EQUAL_STRING("Telegram answered 502", out);
+}
+
+int main(int argc, char** argv){
+    UNITY_BEGIN();
+    RUN_TEST(test_almost_then_ready_once);
+    RUN_TEST(test_straight_past_almost_only_says_ready);
+    RUN_TEST(test_ready_again_only_after_dropping_by_the_hysteresis);
+    RUN_TEST(test_no_almost_when_switched_off);
+    RUN_TEST(test_a_new_target_starts_over);
+    RUN_TEST(test_off_and_unplugged_probes_are_quiet);
+    RUN_TEST(test_stall_once_when_it_starts);
+    RUN_TEST(test_too_hot_once_and_again_after_coming_back);
+    RUN_TEST(test_too_cold_waits_30_seconds_with_the_lid_pause);
+    RUN_TEST(test_too_cold_right_away_without_the_lid_pause);
+    RUN_TEST(test_too_cold_waits_while_the_lid_is_open);
+    RUN_TEST(test_battery_warns_at_20_and_10_once);
+    RUN_TEST(test_battery_ignores_a_single_low_reading);
+    RUN_TEST(test_battery_rearms_after_charging);
+    RUN_TEST(test_battery_ignores_failed_readings_and_charging);
+    RUN_TEST(test_messages);
+    RUN_TEST(test_message_is_cut_not_overflowed);
+    RUN_TEST(test_telegram_errors);
+    return UNITY_END();
+}

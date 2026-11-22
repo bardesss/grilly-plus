@@ -470,6 +470,46 @@ components:
             Range mode: after a sharp drop (lid opened) the "too low" alarm waits this many minutes for
             the temperature to come back. 0 to 30, 0 turns it off. With it on, "too low" also needs to
             last 30 seconds before it beeps.
+        telegram_token:
+          type: string
+          writeOnly: true
+          example: "123456789:AAE..."
+          description: >-
+            Token of the Telegram bot that sends the notifications (from @BotFather). Write-only, never
+            returned. Leave it out to keep the saved token, send "" to remove it and stop notifications.
+        telegram_token_set:
+          type: boolean
+          readOnly: true
+          example: true
+          description: Whether a Telegram bot token is saved.
+        telegram_chat_id:
+          type: string
+          example: "123456789"
+          description: >-
+            The chat the bot sends to: your user ID, a group ID (starts with -) or @channelname.
+            Notifications are only sent with both a token and a chat ID.
+        notify_ready:
+          type: boolean
+          example: true
+          description: Notify when a probe in target mode reaches its target.
+        notify_almost:
+          type: boolean
+          example: true
+          description: Notify when a probe is beep_degrees_before from its target (off when that is 0).
+        notify_outside:
+          type: boolean
+          example: true
+          description: >-
+            Notify when a probe in range mode goes above the maximum or below the minimum. Below the
+            minimum waits for the lid like the beeper does (lid_pause_minutes).
+        notify_stall:
+          type: boolean
+          example: true
+          description: Notify when a probe goes into the stall (see stalled).
+        notify_battery:
+          type: boolean
+          example: true
+          description: Notify when the battery drops to 20 % and to 10 % while not charging.
         screen_timeout_minutes:
           type: integer
           example: 0
@@ -796,6 +836,117 @@ paths:
                   error:
                     type: string
                     example: "Content-Type should be application/json"
+
+  /notify:
+    get:
+      tags:
+        - utility
+      summary: Whether notifications are set up and how the last one went
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  telegram:
+                    type: object
+                    properties:
+                      set_up:
+                        type: boolean
+                        description: A bot token and a chat ID are saved
+                        example: true
+                  sending:
+                    type: boolean
+                    description: Messages are queued or being sent (with retries, up to a few minutes)
+                    example: false
+                  last:
+                    type: object
+                    nullable: true
+                    description: The last message since the grill started, null when none was sent
+                    properties:
+                      ok:
+                        type: boolean
+                        example: false
+                      error:
+                        type: string
+                        description: Why it wasn't sent, "" when it was
+                        example: "Telegram: Unauthorized, check the bot token"
+                      seconds_ago:
+                        type: integer
+                        example: 12
+                      test:
+                        type: boolean
+                        description: It was a test message from POST /notify/test
+                        example: true
+
+  /notify/test:
+    post:
+      tags:
+        - utility
+      summary: Send a test notification
+      description: >
+        Queues a test message to Telegram, read the result with GET /notify. Needs no admin auth: it
+        only goes to the chat that is set up, and it is allowed once every 10 seconds.
+      requestBody:
+        required: true
+        description: Empty body
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '202':
+          description: Queued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '400':
+          description: No bot token or chat ID saved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Telegram isn't set up: save a bot token and chat ID first"
+        '409':
+          description: The grill isn't connected to WiFi
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "The grill isn't connected to WiFi"
+        '415':
+          description: Content-Type was not application/json
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Content-Type should be application/json"
+        '429':
+          description: A test was sent less than 10 seconds ago
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Sent a test less than 10 seconds ago"
 
   /update/latest:
     get:
