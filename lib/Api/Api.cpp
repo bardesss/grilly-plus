@@ -51,6 +51,8 @@ void setup_api_routes()
 
     web::webserver.on("/api/admin/reset/start", HTTP_POST, post_api_admin_reset_start);
     web::webserver.on("/api/admin/reset/start", HTTP_OPTIONS, cors_api_admin_reset);
+    web::webserver.on("/api/admin/reset/cancel", HTTP_POST, post_api_admin_reset_cancel);
+    web::webserver.on("/api/admin/reset/cancel", HTTP_OPTIONS, cors_api_admin_reset);
     web::webserver.on("/api/admin/reset", HTTP_POST, post_api_admin_reset);
     web::webserver.on("/api/admin/reset", HTTP_OPTIONS, cors_api_admin_reset);
 
@@ -312,6 +314,16 @@ void post_api_admin_reset(){
     // Not under the lock, it takes the lock itself for the NVS writes
     config::config_helper.save_settings();
     Serial.println(new_password.isEmpty() ? "Admin password removed with a reset code" : "Admin password reset with a code");
+    web::webserver.send(200, "application/json", "{\"success\": true}");
+}
+
+// Takes the code off the screen, like a short press on the button. Harmless, so no password needed.
+void post_api_admin_reset_cancel(){
+    if(!is_json_request()) { return; }
+    {
+        SharedLock lock;
+        config::admin_reset.cancel();
+    }
     web::webserver.send(200, "application/json", "{\"success\": true}");
 }
 

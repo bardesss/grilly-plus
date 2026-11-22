@@ -718,7 +718,7 @@ paths:
                       alarm per probe in /grill; calibration_offset = offset_celcius per probe; diagnostics = reset,
                       off reason and battery millivolts in /grill; ota_upload = POST /update; github_update = update_available
                       in /grill and the /update/latest, /update/check and /update/install endpoints;
-                      admin_reset = POST /admin/reset/start and /admin/reset.
+                      admin_reset = POST /admin/reset/start, /admin/reset/cancel and /admin/reset.
 
   /wifiscan:
     get:
@@ -1040,6 +1040,32 @@ paths:
                   error:
                     type: string
                     example: "Wait a minute before asking for a new code"
+
+  /admin/reset/cancel:
+    post:
+      tags:
+        - utility
+      summary: Take the password reset code off the grill's screen
+      description: >
+        Ends the current code, like a short press on the grill's button. Always answers 200, also when
+        no code was showing. Needs the json content type.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: No code is showing anymore
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
 
   /admin/reset:
     post:
