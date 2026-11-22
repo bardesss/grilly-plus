@@ -121,9 +121,13 @@
     const version = latest.latest;
     const status = App.getStatus();
     const probes = status && status.probes && status.probes.some((probe) => probe.connected);
-    const question = "Install " + version + "? The grill restarts into update mode for about a minute. " +
-      "Keep it on the charger or above 30 % battery." + (probes ? " The graphs of the connected probes start over." : "");
-    if (!window.confirm(question)) return;
+    const confirmed = await Dialog.confirm({
+      title: "Install " + version + "?",
+      message: "The grill restarts into update mode for about a minute. Keep it on the charger or above 30 % battery." +
+        (probes ? " The graphs of the connected probes start over." : ""),
+      confirm: "Install",
+    });
+    if (!confirmed || busy) return;
     if (currentPasswordMissing((text) => { ghNotice.textContent = text; })) return;
     busy = true;
     renderLatest();
@@ -139,7 +143,8 @@
       }
       if (newVersion) {
         await loadLatest();
-        ghNotice.textContent = "The update failed: " + ((latest && latest.last_install_error) || "unknown error");
+        // The failure line under the status already shows the reason; only say something when it can't
+        ghNotice.textContent = latest && latest.last_install_error ? "" : "The update failed for an unknown reason.";
       } else {
         ghNotice.textContent = "The grill hasn't come back yet. Check its screen and reload in a minute.";
       }

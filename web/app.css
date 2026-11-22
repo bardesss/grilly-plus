@@ -264,6 +264,23 @@ body.offline .live { opacity: .4; }
   .sheet-grab { display: none; }
 }
 
+/* Edge adds its own reveal button to password fields; the app has its own eye button */
+input::-ms-reveal, input::-ms-clear { display: none; }
+
+/* Confirmation dialog (Dialog.confirm) */
+.confirm-dialog {
+  width: min(400px, calc(100vw - 32px)); padding: 20px; border: 1px solid var(--border); border-radius: 20px;
+  background: var(--surface); color: var(--text); box-shadow: 0 20px 50px rgba(0, 0, 0, .35);
+}
+.confirm-dialog::backdrop { background: rgba(0, 0, 0, .5); }
+.confirm-dialog h2 { margin: 0 0 8px; font-size: 19px; }
+.confirm-dialog-message { margin: 0 0 20px; color: var(--muted); line-height: 1.45; }
+.confirm-dialog-buttons { display: flex; justify-content: flex-end; gap: 10px; }
+.confirm-dialog-buttons .button { min-width: 100px; }
+@media (max-width: 420px) {
+  .confirm-dialog-buttons .button { flex: 1; }
+}
+
 /* Form controls shared by the editor and the settings view */
 fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
 .field { display: block; margin-top: 14px; }
