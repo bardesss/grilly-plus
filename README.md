@@ -92,6 +92,7 @@ Grilly+ is a fork of [Free-Grilly](https://github.com/epiecs/free-grilly) by [Ep
 - **Probe editor:** name, alarm (off / target / range) with large steppers, probe type, calibration offset, and a large chart with temperature labels, a "30 min / Whole cook" switch and **Clear history**.
 - **Temperature history** on the grill: the last 30 minutes at 10 seconds per reading plus the whole cook at a coarser step, in a fixed ~5 KB, so even a 24-hour cook fits. It's kept until a restart, until a probe has been unplugged for more than 10 minutes, or until you clear it.
 - **Time to target**, worked out from the last 10 minutes of readings in target mode. After a sudden drop, such as opening the lid, it picks up again after about 3 minutes of climbing.
+- **Alarm in the browser:** a dialog says which probe went off and why, with a big Mute button. The page beeps along with the grill, vibrates on Android and shows a bell in the tab title. Switch it off per browser under **Settings › This browser**.
 - **Mute** a sounding alarm from your phone. The card of the probe that triggered it is highlighted.
 - **Settings save themselves.** Network changes are applied together with one button, and every password field has a show/hide button.
 - **About page** with the battery voltage and why the grill last restarted or switched off (crash, watchdog, update, button, factory reset, empty battery).
@@ -149,6 +150,8 @@ Tap a probe card in the app to set it up:
 - **Range:** beep when the temperature leaves the min-max range. Ideal for the grill or smoker temperature.
 
 Not sure what temperature to use? Pick a food under **Food** and the target fills in. A probe that still has its default name ("Probe 3") gets the food's name.
+
+While the app is open, an alarm opens a dialog that says which probe went off and why, with **Mute** and **Close**, and the page beeps along with the grill. Browsers only allow sound after you tapped the page once, and phones pause pages in the background, so keep the page on screen. **Settings › This browser** has a test sound and a switch to turn it off.
 
 **Calibration offset** (-10 to 10 °C) corrects a probe that reads a little high or low. It belongs to the socket, not the probe, so keep the probe in the same socket.
 
