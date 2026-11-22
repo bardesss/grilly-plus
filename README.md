@@ -187,7 +187,7 @@ You can reset it from the web app, as long as you can see the grill's screen. Al
   4. Type that code in the app. Enter a new admin password, or leave the field empty to remove the password.
   5. Tap **Reset password**. The new password works right away.
 
-A code works once. After 5 wrong tries it ends and you can ask for a new one a minute later. After 15 wrong tries in total the grill stops giving out codes until you restart it. A short press on the grill's button cancels a code on the screen, for example one you didn't ask for. If you can't get it to work, a factory reset (hold the button for 10 seconds) also clears the admin password, together with all other settings.
+A code works once. After 5 wrong tries it ends and you can ask for a new one a minute later. After 15 wrong tries in total the grill stops giving out codes until you restart it. **Cancel** in the app takes the code off the grill's screen, and so does a short press on the grill's button (for example for a code you didn't ask for). If you can't get it to work, a factory reset (hold the button for 10 seconds) also clears the admin password, together with all other settings.
 
 ## Supported probes
 
