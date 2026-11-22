@@ -28,7 +28,7 @@ const Dialog = (() => {
       const finish = (answer) => {
         if (open !== dialog) return;
         open = null;
-        dialog.close();
+        if (dialog.open) dialog.close();
         dialog.remove();
         resolve(answer);
       };
@@ -36,6 +36,10 @@ const Dialog = (() => {
       cancelButton.addEventListener("click", () => finish(false));
       // Escape closes the dialog through the cancel event
       dialog.addEventListener("cancel", (event) => { event.preventDefault(); finish(false); });
+      // The browser can also close it without a cancelable cancel event (Android's back gesture,
+      // Escape pressed twice): without this the dialog stayed "open" here and every later call
+      // returned false right away, so buttons that ask for a confirmation did nothing
+      dialog.addEventListener("close", () => finish(false));
       // A tap on the dimmed backdrop (outside the box) cancels as well
       dialog.addEventListener("click", (event) => {
         const box = dialog.getBoundingClientRect();
