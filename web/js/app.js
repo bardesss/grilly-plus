@@ -62,6 +62,10 @@ const App = (() => {
       bar.classList.toggle("on", index < signal.bars);
     });
     document.getElementById("signal-text").textContent = signal.label;
+    const settingsTab = document.querySelector('.tabs a[data-view="settings"]');
+    settingsTab.classList.toggle("has-update", !!s.update_available);
+    if (s.update_available) settingsTab.setAttribute("aria-label", "Settings, update available");
+    else settingsTab.removeAttribute("aria-label");
     signalPill.setAttribute("aria-label", signal.hotspot ? "Using the grill's hotspot" : "WiFi signal " + signal.label.toLowerCase());
   }
 

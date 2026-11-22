@@ -141,7 +141,25 @@ const Format = (() => {
     return changed;
   }
 
-  return { unitSymbol, number, temperature, signal, battery, batteryDiagnostics, resetReasonText,
+  function checkedAgo(seconds) {
+    if (!(seconds >= 0)) return "Never checked";
+    if (seconds < 60) return "checked just now";
+    if (seconds < 3600) return "checked " + Math.floor(seconds / 60) + " min ago";
+    if (seconds < 86400) return "checked " + Math.floor(seconds / 3600) + " h ago";
+    const days = Math.floor(seconds / 86400);
+    return "checked " + days + (days === 1 ? " day ago" : " days ago");
+  }
+
+  // Status line of the "Update from GitHub" section, from /api/update/latest
+  function updateStatus(latest) {
+    if (latest.state === "checking") return { kind: "checking", text: "Checking GitHub…" };
+    if (latest.state === "error") return { kind: "error", text: "Couldn't check: " + (latest.error || "unknown error") };
+    if (latest.available && latest.latest) return { kind: "available", text: latest.latest + " is available" };
+    if (latest.latest) return { kind: "current", text: "You have the newest version · " + checkedAgo(latest.checked_seconds_ago) };
+    return { kind: "unknown", text: "Not checked yet" };
+  }
+
+  return { checkedAgo, updateStatus, unitSymbol, number, temperature, signal, battery, batteryDiagnostics, resetReasonText,
            offReasonText, alarmMode, probeStatus, alarmLabel, duration, ago, eta, emptySockets, changedFields };
 })();
 

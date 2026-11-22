@@ -43,9 +43,12 @@
       applyNote.textContent = "The hotspot password needs at least 8 characters.";
       return;
     }
-    if (!window.confirm("The grill will reconnect to apply these network settings. You may need to reconnect to it at its new address. Continue?")) {
-      return;
-    }
+    const confirmed = await Dialog.confirm({
+      title: "Apply network settings?",
+      message: "The grill reconnects to apply them. You may need to reconnect to it at its new address.",
+      confirm: "Apply",
+    });
+    if (!confirmed) return;
     applyButton.disabled = true;
     applyNote.textContent = "Applying…";
     try {
