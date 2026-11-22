@@ -10,6 +10,7 @@ const Editor = (() => {
 
   let backdrop, sheet, form, title, live, note, nameInput, modeInputs;
   let targetGroup, targetLabel, minGroup, targetStepper, minStepper;
+  let presetGroup, presetSelect, presetUnit = null;
   let typeSelect, typeName, customBox, offsetStepper;
   const refInputs = {};
   let saver;
@@ -47,6 +48,7 @@ const Editor = (() => {
 
   function showMode(current) {
     targetGroup.hidden = current === "off";
+    presetGroup.hidden = current === "range";
     minGroup.hidden = current !== "range";
     targetLabel.textContent = current === "range" ? "Maximum temperature" : "Target temperature";
     targetStepper.setLabel(current === "range" ? "Maximum temperature" : "Target temperature");
@@ -79,6 +81,36 @@ const Editor = (() => {
     save({ target_temperature: targetStepper.get(), minimum_temperature: value });
   }
 
+  // Options read "Brisket · 95°C", so they're rebuilt when the unit changes
+  function fillPresets(u) {
+    if (presetUnit === u) return;
+    presetUnit = u;
+    presetSelect.length = 1;
+    Presets.groups().forEach((group) => {
+      const optgroup = document.createElement("optgroup");
+      optgroup.label = group.name;
+      group.items.forEach((preset) => {
+        optgroup.append(new Option(preset.label + " · " + Presets.target(preset, u) + Format.unitSymbol(u), String(preset.index)));
+      });
+      presetSelect.append(optgroup);
+    });
+  }
+
+  function onPresetChange() {
+    const preset = Presets.LIST[Number(presetSelect.value)];
+    presetSelect.value = "";
+    if (!preset) return;
+    modeInputs.forEach((input) => { input.checked = input.value === "target"; });
+    showMode("target");
+    targetStepper.set(Presets.target(preset, unit()));
+    const fields = { target_temperature: targetStepper.get(), minimum_temperature: 0 };
+    if (Presets.shouldRename(nameInput.value, probeId)) {
+      nameInput.value = preset.name;
+      fields.name = preset.name;
+    }
+    save(fields, { immediate: true });
+  }
+
   function references() {
     return {
       reference_kohm: Number(refInputs.reference_kohm.value) || 0,
@@ -106,6 +138,7 @@ const Editor = (() => {
     targetStepper.setLimits(1, d.max);
     minStepper.setLimits(1, d.max - 1);
     targetStepper.setSuffix(Format.unitSymbol(unit()));
+    fillPresets(unit());
     minStepper.setSuffix(Format.unitSymbol(unit()));
 
     if (document.activeElement !== nameInput) nameInput.value = probe.name;
@@ -330,6 +363,8 @@ const Editor = (() => {
       '    <label><input type="radio" name="editor-mode" value="target"><span>Target</span></label>' +
       '    <label><input type="radio" name="editor-mode" value="range"><span>Range</span></label>' +
       '  </div></fieldset>' +
+      '  <label class="field" id="editor-preset-group"><span>Food</span><select id="editor-preset">' +
+      '    <option value="">Pick a food to set the target</option></select></label>' +
       '  <div class="field" id="editor-min-group"><span class="field-label">Minimum temperature</span><div id="editor-min"></div></div>' +
       '  <div class="field" id="editor-target-group"><span class="field-label" id="editor-target-label"></span><div id="editor-target"></div></div>' +
       '  <details class="probe-type"><summary><span>Probe type</span><span class="summary-value"><span id="editor-type-name"></span> <svg class="icon"><use href="#i-chevron"/></svg></span></summary>' +
@@ -356,6 +391,8 @@ const Editor = (() => {
     targetGroup = sheet.querySelector("#editor-target-group");
     targetLabel = sheet.querySelector("#editor-target-label");
     minGroup = sheet.querySelector("#editor-min-group");
+    presetGroup = sheet.querySelector("#editor-preset-group");
+    presetSelect = sheet.querySelector("#editor-preset");
     typeSelect = sheet.querySelector("#editor-type");
     typeName = sheet.querySelector("#editor-type-name");
     customBox = sheet.querySelector("#editor-custom");
@@ -393,6 +430,7 @@ const Editor = (() => {
     nameInput.addEventListener("keydown", (event) => { if (event.key === "Enter") nameInput.blur(); });
     modeInputs.forEach((input) => input.addEventListener("change", onModeChange));
     typeSelect.addEventListener("change", onTypeChange);
+    presetSelect.addEventListener("change", onPresetChange);
     Object.entries(refInputs).forEach(([key, input]) => {
       input.addEventListener("change", () => save({ probe_type: "custom", ...references() }, { immediate: true }));
     });
