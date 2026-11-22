@@ -96,7 +96,7 @@ Grilly+ is a fork of [Free-Grilly](https://github.com/epiecs/free-grilly) by [Ep
 - **Stall detection:** when brisket or pork shoulder sits flat for 20 minutes between 60 and 80 °C, the card says "In the stall" and the grill shows STALL, so you know why the time to target is gone.
 - **Lid open:** in range mode, opening the lid makes the grill temperature drop fast. Grilly+ notices and holds back the "too low" alarm for a few minutes while the grill recovers; the card says "Lid open".
 - **Alarm in the browser:** a dialog says which probe went off and why, with a big Mute button. The page beeps along with the grill, vibrates on Android and shows a bell in the tab title. Switch it off per browser under **Settings › This browser**.
-- **Phone notifications** through Telegram, ntfy and/or Pushover for ready, almost ready, too hot or too cold, the stall and a low battery (20 % and 10 %), each with its own switch. They also arrive when the beeper is off. Set it up under **Settings › Notifications** and tap **Send test**:
+- **Phone notifications** through Telegram, ntfy and/or Pushover for ready, almost ready, too hot or too cold, the stall and a low battery (20 % and 10 %), each with its own switch. They also arrive when the beeper is off. Set it up under **Settings › Notifications**, where each service folds open and shows whether it is set up, and tap **Send test**:
   - **Telegram:** create a bot with @BotFather, paste its token and your chat ID.
   - **ntfy:** pick a hard-to-guess topic, fill in `https://ntfy.sh/your-topic` (or your own ntfy server) and subscribe to it in the [ntfy app](https://ntfy.sh). No account needed.
   - **Pushover:** paste your user key and the API token of an application you create on [pushover.net](https://pushover.net).
