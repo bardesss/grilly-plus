@@ -10,12 +10,6 @@
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
 </p>
 
-<p align="center">
-  <img src="docs/screenshots/app_grill_phone_dark.png" alt="The Grilly+ web app on a phone" width="260">
-  &nbsp;&nbsp;
-  <img src="docs/screenshots/device_one_probe.png" alt="The Grilleye Max screen with one probe and the time to target" width="420">
-</p>
-
 The Grilleye Max is a great 8-probe thermometer whose maker stopped supporting it. Grilly+ gives it a second life: a fast web app on your phone, live graphs of every cook, a "ready in 1h 20m" estimate, alarms you can mute from the couch, and updates that install themselves from GitHub. No cloud, no account, no app store. Everything runs on the thermometer itself, on your own WiFi.
 
 Grilly+ is a fork of [Free-Grilly](https://github.com/epiecs/free-grilly) by [Epiecs](https://github.com/epiecs) and [Questum](https://questum.be/), who reverse engineered the hardware and wrote the original firmware.
