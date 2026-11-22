@@ -1,6 +1,7 @@
 # Changelog (firmware only)
 
-## Unreleased
+## 2026-11-22.3
+Fixes for updating from GitHub and for dialogs with Bitwarden. Grills on 2026-11-22 or later install it under Settings > Firmware updates with one tap.
 
 ### Fixes
 - Checking for updates could fail with "GitHub's answer couldn't be read (NoMemory)" when a release had long notes. The grill no longer reads the release notes; **What's new in this release** links to them on GitHub instead
