@@ -39,6 +39,8 @@ namespace config{
     // Notifications
     extern String telegram_token;
     extern String telegram_chat_id;
+    extern String ntfy_url;
+    extern String ntfy_token;
     extern bool   notify_ready;
     extern bool   notify_almost;
     extern bool   notify_outside;

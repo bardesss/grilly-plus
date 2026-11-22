@@ -201,7 +201,7 @@ void post_api_notify_test(){
 
     int status = notify::request_test();
     if(status == 400){
-        web::webserver.send(400, "application/json", "{\"error\": \"Telegram isn't set up: save a bot token and chat ID first\"}");
+        web::webserver.send(400, "application/json", "{\"error\": \"No notifications are set up yet: save Telegram or ntfy first\"}");
         return;
     }
     if(status == 409){

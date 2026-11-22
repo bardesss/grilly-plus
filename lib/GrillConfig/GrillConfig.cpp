@@ -64,6 +64,8 @@ void GrillConfig::load_settings(){
 
     config::telegram_token            = config::settings_storage.getString("tg_token", "");
     config::telegram_chat_id          = config::settings_storage.getString("tg_chat", "");
+    config::ntfy_url                  = config::settings_storage.getString("ntfy_url", "");
+    config::ntfy_token                = config::settings_storage.getString("ntfy_token", "");
     config::notify_ready              = config::settings_storage.getBool("ntf_ready", true);
     config::notify_almost             = config::settings_storage.getBool("ntf_almost", true);
     config::notify_outside            = config::settings_storage.getBool("ntf_outside", true);
@@ -130,6 +132,8 @@ void GrillConfig::save_settings(){
         config::settings_storage.putInt("lid_pause", config::lid_pause_minutes);
         config::settings_storage.putString("tg_token", config::telegram_token);
         config::settings_storage.putString("tg_chat", config::telegram_chat_id);
+        config::settings_storage.putString("ntfy_url", config::ntfy_url);
+        config::settings_storage.putString("ntfy_token", config::ntfy_token);
         config::settings_storage.putBool("ntf_ready", config::notify_ready);
         config::settings_storage.putBool("ntf_almost", config::notify_almost);
         config::settings_storage.putBool("ntf_outside", config::notify_outside);
@@ -230,6 +234,8 @@ void GrillConfig::initialize_settings(){
     config::settings_storage.putInt("lid_pause", config::lid_pause_minutes);
     config::settings_storage.putString("tg_token", config::telegram_token);
     config::settings_storage.putString("tg_chat", config::telegram_chat_id);
+    config::settings_storage.putString("ntfy_url", config::ntfy_url);
+    config::settings_storage.putString("ntfy_token", config::ntfy_token);
     config::settings_storage.putBool("ntf_ready", config::notify_ready);
     config::settings_storage.putBool("ntf_almost", config::notify_almost);
     config::settings_storage.putBool("ntf_outside", config::notify_outside);
