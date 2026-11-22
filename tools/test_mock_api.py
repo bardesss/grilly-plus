@@ -190,6 +190,11 @@ class AdminResetTest(unittest.TestCase):
         mock_api.RESET_STARTED_AT = None
         self.assertEqual(423, mock_api.handle("POST", "/api/admin/reset/start", b"{}", self.JSON)[0])
 
+    def test_cancel_ends_the_code(self):
+        mock_api.handle("POST", "/api/admin/reset/start", b"{}", self.JSON)
+        self.assertEqual(200, mock_api.handle("POST", "/api/admin/reset/cancel", b"{}", self.JSON)[0])
+        self.assertEqual(410, self.reset("123456")[0])
+
     def test_needs_a_password_to_reset(self):
         mock_api.ADMIN_PASSWORD = ""
         self.assertEqual(409, mock_api.handle("POST", "/api/admin/reset/start", b"{}", self.JSON)[0])

@@ -89,6 +89,13 @@
     resetPassword.value = "";
   }
 
+  // Cancel also takes the code off the grill's screen
+  function cancelReset() {
+    const codeShowing = resetTimer !== null;
+    closeReset();
+    if (codeShowing) Api.post("/api/admin/reset/cancel", {}).catch(() => {});
+  }
+
   async function submitReset() {
     const code = resetCode.value.trim();
     if (!/^[0-9]{6}$/.test(code)) {
@@ -312,7 +319,7 @@
     resetNotice = card.querySelector("[data-reset-notice]");
     resetStart.addEventListener("click", startReset);
     resetSubmit.addEventListener("click", submitReset);
-    resetCancel.addEventListener("click", closeReset);
+    resetCancel.addEventListener("click", cancelReset);
     resetCode.addEventListener("keydown", (event) => { if (event.key === "Enter") submitReset(); });
     resetPassword.addEventListener("keydown", (event) => { if (event.key === "Enter") submitReset(); });
     ghInstall.addEventListener("click", installFromGitHub);

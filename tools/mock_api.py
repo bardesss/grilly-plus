@@ -202,11 +202,14 @@ def handle(method, path, body, headers=None, query=""):
     finish_install_when_due()
     if INSTALL_DONE_AT is not None and SETTINGS["firmware_version"] != UPDATE_LATEST and path in ("/api/grill", "/api/info"):
         return 503, {"error": "The grill is updating"}   # the real grill doesn't answer while it restarts
-    if method == "POST" and path in ("/api/admin/reset/start", "/api/admin/reset"):
+    if method == "POST" and path in ("/api/admin/reset/start", "/api/admin/reset/cancel", "/api/admin/reset"):
         if "json" not in headers.get("Content-Type", ""):
             return 415, {"error": "Content-Type should be application/json"}
         now = time.time()
         active = RESET_ACTIVE and now - RESET_STARTED_AT < 300
+        if path == "/api/admin/reset/cancel":
+            RESET_ACTIVE = False
+            return 200, {"success": True}
         if path == "/api/admin/reset/start":
             if ADMIN_PASSWORD == "":
                 return 409, {"error": "No admin password is set"}
