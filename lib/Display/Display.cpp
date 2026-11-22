@@ -83,6 +83,40 @@ bool disp::wake(void){
     return true;
 }
 
+String disp::fit(const String& text, int max_width){
+    if (screen.getStrWidth(text.c_str()) <= max_width) { return text; }
+    String cut = text;
+    while (cut.length() > 0) {
+        cut.remove(cut.length() - 1);
+        cut.trim();
+        String shown = cut + ".";
+        if (screen.getStrWidth(shown.c_str()) <= max_width) { return shown; }
+    }
+    return "";
+}
+
+void disp::draw_wrapped(int x, int y, int max_width, int line_height, int max_lines, const String& text){
+    String rest = text;
+    rest.trim();
+    for (int line = 0; line < max_lines && rest.length() > 0; line++) {
+        String shown = rest;
+        if (line < max_lines - 1 && screen.getStrWidth(rest.c_str()) > max_width) {
+            // Take as many whole words as fit
+            int end = -1;
+            for (int space = rest.indexOf(' '); space > 0; space = rest.indexOf(' ', space + 1)) {
+                if (screen.getStrWidth(rest.substring(0, space).c_str()) > max_width) { break; }
+                end = space;
+            }
+            shown = end > 0 ? rest.substring(0, end) : rest;
+        }
+        shown = fit(shown, max_width);
+        screen.drawStr(x, y + line * line_height, shown.c_str());
+        if (shown.endsWith(".") && !rest.startsWith(shown)) { break; }   // the last line was cut
+        rest = rest.substring(shown.length());
+        rest.trim();
+    }
+}
+
 void disp::draw_update(const char* version, int percent, const char* status){
     screen.clearBuffer();
     screen.setFont(u8g2_font_profont12_tr);
@@ -93,8 +127,10 @@ void disp::draw_update(const char* version, int percent, const char* status){
         screen.drawFrame(3, 32, 122, 10);
         screen.drawBox(5, 34, (118 * percent) / 100, 6);
         screen.setCursor(3, 53); screen.printf("%d%%", percent);
+        screen.drawStr(3, 63, fit(status, 122).c_str());
+    } else {
+        draw_wrapped(3, 43, 122, 10, 3, status);
     }
-    screen.drawStr(3, 63, status);
     screen.sendBuffer();
 }
 
@@ -104,7 +140,7 @@ void disp::draw_screen_reset_code(const char* code, uint32_t seconds_left){
     screen.setFont(u8g2_font_profont22_tr);
     screen.drawStr((128 - screen.getStrWidth(code)) / 2, 34, code);
     screen.setFont(u8g2_font_profont10_tr);
-    const char* hint = "Enter this code in the app";
+    const char* hint = "Enter it in the app";
     screen.drawStr((128 - screen.getStrWidth(hint)) / 2, 48, hint);
     char valid[24];
     snprintf(valid, sizeof(valid), "Valid for %u:%02u", (unsigned)(seconds_left / 60), (unsigned)(seconds_left % 60));
@@ -289,8 +325,9 @@ bool disp::draw_screen_temp(void){
             screen.setFont(u8g2_font_profont10_tr); 
             screen.drawStr(2, y_offset, "P :");
             screen.setCursor(7, y_offset); screen.print(connectedProbeInfo.second[i]);
-            screen.setCursor(18, y_offset); screen.print(current_active_name);
-            blink_label(connectedProbeInfo.second[i], 0, y_offset - 8, 19 + screen.getStrWidth(current_active_name.c_str()), 10);
+            String name = fit(current_active_name, 84 - 18);   // the timer starts at x 88, keep a gap
+            screen.setCursor(18, y_offset); screen.print(name);
+            blink_label(connectedProbeInfo.second[i], 0, y_offset - 8, 19 + screen.getStrWidth(name.c_str()), 10);
 
             // status text
             screen.setCursor(88, y_offset); screen.printf(current_elapsed_time.c_str());
@@ -300,8 +337,17 @@ bool disp::draw_screen_temp(void){
             screen.setFont(u8g2_font_profont22_tr); 
             screen.setCursor(2, y_offset+18); screen.printf("%.1f", current_active_temp); 
 
-            // progress status
+            // progress status, or else the time to target
             screen.setFont(u8g2_font_profont11_tr);
+            bool status_shown = (current_target_temp > 0 and current_active_temp > current_target_temp)
+                             or current_active_temp < current_minimum_temp;
+            int32_t eta = get_eta(connectedProbeInfo.second[i]);
+            if (!status_shown and eta >= 0) {
+                int minutes = (eta + 59) / 60;
+                char eta_text[16];
+                snprintf(eta_text, sizeof(eta_text), "in %d:%02d", minutes / 60, minutes % 60);
+                screen.drawStr(125 - screen.getStrWidth(eta_text), y_offset + 17, eta_text);
+            }
             if (current_minimum_temp <= 0 and current_target_temp > 0 and current_active_temp > current_target_temp){
                 screen.drawStr(125-screen.getStrWidth("READY"), y_offset+17, "READY");
                 screen.setDrawColor(2);
@@ -373,7 +419,7 @@ bool disp::draw_screen_temp(void){
                     }
                     else {
                         // probe name
-                        screen.setCursor(x_offset + 16, y_offset); screen.print(current_active_name);  
+                        screen.setCursor(x_offset + 16, y_offset); screen.print(fit(current_active_name, 44));  
                     }
                 }
                 
@@ -414,7 +460,7 @@ bool disp::draw_screen_temp(void){
                     continue;
                 }
 
-                screen.print(get_temp(i + 1));
+                screen.printf("%.1f", get_temp(i + 1));
 
                 // Thermometer
                 if (probes[i]->target_temperature > 0) {
@@ -441,8 +487,10 @@ bool disp::draw_screen_details(int connectedProbe){
     screen.setFont(u8g2_font_profont12_tr);
     screen.drawStr(3, 20, "P :");
     screen.setCursor(9, 20); screen.print(connectedProbe);
-    screen.setCursor(22, 20); screen.print(current_active_name);
-    blink_label(connectedProbe, 1, 10, 23 + screen.getStrWidth(current_active_name.c_str()), 12);
+    // The bar and its labels start at x 105 when there is a target
+    String name = fit(current_active_name, (current_target_temp > 0 ? 104 : 126) - 22);
+    screen.setCursor(22, 20); screen.print(name);
+    blink_label(connectedProbe, 1, 10, 23 + screen.getStrWidth(name.c_str()), 12);
     
     // probe temp 
     screen.setFont(u8g2_font_profont29_tr); 
@@ -494,7 +542,7 @@ bool disp::draw_screen_info(void){
     screen.setFont(u8g2_font_4x6_tr);
     // Grill info
     screen.drawStr(10, 14, "NAME:");
-    screen.setCursor(33, 14); screen.print(config::grill_name);
+    screen.setCursor(33, 14); screen.print(fit(config::grill_name, 94));
     screen.drawStr(18, 21, "FW: ");
     screen.setCursor(33, 21); screen.print(config::grill_firmware_version);
     // mDNS hostname, without ".local" (20 chars x 4px fits); also shown on the About page
@@ -502,14 +550,14 @@ bool disp::draw_screen_info(void){
     screen.setCursor(33, 28); screen.print(grill::hostname);
     // AP info
     screen.drawStr(10, 35, "SSID:");
-    screen.setCursor(33, 35); screen.print(config::wifi_ssid);
+    screen.setCursor(33, 35); screen.print(fit(config::wifi_ssid, 94));
     screen.drawStr(18, 42, "IP: ");
     screen.setCursor(33, 42); screen.print(grill::wifi_ip);
     // local AP info, the password is shown so a generated one can be read off the device
     screen.drawStr(2, 49, "L-SSID:");
-    screen.setCursor(33, 49); screen.print(config::local_ap_ssid);
+    screen.setCursor(33, 49); screen.print(fit(config::local_ap_ssid, 94));
     screen.drawStr(10, 56, "L-PW: ");
-    screen.setCursor(33, 56); screen.print(config::local_ap_password.isEmpty() ? String("(open)") : config::local_ap_password);
+    screen.setCursor(33, 56); screen.print(config::local_ap_password.isEmpty() ? String("(open)") : fit(config::local_ap_password, 94));
     screen.drawStr(10, 63, "L-IP: ");
     screen.setCursor(33, 63); screen.print(config::local_ap_ip);
 
