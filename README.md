@@ -130,7 +130,7 @@ Follow the [flashing guide](docs/how_to_flash.md). You can flash from your brows
 ### 2. Connect it to your WiFi
 
 1. **Switch it on:** hold the side button until you hear the beeps, then let go.
-2. **Find its hotspot:** the grill starts its own WiFi network, `GrillyPlus_xxxxxx`. Hold the button for 2 seconds (2 beeps) to see its name and password on the Info screen.
+2. **Find its hotspot:** the grill starts its own WiFi network, `GrillyPlus_xxxxxx`. Hold the button for about 1 second, until 2 beeps, then let go to see its name and password on the Info screen (past 2 seconds it switches off).
 3. **Connect** your phone or computer to that network.
 4. **Open** `http://192.168.200.10` in a browser.
 5. **Enter your home WiFi** under **Settings**, then **Network**, and tap **Apply**.
