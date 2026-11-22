@@ -165,6 +165,14 @@ def probes():
 # Kept here because SETTINGS only says whether it is set, like the firmware
 ADMIN_PASSWORD = ""
 
+# Mock-only: the "code on the grill's screen" for resetting the admin password is always 123456.
+# Same rules as the firmware (lib/AdminReset): 5 minutes, 5 tries, a new code a minute after the last.
+RESET_CODE = "123456"
+RESET_STARTED_AT = None
+RESET_ACTIVE = False
+RESET_ATTEMPTS = 0
+RESET_WRONG_TOTAL = 0   # wrong tries over all codes; 15 lock the reset until a restart
+
 # Same limits as the firmware (lib/JsonUtilities)
 NUMBER_LIMITS = {"beep_volume": (0, 5), "backlight_brightness": (0, 5), "mqtt_port": (1, 65535)}
 
@@ -189,10 +197,52 @@ def handle(method, path, body, headers=None, query=""):
     """Returns (status, json_body) for an /api request."""
     global ADMIN_PASSWORD, ALARM_SOUNDING, ALARM_PROBE_ID
     global UPDATE_CHECKED_AT, UPDATE_CHECKING_UNTIL, LAST_CHECK_REQUEST, INSTALL_DONE_AT
+    global RESET_STARTED_AT, RESET_ACTIVE, RESET_ATTEMPTS, RESET_WRONG_TOTAL
     headers = headers or {}
     finish_install_when_due()
     if INSTALL_DONE_AT is not None and SETTINGS["firmware_version"] != UPDATE_LATEST and path in ("/api/grill", "/api/info"):
         return 503, {"error": "The grill is updating"}   # the real grill doesn't answer while it restarts
+    if method == "POST" and path in ("/api/admin/reset/start", "/api/admin/reset/cancel", "/api/admin/reset"):
+        if "json" not in headers.get("Content-Type", ""):
+            return 415, {"error": "Content-Type should be application/json"}
+        now = time.time()
+        active = RESET_ACTIVE and now - RESET_STARTED_AT < 300
+        if path == "/api/admin/reset/cancel":
+            RESET_ACTIVE = False
+            return 200, {"success": True}
+        if path == "/api/admin/reset/start":
+            if ADMIN_PASSWORD == "":
+                return 409, {"error": "No admin password is set"}
+            if not active:
+                if RESET_WRONG_TOTAL >= 15:
+                    return 423, {"error": "Too many wrong codes. Restart the grill to try again"}
+                if RESET_STARTED_AT is not None and now - RESET_STARTED_AT < 60:
+                    return 429, {"error": "Wait a minute before asking for a new code"}
+                RESET_STARTED_AT, RESET_ACTIVE, RESET_ATTEMPTS = now, True, 0
+            return 202, {"seconds_left": int(300 - (now - RESET_STARTED_AT))}
+        try:
+            data = json.loads(body or b"{}")
+        except ValueError:
+            data = None
+        if not isinstance(data, dict) or not isinstance(data.get("code"), str):
+            return 400, {"error": "Body should be json with the code"}
+        password = data.get("admin_password") or ""
+        if len(password) > 64:
+            return 400, {"error": "admin_password can be at most 64 characters"}
+        if not active:
+            return 410, {"error": "The code is no longer valid, ask for a new one"}
+        if data["code"] != RESET_CODE:
+            RESET_ATTEMPTS += 1
+            RESET_WRONG_TOTAL += 1
+            left = min(5 - RESET_ATTEMPTS, 15 - RESET_WRONG_TOTAL)
+            if left <= 0:
+                RESET_ACTIVE = False
+                return 403, {"error": "Wrong code. That was the last try, ask for a new one", "attempts_left": 0}
+            return 403, {"error": "Wrong code", "attempts_left": left}
+        RESET_ACTIVE = False
+        ADMIN_PASSWORD = password
+        SETTINGS["admin_password_set"] = password != ""
+        return 200, {"success": True}
     if method == "GET" and path == "/api/update/latest":
         return 200, update_latest()
     if method == "POST" and path == "/api/update/check":

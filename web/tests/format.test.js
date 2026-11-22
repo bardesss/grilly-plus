@@ -109,3 +109,10 @@ test("updateStatus kinds and texts", () => {
     { kind: "current", text: "You have the newest version · checked 2 h ago" });
   assert.deepEqual(Format.updateStatus({ state: "idle", latest: "", checked_seconds_ago: -1 }), { kind: "unknown", text: "Not checked yet" });
 });
+
+test("countdown shows minutes and seconds", () => {
+  assert.equal(Format.countdown(300), "5:00");
+  assert.equal(Format.countdown(61.2), "1:02");
+  assert.equal(Format.countdown(9), "0:09");
+  assert.equal(Format.countdown(-3), "0:00");
+});
