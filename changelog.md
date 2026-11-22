@@ -7,10 +7,14 @@
 - Stall detection: when a probe in target mode stays within 1.5° for 20 minutes somewhere between 60 and 80 °C, with the target at least 5° higher, the app shows "In the stall" where the time to target goes and the grill's screen shows STALL. It ends by itself once the temperature climbs again
 - Lid open: in range mode, a drop of 8° or more within a minute (opening the lid) holds back the "too low" alarm until the temperature is back within 2° of where it was, or until the lid pause is over. Meanwhile the app says "Lid open" and the grill shows LID instead of LOW. Settings > Alarms > Lid open pause sets the minutes (default 5, 0 = off). With it on, "too low" also has to last 30 seconds before it beeps; "too high" isn't held back
 
+- Telegram notifications: the grill sends a message when a probe is ready, almost ready (the early warning), too hot or too cold, or goes into the stall, and when the battery drops to 20 % and 10 %. They also go out when the beeper is off or the alarm was muted. Set it up under Settings > Notifications with a bot token from @BotFather and your chat ID, pick the events, and use Send test. A failed message is tried 3 times and the card says why it failed. HTTPS to Telegram is checked against the Mozilla root certificates
+
 ### API and MQTT
+- `GET /api/notify` and `POST /api/notify/test`; `telegram_token` (write-only, `telegram_token_set`), `telegram_chat_id` and `notify_ready`, `notify_almost`, `notify_outside`, `notify_stall`, `notify_battery` in the settings
 - `stalled` and `lid_open` for every probe in `/api/grill`, `/api/probes` and the MQTT `grill` and `probes` topics; `lid_pause_minutes` in the settings (0 to 30)
 
 ### Fixes
+- With the lid pause on, "too low" could beep right away instead of after 30 seconds below the minimum (about half the time)
 - Install from GitHub with an admin password set but not filled in: the confirmation closed and only a small line said why. The app now asks for the password before the confirmation, and scrolls to the field
 - When the browser closed the confirmation by itself (Android's back gesture, Escape twice), Install and Apply did nothing until the page was reloaded
 

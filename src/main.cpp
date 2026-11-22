@@ -171,6 +171,7 @@ void setup() {
     // ***********************************
 
     delay(100); //Needed to give the power rail time to adjust
+    notify::setup();    // before the battery and probes tasks, which queue notifications
     xTaskCreatePinnedToCore(task_battery, "Battery", task::batteryStackSize, NULL, 1, &task::batteryTask, 1);
     delay(100); //Needed to give the power rail time to adjust
     xTaskCreatePinnedToCore(task_screen, "Screen", task::screenStackSize, NULL, 1, &task::screenTask, 1);
@@ -643,6 +644,7 @@ void task_probes(void* pvParameters) {
         grill::probe_6.calculate_temperature(); grill::probe_6.check_temperature_status();
         grill::probe_7.calculate_temperature(); grill::probe_7.check_temperature_status();
         grill::probe_8.calculate_temperature(); grill::probe_8.check_temperature_status();
+        notify::check_probes();
 
         if((long)(millis() - next_history_ms) >= 0){
             record_history();
@@ -671,6 +673,7 @@ void task_battery(void* pvParameters) {
     LowBattery low_battery;
     for (;;) {
         bool read_ok = battery.read_battery();
+        notify::check_battery(read_ok, grill::battery_percentage, grill::battery_charging);
 
         // Switch off cleanly before an empty battery causes brownouts and reboot loops
         if (low_battery.update(read_ok, grill::battery_percentage, grill::battery_millivolts, grill::battery_charging)) {

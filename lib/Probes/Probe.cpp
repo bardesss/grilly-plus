@@ -215,8 +215,10 @@ void Probe::check_temperature_status(){
             //* Too low only counts once it lasted LOW_CONFIRM_MS and the lid isn't open: an opened lid
             //* drops the temperature within seconds, the history needs up to 20 s to notice the drop.
             bool too_low = Probe::temperature < Probe::minimum_temperature;
-            if(!too_low){ Probe::low_since_ms = 0; }
-            else if(Probe::low_since_ms == 0){ Probe::low_since_ms = millis() | 1; }
+            // A separate flag instead of 0 meaning "not low": millis() | 1 could lie 1 ms in the future,
+            // and the unsigned millis() - low_since_ms then wrapped to ~49 days, confirming right away
+            if(!too_low){ Probe::is_low = false; }
+            else if(!Probe::is_low){ Probe::is_low = true; Probe::low_since_ms = millis(); }
             bool low_confirmed = too_low && !Probe::lid_open &&
                 (config::lid_pause_minutes <= 0 || millis() - Probe::low_since_ms >= Probe::LOW_CONFIRM_MS);
 

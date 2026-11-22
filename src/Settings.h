@@ -9,6 +9,7 @@
 #include "Mqtt.h"
 #include "Opengrill.h"
 #include "GrillConfig.h"
+#include "Notify.h"
 
 namespace gpio{
 
@@ -73,6 +74,18 @@ namespace config{
     int  beep_volume                    = 5;
     int  beep_degrees_before            = 5;
     int  lid_pause_minutes              = 5;     // range mode: minutes the "too low" alarm waits after a sharp drop, 0 = off
+
+    // ***********************************
+    // * Notifications
+    // ***********************************
+
+    String telegram_token               = "";    // never sent out, like the passwords
+    String telegram_chat_id             = "";
+    bool notify_ready                   = true;
+    bool notify_almost                  = true;
+    bool notify_outside                 = true;  // range mode: too hot or too cold
+    bool notify_stall                   = true;
+    bool notify_battery                 = true;
 
     // ***********************************
     // * Buffers

@@ -62,6 +62,14 @@ void GrillConfig::load_settings(){
     config::beep_degrees_before       = config::settings_storage.getInt("beep_before");
     config::lid_pause_minutes         = config::settings_storage.getInt("lid_pause", 5);
 
+    config::telegram_token            = config::settings_storage.getString("tg_token", "");
+    config::telegram_chat_id          = config::settings_storage.getString("tg_chat", "");
+    config::notify_ready              = config::settings_storage.getBool("ntf_ready", true);
+    config::notify_almost             = config::settings_storage.getBool("ntf_almost", true);
+    config::notify_outside            = config::settings_storage.getBool("ntf_outside", true);
+    config::notify_stall              = config::settings_storage.getBool("ntf_stall", true);
+    config::notify_battery            = config::settings_storage.getBool("ntf_battery", true);
+
     config::screen_timeout_minutes    = config::settings_storage.getInt("screen_to_mins");
     config::backlight_timeout_minutes = config::settings_storage.getInt("backl_to_mins");
 
@@ -120,6 +128,13 @@ void GrillConfig::save_settings(){
         config::settings_storage.putInt("beep_volume", config::beep_volume);
         config::settings_storage.putInt("beep_before", config::beep_degrees_before);
         config::settings_storage.putInt("lid_pause", config::lid_pause_minutes);
+        config::settings_storage.putString("tg_token", config::telegram_token);
+        config::settings_storage.putString("tg_chat", config::telegram_chat_id);
+        config::settings_storage.putBool("ntf_ready", config::notify_ready);
+        config::settings_storage.putBool("ntf_almost", config::notify_almost);
+        config::settings_storage.putBool("ntf_outside", config::notify_outside);
+        config::settings_storage.putBool("ntf_stall", config::notify_stall);
+        config::settings_storage.putBool("ntf_battery", config::notify_battery);
         config::settings_storage.putInt("screen_to_mins", config::screen_timeout_minutes);
         config::settings_storage.putInt("backl_to_mins", config::backlight_timeout_minutes);
         config::settings_storage.putInt("backl_bright", config::backlight_brightness);
@@ -213,6 +228,13 @@ void GrillConfig::initialize_settings(){
     config::settings_storage.putInt("beep_volume", config::beep_volume);
     config::settings_storage.putInt("beep_before", config::beep_degrees_before);
     config::settings_storage.putInt("lid_pause", config::lid_pause_minutes);
+    config::settings_storage.putString("tg_token", config::telegram_token);
+    config::settings_storage.putString("tg_chat", config::telegram_chat_id);
+    config::settings_storage.putBool("ntf_ready", config::notify_ready);
+    config::settings_storage.putBool("ntf_almost", config::notify_almost);
+    config::settings_storage.putBool("ntf_outside", config::notify_outside);
+    config::settings_storage.putBool("ntf_stall", config::notify_stall);
+    config::settings_storage.putBool("ntf_battery", config::notify_battery);
     config::settings_storage.putInt("screen_to_mins", config::screen_timeout_minutes);
     config::settings_storage.putInt("backl_to_mins", config::backlight_timeout_minutes);
     config::settings_storage.putInt("backl_bright", config::backlight_brightness);

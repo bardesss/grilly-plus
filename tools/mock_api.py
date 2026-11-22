@@ -15,6 +15,8 @@ ALARM_PROBE_ID = None
 SETTINGS = {
     "name": "Big Green Egg", "uuid": "43c62ed2-4dc0-41a5-8f71-16db60155739", "firmware_version": "26.09.27",
     "temperature_unit": "celcius", "beep_enabled": True, "beep_volume": 4, "beep_degrees_before": 5, "lid_pause_minutes": 5,
+    "telegram_token_set": False, "telegram_chat_id": "", "notify_ready": True, "notify_almost": True,
+    "notify_outside": True, "notify_stall": True, "notify_battery": True,
     "beep_outside_target": True, "beep_on_ready": True, "cucaracha_enabled": False,
     "screen_timeout_minutes": 0, "backlight_timeout_minutes": 5, "backlight_brightness": 4,
     "opengrill_server": "", "mqtt_broker": "192.168.1.10", "mqtt_port": 1883, "mqtt_topic": "grilly-plus",
@@ -123,6 +125,21 @@ def history(only_probe=None):
             entry["fine"] = {"interval": 10, "age": 3 if fine_values else 0, "values": fine_values}
         result.append(entry)
     return {"probes": result}
+
+
+# The last notification: {"at": seconds, "error": "", "test": bool}, sent 2 s after it was queued
+NOTIFY_LAST = None
+
+
+def notify_status():
+    set_up = bool(SETTINGS["telegram_token_set"] and SETTINGS["telegram_chat_id"])
+    last = NOTIFY_LAST
+    if last is not None and time.time() < last["at"]:
+        return {"telegram": {"set_up": set_up}, "sending": True, "last": None}
+    if last is None:
+        return {"telegram": {"set_up": set_up}, "sending": False, "last": None}
+    return {"telegram": {"set_up": set_up}, "sending": False, "last": {
+        "ok": last["error"] == "", "error": last["error"], "seconds_ago": int(time.time() - last["at"]), "test": last["test"]}}
 
 
 # Mock-only: probe_ids that report stalled, toggled with POST /api/_mock/stall {"probe_id": n}
@@ -332,6 +349,17 @@ def handle(method, path, body, headers=None, query=""):
             probe = next((p for p in PROBES if p["probe_id"] == int(update["probe_id"])), None)
             probe.update({k: v for k, v in update.items() if k != "probe_id"})
         return 200, probes()
+    if method == "GET" and path == "/api/notify":
+        return 200, notify_status()
+    if method == "POST" and path == "/api/notify/test":
+        if not (SETTINGS["telegram_token_set"] and SETTINGS["telegram_chat_id"]):
+            return 400, {"error": "Telegram isn't set up: save a bot token and chat ID first"}
+        global NOTIFY_LAST
+        # Mock: chat ID "0" plays a refused message
+        error = "Telegram: Bad Request: chat not found, check the chat ID and send the bot a message first" \
+            if SETTINGS["telegram_chat_id"] == "0" else ""
+        NOTIFY_LAST = {"at": time.time() + 2, "error": error, "test": True}
+        return 202, {"success": True}
     if method == "GET" and path == "/api/settings":
         return 200, SETTINGS
     if method == "POST" and path == "/api/settings":
@@ -347,7 +375,7 @@ def handle(method, path, body, headers=None, query=""):
         for key, value in update.items():
             if key == "admin_password":
                 ADMIN_PASSWORD = value
-            if key.endswith("_password"):
+            if key.endswith("_password") or key == "telegram_token":
                 SETTINGS[key + "_set"] = value != ""
             else:
                 SETTINGS[key] = value

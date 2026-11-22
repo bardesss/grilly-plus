@@ -61,7 +61,8 @@ public:
 	volatile int32_t eta_seconds 			   = -1;	// Seconds until the target temperature, -1 = unknown. Set by the probes task from the history.
 	volatile bool stalled 					   = false;	// In the stall: flat for 20 minutes between 60 and 80 C. Set by the probes task.
 	volatile bool lid_open 					   = false;	// Range mode: a sharp drop, the "too low" alarm waits. Set by the probes task.
-	uint32_t low_since_ms 					   = 0;		// When the reading went below the minimum, 0 = it isn't
+	bool is_low 							   = false;	// Below the minimum, since low_since_ms
+	uint32_t low_since_ms 					   = 0;		// When the reading went below the minimum
 
 	/**
 	 * @brief Construct a new Probe object
