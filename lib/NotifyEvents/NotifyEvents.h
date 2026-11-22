@@ -46,7 +46,8 @@ private:
     bool     almost_      = false;
     bool     outside_     = false;
     bool     stalled_     = false;
-    uint32_t low_since_   = 0;    // 0 = not below the minimum
+    bool     low_         = false;  // below the minimum, since low_since_
+    uint32_t low_since_   = 0;
 };
 
 // Battery warnings at 20 % and 10 %, each once until the battery is charged or back above the level

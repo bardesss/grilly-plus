@@ -83,7 +83,13 @@ void test_too_hot_once_and_again_after_coming_back(){
 }
 
 void test_too_cold_waits_30_seconds_with_the_lid_pause(){
-    TEST_ASSERT_EQUAL(0, feed(range_mode(95), 31));
+    TEST_ASSERT_EQUAL(0, feed(range_mode(95), 30));
+    TEST_ASSERT_EQUAL(TOO_COLD, feed(range_mode(95)));
+}
+
+void test_too_cold_waits_also_from_an_even_millisecond(){
+    now_ms = 2000;                                      // used to store 2001, 1 ms in the future
+    TEST_ASSERT_EQUAL(0, feed(range_mode(95), 30));
     TEST_ASSERT_EQUAL(TOO_COLD, feed(range_mode(95)));
 }
 
@@ -169,6 +175,7 @@ int main(int argc, char** argv){
     RUN_TEST(test_stall_once_when_it_starts);
     RUN_TEST(test_too_hot_once_and_again_after_coming_back);
     RUN_TEST(test_too_cold_waits_30_seconds_with_the_lid_pause);
+    RUN_TEST(test_too_cold_waits_also_from_an_even_millisecond);
     RUN_TEST(test_too_cold_right_away_without_the_lid_pause);
     RUN_TEST(test_too_cold_waits_while_the_lid_is_open);
     RUN_TEST(test_battery_warns_at_20_and_10_once);

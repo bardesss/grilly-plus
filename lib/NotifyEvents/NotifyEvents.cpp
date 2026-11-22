@@ -12,11 +12,10 @@ uint8_t ProbeWatch::update(const ProbeInput& in, uint32_t now_ms){
     if(in.target != target_ || in.minimum != minimum_){
         target_  = in.target;
         minimum_ = in.minimum;
-        ready_ = almost_ = outside_ = stalled_ = false;
-        low_since_ = 0;
+        ready_ = almost_ = outside_ = stalled_ = low_ = false;
     }
     if(!in.connected || in.target <= 0){
-        low_since_ = 0;
+        low_ = false;
         return 0;
     }
 
@@ -45,8 +44,9 @@ uint8_t ProbeWatch::update(const ProbeInput& in, uint32_t now_ms){
     } else {
         //* Range mode, "too cold" waits for the lid like the beeper does
         bool too_low = t < in.minimum;
-        if(!too_low){ low_since_ = 0; }
-        else if(low_since_ == 0){ low_since_ = now_ms | 1; }
+        // A flag instead of 0 meaning "not low": now_ms | 1 could lie in the future and wrap the difference
+        if(!too_low){ low_ = false; }
+        else if(!low_){ low_ = true; low_since_ = now_ms; }
         bool low_confirmed = too_low && !in.lid_open &&
             (!in.lid_pause_on || now_ms - low_since_ >= LOW_CONFIRM_MS);
 
