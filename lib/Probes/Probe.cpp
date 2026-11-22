@@ -243,6 +243,11 @@ void Probe::set_name(String probe_name){
     Probe::name = probe_name;
 }
 
+void Probe::set_type_icon(String type_icon){
+    SharedLock lock;    // type_icon is read by the screen, web and mqtt tasks
+    Probe::type_icon = type_icon;
+}
+
 void Probe::set_offset(float offset_celcius){
     SharedLock lock;    // offset_celcius is read by the probes task on the next reading
     // A NaN offset makes every reading NaN, so the probe looks unplugged. Preferences returns NaN

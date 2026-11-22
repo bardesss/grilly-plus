@@ -106,7 +106,14 @@
     const status = Format.probeStatus(probe);
     card.dataset.status = status.kind;
     card.classList.toggle("alarming", !!probe.alarm);
-    card.querySelector(".probe-name").textContent = probe.probe_id + " · " + probe.name;
+    const nameEl = card.querySelector(".probe-name");
+    if (nameEl.dataset.key !== probe.probe_id + "|" + probe.name + "|" + (probe.type_icon || "")) {
+      nameEl.dataset.key = probe.probe_id + "|" + probe.name + "|" + (probe.type_icon || "");
+      nameEl.textContent = probe.probe_id + " · ";
+      const icon = Food.icon(probe.type_icon);
+      if (icon) nameEl.append(icon, " ");
+      nameEl.append(probe.name);
+    }
     card.querySelector(".probe-alarm").textContent = Format.alarmLabel(probe);
     card.querySelector(".value").textContent = Format.number(probe.temperature);
     card.querySelector(".unit").textContent = Format.unitSymbol(unit);

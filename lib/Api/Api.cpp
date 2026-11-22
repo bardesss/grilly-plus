@@ -20,7 +20,7 @@
 #include "Web.h"
 
 // Set this to config::json_buffer_size, cant do this dynamically
-char api_json_buffer[3000];
+char api_json_buffer[4096];
 
 void setup_api_routes()
 {

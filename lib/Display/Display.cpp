@@ -9,6 +9,7 @@
 #include <sstream>
 
 #include "Display.h"
+#include "FoodTypes.h"
 #include "Grill.h"
 #include "Probe.h"
 #include "Config.h"
@@ -321,13 +322,16 @@ bool disp::draw_screen_temp(void){
             if(i == 0) { y_offset = 16;}
             if(i == 1) { y_offset = 45;}
 
-            // probe name
-            screen.setFont(u8g2_font_profont10_tr); 
+            // probe name, with the food icon between the number and the name
+            screen.setFont(u8g2_font_profont10_tr);
             screen.drawStr(2, y_offset, "P :");
             screen.setCursor(7, y_offset); screen.print(connectedProbeInfo.second[i]);
-            String name = fit(current_active_name, 84 - 18);   // the timer starts at x 88, keep a gap
-            screen.setCursor(18, y_offset); screen.print(name);
-            blink_label(connectedProbeInfo.second[i], 0, y_offset - 8, 19 + screen.getStrWidth(name.c_str()), 10);
+            const uint8_t* icon = food::icon_10(get_food_icon(connectedProbeInfo.second[i]));
+            int name_x = icon ? 29 : 18;
+            if (icon) { screen.drawXBM(17, y_offset - 9, 10, 10, icon); }
+            String name = fit(current_active_name, 84 - name_x);   // the timer starts at x 88, keep a gap
+            screen.setCursor(name_x, y_offset); screen.print(name);
+            blink_label(connectedProbeInfo.second[i], 0, y_offset - 8, name_x + 1 + screen.getStrWidth(name.c_str()), 10);
 
             // status text
             screen.setCursor(88, y_offset); screen.printf(current_elapsed_time.c_str());
@@ -400,28 +404,33 @@ bool disp::draw_screen_temp(void){
                 screen.setCursor(x_offset + 5, y_offset); screen.print(connectedProbeInfo.second[i]);
                 blink_label(connectedProbeInfo.second[i], x_offset - 1, y_offset - 8, 13, 10);
 
+                // The food icon sits between the number and the name or status, which move over for it
+                const uint8_t* icon = food::icon_10(get_food_icon(connectedProbeInfo.second[i]));
+                int text_x = x_offset + (icon ? 26 : 16);
+                if (icon) { screen.drawXBM(x_offset + 14, y_offset - 9, 10, 10, icon); }
+
                 if (current_minimum_temp <= 0 and current_target_temp > 0 and current_active_temp > current_target_temp){
-                    screen.drawStr(x_offset+16, y_offset, "READY");
+                    screen.drawStr(text_x, y_offset, "READY");
                     screen.setDrawColor(2);
-                    screen.drawBox(x_offset+15, y_offset-7, 26, 8);
+                    screen.drawBox(text_x - 1, y_offset-7, 26, 8);
                     screen.setDrawColor(1);
                 }
                 else {
                     if(current_target_temp > 0 and current_active_temp > current_target_temp) {
-                        screen.drawStr(x_offset+16, y_offset, "HIGH");
+                        screen.drawStr(text_x, y_offset, "HIGH");
                         screen.setDrawColor(2);
-                        screen.drawBox(x_offset+15, y_offset-7, 21, 8);
+                        screen.drawBox(text_x - 1, y_offset-7, 21, 8);
                         screen.setDrawColor(1);
                     }
                     else if (current_active_temp < current_minimum_temp){
-                        screen.drawStr(x_offset+16, y_offset, get_lid_open(connectedProbeInfo.second[i]) ? "LID" : "LOW");
+                        screen.drawStr(text_x, y_offset, get_lid_open(connectedProbeInfo.second[i]) ? "LID" : "LOW");
                         screen.setDrawColor(2);
-                        screen.drawBox(x_offset+15, y_offset-7, 16, 8);
+                        screen.drawBox(text_x - 1, y_offset-7, 16, 8);
                         screen.setDrawColor(1);
                     }
                     else {
                         // probe name
-                        screen.setCursor(x_offset + 16, y_offset); screen.print(fit(current_active_name, 44));  
+                        screen.setCursor(text_x, y_offset); screen.print(fit(current_active_name, 60 - (text_x - x_offset)));
                     }
                 }
                 
@@ -464,9 +473,11 @@ bool disp::draw_screen_temp(void){
 
                 screen.printf("%.1f", get_temp(i + 1));
 
-                // Thermometer
+                // Food icon after the temperature, then the thermometer
+                const uint8_t* icon = food::icon_10(food::type_index(probes[i]->type_icon.c_str()));
+                if (icon) { screen.drawXBM(i < 4 ? 46 : 111, y - 9, 10, 10, icon); }
                 if (probes[i]->target_temperature > 0) {
-                    draw_thermometer(i < 4 ? 54 : 119, y - 10, get_temp(i + 1), probes[i]->target_temperature);
+                    draw_thermometer(i < 4 ? 57 : 122, y - 10, get_temp(i + 1), probes[i]->target_temperature);
                 }
             }
         }
@@ -495,8 +506,17 @@ bool disp::draw_screen_details(int connectedProbe){
     blink_label(connectedProbe, 1, 10, 23 + screen.getStrWidth(name.c_str()), 12);
     
     // probe temp 
-    screen.setFont(u8g2_font_profont29_tr); 
-    screen.setCursor(3, 42); screen.printf("%.1f", current_active_temp);      
+    screen.setFont(u8g2_font_profont29_tr);
+    char temp_text[12];
+    snprintf(temp_text, sizeof(temp_text), "%.1f", current_active_temp);
+    screen.drawStr(3, 42, temp_text);
+
+    // Food icon right of the temperature, when it fits left of the bar and its labels
+    const uint8_t* icon = food::icon_16(get_food_icon(connectedProbe));
+    int icon_x = 3 + screen.getStrWidth(temp_text) + 6;
+    if (icon && icon_x + 16 <= (current_target_temp > 0 ? 100 : 126)) {
+        screen.drawXBM(icon_x, 26, 16, 16, icon);
+    }
 
     // status text
     screen.setFont(u8g2_font_profont10_tr); 
@@ -707,6 +727,13 @@ bool disp::get_lid_open(int connectedProbe) {
         case 8: return grill::probe_8.lid_open;
         default: return false;
     }
+}
+
+int disp::get_food_icon(int connectedProbe) {
+    if (connectedProbe < 1 || connectedProbe > 8) { return -1; }
+    Probe* probes[] = {&grill::probe_1, &grill::probe_2, &grill::probe_3, &grill::probe_4,
+                       &grill::probe_5, &grill::probe_6, &grill::probe_7, &grill::probe_8};
+    return food::type_index(probes[connectedProbe - 1]->type_icon.c_str());
 }
 
 bool disp::get_stalled(int connectedProbe) {

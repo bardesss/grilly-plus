@@ -193,6 +193,7 @@ body.offline .live { opacity: .4; }
 .probe-card:active { transform: scale(.99); }
 .card-head { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--muted); }
 .probe-name { font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.probe-name .food-icon { width: 16px; height: 16px; vertical-align: -3px; stroke-width: 1.75; }
 .probe-temp { font-size: 40px; font-weight: 700; line-height: 1.15; margin-top: 2px; font-variant-numeric: tabular-nums; }
 .probe-temp .unit { font-size: 16px; font-weight: 500; color: var(--muted); margin-left: 3px; }
 .card-meta { display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; font-size: 13px; color: var(--muted); }
@@ -320,6 +321,17 @@ fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
 }
 .segmented input:checked + span { background: var(--accent); color: var(--on-accent); font-weight: 700; }
 .segmented input:focus-visible + span { outline: 3px solid var(--accent); outline-offset: 2px; }
+/* Food icon picker in the editor: a wrapping row of icon buttons */
+.food-picker { margin-top: 14px; }
+.food-picker .options { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px; border-radius: 12px; background: var(--bg); }
+.food-picker label { position: relative; }
+.food-picker input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.food-picker label > span:not(.visually-hidden) {
+  display: flex; align-items: center; justify-content: center; width: 44px; height: 44px;
+  border-radius: 9px; color: var(--muted); cursor: pointer;
+}
+.food-picker input:checked + span { background: var(--accent); color: var(--on-accent); }
+.food-picker input:focus-visible + span { outline: 3px solid var(--accent); outline-offset: 2px; }
 .stepper { display: flex; align-items: center; gap: 8px; padding: 6px; border: 1px solid var(--border); border-radius: 14px; background: var(--bg); }
 .step-btn {
   display: flex; align-items: center; justify-content: center; flex: 0 0 auto;

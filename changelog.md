@@ -11,11 +11,13 @@
 - Pushover notifications: paste your user key and the API token of an application you create on pushover.net. Ready and outside-the-range messages come with high priority
 - Webhook: every notification also goes as a JSON POST to a URL of your choice, for Home Assistant, Node-RED and the like. The body has the event (`ready`, `almost_ready`, `too_hot`, `too_cold`, `stall`, `battery_low`, `test`), the grill, the message, the unit, the probe (id, name, temperature, target, minimum) and the battery. The URL is kept secret like a password, because a Home Assistant webhook URL is its own key
 - Home Assistant discovery: with MQTT set up, the grill shows up in Home Assistant by itself as one device, with the temperature, target, time to target, stall and alarm of every probe, the battery, charging, WiFi signal, alarm, update available and a Mute alarm button. Probes that aren't plugged in show as unavailable, and the whole device when the grill is off. Switch it off under Settings > MQTT to remove the device
+- Food icons: every probe can have an icon for what's on it (beef, lamb, pork, poultry, fish, sausage, vegetables, pit or smoker, other). Picking a food sets it, or pick one in the probe editor. The grill shows it on its screen: next to the temperature with one probe, between the probe number and the name with two to four, after the temperature with five to eight. Beef and lamb are now separate groups in the food list
 
 ### API and MQTT
 - `GET /api/notify` (per service: `{"sending", "telegram": {"set_up", "last"}, "ntfy": {...}, "pushover": {...}, "webhook": {...}}`) and `POST /api/notify/test`; `telegram_token` (write-only, `telegram_token_set`), `telegram_chat_id`, `ntfy_url` (write-only, `ntfy_url_set` and `ntfy_server`), `ntfy_token` (write-only, `ntfy_token_set`), `pushover_user` and `pushover_token` (write-only, `pushover_user_set` and `pushover_token_set`), `webhook_url` (write-only, `webhook_url_set` and `webhook_server`) and `notify_ready`, `notify_almost`, `notify_outside`, `notify_stall`, `notify_battery` in the settings
 - `stalled` and `lid_open` for every probe in `/api/grill`, `/api/probes` and the MQTT `grill` and `probes` topics; `lid_pause_minutes` in the settings (0 to 30)
 - `mqtt_ha_discovery` in the settings (default on); the retained `<prefix>/<uuid>/status` topic (`online`, or `offline` as the last will); discovery configs under `homeassistant/`
+- `type_icon` for every probe in `/api/grill`, `/api/probes` and the MQTT `grill` and `probes` topics, settable through `POST /api/probes` and `/config/probes`
 
 ### Fixes
 - With the lid pause on, "too low" could beep right away instead of after 30 seconds below the minimum (about half the time)

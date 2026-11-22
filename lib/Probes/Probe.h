@@ -44,6 +44,7 @@ public:
 	String type = "grilleye_iris";						// The probe type
 	
 	String name = "Probe";      						// The probe name
+	String type_icon = "";								// Food type for the icon ("beef", ...), "" = none
 
 	float temperature;								    // The last known temperature for the chosen temperature_unit
 														// in the grill settings
@@ -116,6 +117,11 @@ public:
 	 * @param probe_name the name
 	 */
 	void set_name(String probe_name);
+
+	/**
+	 * @brief Set the food type for the icon, a key from FoodTypes or "" for none
+	 */
+	void set_type_icon(String type_icon);
 
 	/**
 	 * @brief Set the user calibration offset, added to the Celsius reading of a valid measurement
