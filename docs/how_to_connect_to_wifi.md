@@ -2,7 +2,7 @@
 
 This guide will walk you through connecting your device to a Wi-Fi network. Our firmware offers two ways to connect:
 
-* **Local Access Point (AP):** The device hosts its own temporary Wi-Fi network. This is used for initial setup and configuration, or if you dont want to connect your device to your own home Wi-Fi network. 
+* **Local Access Point (AP):** The device hosts its own temporary Wi-Fi network. This is used for initial setup and configuration, or if you don't want to connect your device to your own home Wi-Fi network. 
 * **Wi-Fi Client:** The device connects to your existing home Wi-Fi network, allowing you to access it from any other device on your network.
 
 ---
@@ -11,10 +11,10 @@ This guide will walk you through connecting your device to a Wi-Fi network. Our 
 
 First, you'll connect directly to the device to access its settings.
 
-1.  With the device powered on, press and hold the side button for **1-3 seconds** until you hear two short beeps. This will bring up the device's **Info Screen**.
+1.  With the device powered on, press and hold the side button for about **1 second** until you hear two short beeps, then let go. This will bring up the device's **Info Screen**. Don't hold it longer than 2 seconds: at three short beeps the device switches off.
 ![device infoscreen](screenshots/device_infoscreen_notconnected.png "device infoscreen")
 
-2.  On your phone or computer, open your Wi-Fi settings and connect to the network name (SSID) shown on the `L-SSID` line of the Info Screen. By default, this network has no password.
+2.  On your phone or computer, open your Wi-Fi settings and connect to the network name (SSID) shown on the `L-SSID` line of the Info Screen. The password is shown on the `L-PW` line below it. New and factory-reset devices get a generated password; a device upgraded from an older firmware without a hotspot password shows `(open)` there, and its network has no password.
     
 > [!Warning]
 > Your phone or PC might warn you that this network has "no internet connection." This is normal. If prompted, choose the option to **"Stay Connected"** or  **"Use this network anyway."**
