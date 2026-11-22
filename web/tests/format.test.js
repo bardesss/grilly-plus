@@ -125,3 +125,9 @@ test("alarmMessage says which probe and why", () => {
   assert.deepEqual(Format.alarmMessage(p(104, 120, 110, "Grill"), "fahrenheit"), { title: "Grill is too cold", detail: "104.0°F · range 110–120°" });
   assert.deepEqual(Format.alarmMessage(p(60, 0, 0, ""), "celcius"), { title: "Probe 2", detail: "60.0°C" });
 });
+
+test("progressNote shows the stall instead of the time to target", () => {
+  assert.equal(Format.progressNote({ stalled: true, eta_seconds: -1 }), "In the stall");
+  assert.equal(Format.progressNote({ stalled: false, eta_seconds: -1 }), "");
+  assert.equal(Format.progressNote({ stalled: false, eta_seconds: 4800 }), Format.eta(4800));
+});

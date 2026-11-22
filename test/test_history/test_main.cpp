@@ -209,6 +209,58 @@ void test_eta_for_probe_celcius_matches_eta_seconds(){
     TEST_ASSERT_EQUAL_INT32(h.eta_seconds(50.0f), eta_for_probe(h, true, 50.0f, 0.0f, false));
 }
 
+void test_stall_flat_in_the_band_with_the_target_above(){
+    feed(120, 70.0f, 0.01f);                            // 70.0 to 71.2 over 20 minutes
+    TEST_ASSERT_TRUE(h.stalled(93.0f));
+    TEST_ASSERT_TRUE(stalled_for_probe(h, true, 93.0f, 0.0f, false));
+    TEST_ASSERT_TRUE(stalled_for_probe(h, true, 200.0f, 0.0f, true));    // 93.3 C
+}
+
+void test_stall_needs_20_minutes(){
+    feed(119, 70.0f, 0.0f);
+    TEST_ASSERT_FALSE(h.stalled(93.0f));
+    feed(1, 70.0f, 0.0f);
+    TEST_ASSERT_TRUE(h.stalled(93.0f));
+}
+
+void test_stall_not_while_climbing(){
+    feed(120, 60.0f, 0.02f);                            // 2.4 degrees in 20 minutes
+    TEST_ASSERT_FALSE(h.stalled(93.0f));
+}
+
+void test_stall_only_between_60_and_80(){
+    feed(120, 50.0f, 0.0f);
+    TEST_ASSERT_FALSE(h.stalled(93.0f));
+    h.clear();
+    feed(120, 85.0f, 0.0f);
+    TEST_ASSERT_FALSE(h.stalled(93.0f));
+}
+
+void test_stall_not_near_the_target(){
+    feed(120, 70.0f, 0.0f);
+    TEST_ASSERT_FALSE(h.stalled(74.0f));                // 4 degrees to go
+    TEST_ASSERT_TRUE(h.stalled(75.0f));
+}
+
+void test_stall_only_in_target_mode(){
+    feed(120, 70.0f, 0.0f);
+    TEST_ASSERT_FALSE(stalled_for_probe(h, true, 120.0f, 60.0f, false));   // range
+    TEST_ASSERT_FALSE(stalled_for_probe(h, true, 0.0f, 0.0f, false));      // off
+    TEST_ASSERT_FALSE(stalled_for_probe(h, false, 93.0f, 0.0f, false));    // unplugged
+}
+
+void test_stall_survives_a_short_unplug_but_not_a_long_one(){
+    feed(110, 70.0f, 0.0f);
+    feed_unplugged(5);
+    feed(5, 70.0f, 0.0f);
+    TEST_ASSERT_TRUE(h.stalled(93.0f));                 // 115 of 120 valid
+    h.clear();
+    feed(100, 70.0f, 0.0f);
+    feed_unplugged(15);
+    feed(5, 70.0f, 0.0f);
+    TEST_ASSERT_FALSE(h.stalled(93.0f));                // 105 of 120 valid
+}
+
 int main(int argc, char** argv){
     UNITY_BEGIN();
     RUN_TEST(test_to_tenths);
@@ -234,5 +286,12 @@ int main(int argc, char** argv){
     RUN_TEST(test_eta_for_probe_unknown_when_target_is_zero);
     RUN_TEST(test_eta_for_probe_converts_fahrenheit_target);
     RUN_TEST(test_eta_for_probe_celcius_matches_eta_seconds);
+    RUN_TEST(test_stall_flat_in_the_band_with_the_target_above);
+    RUN_TEST(test_stall_needs_20_minutes);
+    RUN_TEST(test_stall_not_while_climbing);
+    RUN_TEST(test_stall_only_between_60_and_80);
+    RUN_TEST(test_stall_not_near_the_target);
+    RUN_TEST(test_stall_only_in_target_mode);
+    RUN_TEST(test_stall_survives_a_short_unplug_but_not_a_long_one);
     return UNITY_END();
 }

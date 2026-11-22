@@ -24,7 +24,7 @@ Grilly+ is a fork of [Free-Grilly](https://github.com/epiecs/free-grilly) by [Ep
 | | |
 |---|---|
 | 📱 **A real app, in your browser** | One card per probe with a live graph of the whole cook. Tap a card to set a name, a target temperature or a range. Works on any phone or computer, in dark or light mode. Nothing to install. |
-| ⏱️ **Know when it's done** | Grilly+ watches how fast each probe heats up and tells you when it'll reach its target: "ready in ~1h 20m" in the app, "in 1:20" on the grill's own screen. |
+| ⏱️ **Know when it's done** | Grilly+ watches how fast each probe heats up and tells you when it'll reach its target: "ready in ~1h 20m" in the app, "in 1:20" on the grill's own screen. During the stall it says so instead of guessing. |
 | 🔔 **Alarms that make sense** | It beeps when food is ready or the grill leaves its range. Mute it from your phone, and the app shows which probe went off. The probe's label blinks on the grill too. |
 | 🔄 **Updates with one tap** | The grill checks GitHub for new releases once a day. Tap **Install**, and a minute later it runs the new version. Every download is checksum-verified, and a failed update leaves the old version running. |
 | 🏠 **Plays well with your smart home** | MQTT for Home Assistant and friends, plus a documented local REST API. |
@@ -92,6 +92,7 @@ Grilly+ is a fork of [Free-Grilly](https://github.com/epiecs/free-grilly) by [Ep
 - **Probe editor:** name, alarm (off / target / range) with large steppers, probe type, calibration offset, and a large chart with temperature labels, a "30 min / Whole cook" switch, **Download CSV** and **Clear history**.
 - **Temperature history** on the grill: the last 30 minutes at 10 seconds per reading plus the whole cook at a coarser step, in a fixed ~5 KB, so even a 24-hour cook fits. It's kept until a restart, until a probe has been unplugged for more than 10 minutes, or until you clear it.
 - **Time to target**, worked out from the last 10 minutes of readings in target mode. After a sudden drop, such as opening the lid, it picks up again after about 3 minutes of climbing.
+- **Stall detection:** when brisket or pork shoulder sits flat for 20 minutes between 60 and 80 °C, the card says "In the stall" and the grill shows STALL, so you know why the time to target is gone.
 - **Alarm in the browser:** a dialog says which probe went off and why, with a big Mute button. The page beeps along with the grill, vibrates on Android and shows a bell in the tab title. Switch it off per browser under **Settings › This browser**.
 - **Mute** a sounding alarm from your phone. The card of the probe that triggered it is highlighted.
 - **Settings save themselves.** Network changes are applied together with one button, and every password field has a show/hide button.

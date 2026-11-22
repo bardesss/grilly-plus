@@ -80,7 +80,7 @@
     card.querySelector(".unit").textContent = Format.unitSymbol(unit);
     const statusText = probe.alarm ? ("Alarm" + (status.text ? " · " + status.text : "")) : status.text;
     card.querySelector(".probe-status").textContent = statusText;
-    const eta = Format.eta(probe.eta_seconds);
+    const eta = Format.progressNote(probe);
     const time = card.querySelector(".probe-time");
     time.textContent = eta || Format.duration(probe.connected_seconds);
     time.classList.toggle("eta", eta !== "");

@@ -96,6 +96,12 @@ const Format = (() => {
     return "";
   }
 
+  // What goes where the time to target is shown: "In the stall", "ready in ~1h 20m" or ""
+  function progressNote(probe) {
+    if (probe.stalled) return "In the stall";
+    return eta(probe.eta_seconds);
+  }
+
   // What the alarm dialog says about one alarming probe: { title, detail }
   function alarmMessage(probe, unit) {
     const now = temperature(probe.temperature, unit);
@@ -177,7 +183,7 @@ const Format = (() => {
     return Math.floor(left / 60) + ":" + String(left % 60).padStart(2, "0");
   }
 
-  return { alarmMessage, countdown, checkedAgo, updateStatus, unitSymbol, number, temperature, signal, battery, batteryDiagnostics, resetReasonText,
+  return { progressNote, alarmMessage, countdown, checkedAgo, updateStatus, unitSymbol, number, temperature, signal, battery, batteryDiagnostics, resetReasonText,
            offReasonText, alarmMode, probeStatus, alarmLabel, duration, ago, eta, emptySockets, changedFields };
 })();
 

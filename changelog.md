@@ -2,8 +2,15 @@
 
 ## Unreleased
 
+### New
+- Stall detection: when a probe in target mode stays within 1.5° for 20 minutes somewhere between 60 and 80 °C, with the target at least 5° higher, the app shows "In the stall" where the time to target goes and the grill's screen shows STALL. It ends by itself once the temperature climbs again
+
+### API and MQTT
+- `stalled` for every probe in `/api/grill`, `/api/probes` and the MQTT `grill` and `probes` topics
+
 ### Fixes
 - Install from GitHub with an admin password set but not filled in: the confirmation closed and only a small line said why. The app now asks for the password before the confirmation, and scrolls to the field
+- When the browser closed the confirmation by itself (Android's back gesture, Escape twice), Install and Apply did nothing until the page was reloaded
 
 ## 2026-11-22.1
 Alarm dialog, food presets, CSV export and a reset for a forgotten admin password. Grills on 2026-11-22 find this release under Settings > Firmware updates and install it with one tap; older versions install the `-ota.bin` file there.

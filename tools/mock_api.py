@@ -125,8 +125,14 @@ def history(only_probe=None):
     return {"probes": result}
 
 
+# Mock-only: probe_ids that report stalled, toggled with POST /api/_mock/stall {"probe_id": n}
+STALLED = set()
+
+
 def eta_seconds(probe):
     """The mock's curve rises 0.1 degree per minute; only target mode below the target has an eta."""
+    if probe["probe_id"] in STALLED:
+        return -1
     if not probe["connected"] or probe["target_temperature"] <= 0 or probe["minimum_temperature"] > 0:
         return -1
     remaining = probe["target_temperature"] - temperature(probe)
@@ -152,14 +158,16 @@ def grill():
              "minimum_temperature": p["minimum_temperature"], "target_temperature": p["target_temperature"],
              "connected": p["connected"],
              "connected_seconds": int(time.time() - CONNECTED_AT[p["probe_id"]]) if p["connected"] else 0,
-             "alarm": p["probe_id"] == ALARM_PROBE_ID, "eta_seconds": eta_seconds(p)}
+             "alarm": p["probe_id"] == ALARM_PROBE_ID, "eta_seconds": eta_seconds(p),
+             "stalled": p["probe_id"] in STALLED}
             for p in PROBES
         ],
     }
 
 
 def probes():
-    return [dict(p, temperature=temperature(p), eta_seconds=eta_seconds(p)) for p in PROBES]
+    return [dict(p, temperature=temperature(p), eta_seconds=eta_seconds(p), stalled=p["probe_id"] in STALLED)
+            for p in PROBES]
 
 
 # Kept here because SETTINGS only says whether it is set, like the firmware
@@ -295,6 +303,14 @@ def handle(method, path, body, headers=None, query=""):
         ALARM_SOUNDING = False
         ALARM_PROBE_ID = None
         return 200, {"success": True}
+    if method == "POST" and path == "/api/_mock/stall":
+        # Mock-only helper: switches the stall on or off for a probe
+        try:
+            probe_id = int(json.loads(body or "{}").get("probe_id", 0))
+        except (ValueError, AttributeError):
+            return 400, {"error": "Could not deserialize json"}
+        STALLED.symmetric_difference_update({probe_id})
+        return 200, {"stalled": sorted(STALLED)}
     if method == "POST" and path == "/api/_mock/alarm":
         # Mock-only helper, not part of the real firmware API: lets the web app be tested without hardware.
         ALARM_SOUNDING = True
