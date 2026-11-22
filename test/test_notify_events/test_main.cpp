@@ -164,6 +164,38 @@ void test_telegram_errors(){
     TEST_ASSERT_EQUAL_STRING("Telegram answered 502", out);
 }
 
+void test_ntfy_split(){
+    char server[64], topic[65];
+    TEST_ASSERT_TRUE(ntfy_split("https://ntfy.sh/my-grill_42", server, sizeof(server), topic, sizeof(topic)));
+    TEST_ASSERT_EQUAL_STRING("https://ntfy.sh", server);
+    TEST_ASSERT_EQUAL_STRING("my-grill_42", topic);
+    TEST_ASSERT_TRUE(ntfy_split("http://192.168.1.5:8080/grill", server, sizeof(server), topic, sizeof(topic)));
+    TEST_ASSERT_EQUAL_STRING("http://192.168.1.5:8080", server);
+    TEST_ASSERT_TRUE(ntfy_split("https://example.com/ntfy/grill", server, sizeof(server), topic, sizeof(topic)));
+    TEST_ASSERT_EQUAL_STRING("https://example.com/ntfy", server);
+}
+
+void test_ntfy_split_refuses_what_ntfy_would_refuse(){
+    char server[64], topic[65];
+    const char* bad[] = {"", "ntfy.sh/grill", "ftp://ntfy.sh/grill", "https://ntfy.sh", "https://ntfy.sh/",
+                         "https:///grill", "https://ntfy.sh/my grill", "https://ntfy.sh/grill?x=1",
+                         "https://ntfy.sh/a.b"};
+    for(const char* url : bad){ TEST_ASSERT_FALSE_MESSAGE(ntfy_split(url, server, sizeof(server), topic, sizeof(topic)), url); }
+    char tiny[8];
+    TEST_ASSERT_FALSE(ntfy_split("https://ntfy.sh/grill", tiny, sizeof(tiny), topic, sizeof(topic)));
+}
+
+void test_ntfy_priority_and_errors(){
+    TEST_ASSERT_EQUAL(4, ntfy_priority(READY));
+    TEST_ASSERT_EQUAL(4, ntfy_priority(TOO_COLD));
+    TEST_ASSERT_EQUAL(3, ntfy_priority(STALL));
+    char out[160];
+    ntfy_error(out, sizeof(out), 403, "{\"code\":40301,\"http\":403,\"error\":\"forbidden\"}");
+    TEST_ASSERT_EQUAL_STRING("ntfy: forbidden, check the access token", out);
+    ntfy_error(out, sizeof(out), 500, "oops");
+    TEST_ASSERT_EQUAL_STRING("ntfy answered 500", out);
+}
+
 int main(int argc, char** argv){
     UNITY_BEGIN();
     RUN_TEST(test_almost_then_ready_once);
@@ -185,5 +217,8 @@ int main(int argc, char** argv){
     RUN_TEST(test_messages);
     RUN_TEST(test_message_is_cut_not_overflowed);
     RUN_TEST(test_telegram_errors);
+    RUN_TEST(test_ntfy_split);
+    RUN_TEST(test_ntfy_split_refuses_what_ntfy_would_refuse);
+    RUN_TEST(test_ntfy_priority_and_errors);
     return UNITY_END();
 }

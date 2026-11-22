@@ -7,6 +7,7 @@
 #include "Grill.h"
 #include "GrillConfig.h"
 #include "JsonUtilities.h"
+#include "NotifyEvents.h"
 #include "Probe.h"
 #include "SharedLock.h"
 #include "Updater.h"
@@ -325,6 +326,8 @@ void JsonUtilities::load_json_settings(char* buffer){
 
     jsondoc["telegram_token_set"]        = config::telegram_token.length() > 0;
     jsondoc["telegram_chat_id"]          = config::telegram_chat_id;
+    jsondoc["ntfy_url"]                  = config::ntfy_url;
+    jsondoc["ntfy_token_set"]            = config::ntfy_token.length() > 0;
     jsondoc["notify_ready"]              = config::notify_ready;
     jsondoc["notify_almost"]             = config::notify_almost;
     jsondoc["notify_outside"]            = config::notify_outside;
@@ -399,6 +402,8 @@ jsonResult JsonUtilities::save_json_settings(char* raw_json, bool admin_authoriz
 
             fields.text("telegram_token",               config::telegram_token);
             fields.text("telegram_chat_id",             config::telegram_chat_id);
+            fields.text("ntfy_url",                     config::ntfy_url);
+            fields.text("ntfy_token",                   config::ntfy_token);
             fields.boolean("notify_ready",              config::notify_ready);
             fields.boolean("notify_almost",             config::notify_almost);
             fields.boolean("notify_outside",            config::notify_outside);
@@ -444,6 +449,15 @@ jsonResult JsonUtilities::save_json_settings(char* raw_json, bool admin_authoriz
             }
         }
 
+        if(check.present("ntfy_url")){
+            String url = json_data["ntfy_url"].as<String>();
+            url.trim();
+            char server[160], topic[65];
+            if(!url.isEmpty() && !notify::ntfy_split(url.c_str(), server, sizeof(server), topic, sizeof(topic))){
+                return {false, "ntfy_url should be empty or look like https://ntfy.sh/your-topic"};
+            }
+        }
+
         if(check.present("temperature_unit")){
             String unit = json_data["temperature_unit"].as<String>();
             if(unit != "celcius" && unit != "fahrenheit"){
@@ -457,6 +471,8 @@ jsonResult JsonUtilities::save_json_settings(char* raw_json, bool admin_authoriz
         // Pasted tokens and chat IDs often carry a space or a newline
         config::telegram_token.trim();
         config::telegram_chat_id.trim();
+        config::ntfy_url.trim();
+        config::ntfy_token.trim();
 
         // Set default value for empty topics
         if(config::mqtt_topic.length() == 0){

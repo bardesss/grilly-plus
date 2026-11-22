@@ -145,4 +145,53 @@ void telegram_error(char* out, size_t size, int status, const char* body){
     }
 }
 
+bool ntfy_split(const char* url, char* server, size_t server_size, char* topic, size_t topic_size){
+    if(url == nullptr){ return false; }
+    const char* host = nullptr;
+    if(strncmp(url, "https://", 8) == 0){ host = url + 8; }
+    else if(strncmp(url, "http://", 7) == 0){ host = url + 7; }
+    else { return false; }
+
+    const char* slash = strrchr(host, '/');
+    if(slash == nullptr || slash == host){ return false; }           // no topic, or no host
+    const char* name = slash + 1;
+    size_t name_length = strlen(name);
+    if(name_length == 0 || name_length > 64){ return false; }
+    for(const char* p = name; *p; p++){
+        bool ok = (*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z') || (*p >= '0' && *p <= '9') || *p == '-' || *p == '_';
+        if(!ok){ return false; }
+    }
+    for(const char* p = host; p < slash; p++){
+        if(*p == ' ' || *p == '?' || *p == '#'){ return false; }
+    }
+
+    size_t server_length = (size_t)(slash - url);
+    if(server_length + 1 > server_size || name_length + 1 > topic_size){ return false; }
+    memcpy(server, url, server_length);
+    server[server_length] = 0;
+    memcpy(topic, name, name_length + 1);
+    return true;
+}
+
+int ntfy_priority(uint8_t event){
+    return (event == READY || event == TOO_HOT || event == TOO_COLD) ? 4 : 3;
+}
+
+void ntfy_error(char* out, size_t size, int status, const char* body){
+    JsonDocument doc;
+    const char* error = nullptr;
+    if(body != nullptr && deserializeJson(doc, body) == DeserializationError::Ok){
+        error = doc["error"] | (const char*)nullptr;
+    }
+    const char* hint = "";
+    if(status == 401 || status == 403){ hint = ", check the access token"; }
+    else if(status == 404){ hint = ", check the topic URL"; }
+    else if(status == 429){ hint = ", too many messages for now"; }
+    if(error != nullptr){
+        snprintf(out, size, "ntfy: %s%s", error, hint);
+    } else {
+        snprintf(out, size, "ntfy answered %d%s", status, hint);
+    }
+}
+
 }  // namespace notify

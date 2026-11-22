@@ -1,6 +1,7 @@
 """Mock grill API for tools/dev_server.py --mock: realistic data for development and screenshots."""
 import base64
 import json
+import re
 import time
 import urllib.parse
 
@@ -15,7 +16,8 @@ ALARM_PROBE_ID = None
 SETTINGS = {
     "name": "Big Green Egg", "uuid": "43c62ed2-4dc0-41a5-8f71-16db60155739", "firmware_version": "26.09.27",
     "temperature_unit": "celcius", "beep_enabled": True, "beep_volume": 4, "beep_degrees_before": 5, "lid_pause_minutes": 5,
-    "telegram_token_set": False, "telegram_chat_id": "", "notify_ready": True, "notify_almost": True,
+    "telegram_token_set": False, "telegram_chat_id": "",
+    "ntfy_url": "", "ntfy_token_set": False, "notify_ready": True, "notify_almost": True,
     "notify_outside": True, "notify_stall": True, "notify_battery": True,
     "beep_outside_target": True, "beep_on_ready": True, "cucaracha_enabled": False,
     "screen_timeout_minutes": 0, "backlight_timeout_minutes": 5, "backlight_brightness": 4,
@@ -127,19 +129,35 @@ def history(only_probe=None):
     return {"probes": result}
 
 
-# The last notification: {"at": seconds, "error": "", "test": bool}, sent 2 s after it was queued
-NOTIFY_LAST = None
+# The last notification per service: {"at": seconds, "error": "", "test": bool}, sent 2 s after it was queued
+NOTIFY_LAST = {}
+
+
+def notify_set_up():
+    return {"telegram": bool(SETTINGS["telegram_token_set"] and SETTINGS["telegram_chat_id"]),
+            "ntfy": bool(SETTINGS["ntfy_url"])}
 
 
 def notify_status():
-    set_up = bool(SETTINGS["telegram_token_set"] and SETTINGS["telegram_chat_id"])
-    last = NOTIFY_LAST
-    if last is not None and time.time() < last["at"]:
-        return {"telegram": {"set_up": set_up}, "sending": True, "last": None}
-    if last is None:
-        return {"telegram": {"set_up": set_up}, "sending": False, "last": None}
-    return {"telegram": {"set_up": set_up}, "sending": False, "last": {
-        "ok": last["error"] == "", "error": last["error"], "seconds_ago": int(time.time() - last["at"]), "test": last["test"]}}
+    now = time.time()
+    result = {"sending": any(now < last["at"] for last in NOTIFY_LAST.values())}
+    for service, set_up in notify_set_up().items():
+        last = NOTIFY_LAST.get(service)
+        if last is None or now < last["at"]:
+            result[service] = {"set_up": set_up, "last": None}
+        else:
+            result[service] = {"set_up": set_up, "last": {"ok": last["error"] == "", "error": last["error"],
+                                                          "seconds_ago": int(now - last["at"]), "test": last["test"]}}
+    return result
+
+
+def notify_error(service):
+    """Mock: Telegram chat ID "0" and an ntfy topic ending in "-denied" play a refused message."""
+    if service == "telegram" and SETTINGS["telegram_chat_id"] == "0":
+        return "Telegram: Bad Request: chat not found, check the chat ID and send the bot a message first"
+    if service == "ntfy" and SETTINGS["ntfy_url"].endswith("-denied"):
+        return "ntfy: forbidden, check the access token"
+    return ""
 
 
 # Mock-only: probe_ids that report stalled, toggled with POST /api/_mock/stall {"probe_id": n}
@@ -352,13 +370,11 @@ def handle(method, path, body, headers=None, query=""):
     if method == "GET" and path == "/api/notify":
         return 200, notify_status()
     if method == "POST" and path == "/api/notify/test":
-        if not (SETTINGS["telegram_token_set"] and SETTINGS["telegram_chat_id"]):
-            return 400, {"error": "Telegram isn't set up: save a bot token and chat ID first"}
-        global NOTIFY_LAST
-        # Mock: chat ID "0" plays a refused message
-        error = "Telegram: Bad Request: chat not found, check the chat ID and send the bot a message first" \
-            if SETTINGS["telegram_chat_id"] == "0" else ""
-        NOTIFY_LAST = {"at": time.time() + 2, "error": error, "test": True}
+        set_up = [service for service, ok in notify_set_up().items() if ok]
+        if not set_up:
+            return 400, {"error": "No notifications are set up yet: save Telegram or ntfy first"}
+        for delay, service in enumerate(set_up):
+            NOTIFY_LAST[service] = {"at": time.time() + 2 + delay, "error": notify_error(service), "test": True}
         return 202, {"success": True}
     if method == "GET" and path == "/api/settings":
         return 200, SETTINGS
@@ -367,6 +383,9 @@ def handle(method, path, body, headers=None, query=""):
         password = update.get("local_ap_password")
         if password and len(password) < 8:
             return 400, {"error": "local_ap_password should be empty or at least 8 characters"}
+        url = update.get("ntfy_url")
+        if url and not re.match(r"^https?://[^/\s?#]+(/[^\s?#]*)?/[A-Za-z0-9_-]{1,64}$", url.strip()):
+            return 400, {"error": "ntfy_url should be empty or look like https://ntfy.sh/your-topic"}
         for key, (low, high) in NUMBER_LIMITS.items():
             if key in update and not low <= int(update[key] or 0) <= high:
                 return 400, {"error": "%s should be between %d and %d" % (key, low, high)}
@@ -375,7 +394,7 @@ def handle(method, path, body, headers=None, query=""):
         for key, value in update.items():
             if key == "admin_password":
                 ADMIN_PASSWORD = value
-            if key.endswith("_password") or key == "telegram_token":
+            if key.endswith("_password") or key in ("telegram_token", "ntfy_token"):
                 SETTINGS[key + "_set"] = value != ""
             else:
                 SETTINGS[key] = value

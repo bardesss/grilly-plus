@@ -76,4 +76,15 @@ void battery_message(char* out, size_t size, const char* grill_name, int percent
 // Why Telegram refused a message, from its HTTP status and answer ({"ok":false,"description":"..."})
 void telegram_error(char* out, size_t size, int status, const char* body);
 
+// Splits an ntfy topic URL, "https://ntfy.sh/my-topic" or "http://192.168.1.5:8080/grill", into the
+// server ("https://ntfy.sh") and the topic ("my-topic"). False when it isn't http(s)://host/topic with
+// a topic of letters, digits, - and _ (at most 64), which is what ntfy accepts.
+bool ntfy_split(const char* url, char* server, size_t server_size, char* topic, size_t topic_size);
+
+// ntfy's priority for an event, 1 (min) to 5 (max): 4 for ready and outside the range, 3 otherwise
+int ntfy_priority(uint8_t event);
+
+// Why ntfy refused a message, from its HTTP status and answer ({"code":40101,"http":401,"error":"..."})
+void ntfy_error(char* out, size_t size, int status, const char* body);
+
 }  // namespace notify
