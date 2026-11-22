@@ -61,7 +61,6 @@ bool is_newer(const char* candidate, const char* current){
 
 void release_filter(JsonDocument& filter){
     filter["tag_name"] = true;
-    filter["body"]     = true;
     JsonObject asset = filter["assets"].add<JsonObject>();
     asset["name"]                 = true;
     asset["browser_download_url"] = true;
@@ -74,7 +73,6 @@ const char* read_release(JsonVariantConst release, Release& out){
     const char* tag = release["tag_name"] | "";
     if(!parse_version(tag).valid || strlen(tag) >= sizeof(out.version)){ return "The release has no valid version"; }
     copy_text(out.version, sizeof(out.version), tag);
-    copy_text(out.notes, sizeof(out.notes), release["body"] | "");
 
     for(JsonVariantConst asset : release["assets"].as<JsonArrayConst>()){
         const char* name = asset["name"] | "";

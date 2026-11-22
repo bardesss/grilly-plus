@@ -67,7 +67,6 @@ void test_read_release_picks_the_ota_file(){
     TEST_ASSERT_EQUAL_STRING(OTA_URL, r.url);
     TEST_ASSERT_EQUAL_STRING(OTA_SHA, r.sha256);
     TEST_ASSERT_EQUAL_UINT32(1262368, r.size);
-    TEST_ASSERT_EQUAL_STRING("## 2026-09-28.2\nGraphs", r.notes);
 }
 
 void test_read_release_lowercases_the_checksum(){
@@ -98,13 +97,19 @@ void test_read_release_without_ota_file_or_version(){
     TEST_ASSERT_NOT_NULL(read_release(doc.as<JsonVariantConst>(), r));
 }
 
-void test_notes_are_cut_on_a_character_boundary(){
-    std::string body(599, 'a');
-    body += "\xc3\xa9";   // "e acute", two bytes, would straddle the 600 byte limit
-    body += "tail";
+void test_the_filter_leaves_out_long_notes(){
+    // 26.11.22.1 kept the whole body and ran out of memory on a 6 KB one
+    std::string body(20000, 'a');
+    std::string json = release_json(OTA_URL, "sha256:41933d1a1784d19b399b4b1743285291a3a41158e18a7894437e90cdda614a05", body.c_str());
+    JsonDocument filter;
+    release_filter(filter);
+    JsonDocument doc;
+    TEST_ASSERT_FALSE(deserializeJson(doc, json, DeserializationOption::Filter(filter)));
+    TEST_ASSERT_TRUE(doc["body"].isNull());
+    TEST_ASSERT_TRUE(measureJson(doc) < 1000);
     Release r;
-    TEST_ASSERT_NULL(read(release_json(OTA_URL, "sha256:41933d1a1784d19b399b4b1743285291a3a41158e18a7894437e90cdda614a05", body.c_str()), r));
-    TEST_ASSERT_EQUAL_INT(599, (int)strlen(r.notes));
+    TEST_ASSERT_NULL(read_release(doc.as<JsonVariantConst>(), r));
+    TEST_ASSERT_EQUAL_STRING(OTA_URL, r.url);
 }
 
 void test_battery_gate(){
@@ -122,7 +127,7 @@ int main(int argc, char** argv){
     RUN_TEST(test_read_release_needs_a_checksum);
     RUN_TEST(test_read_release_only_trusts_this_repository);
     RUN_TEST(test_read_release_without_ota_file_or_version);
-    RUN_TEST(test_notes_are_cut_on_a_character_boundary);
+    RUN_TEST(test_the_filter_leaves_out_long_notes);
     RUN_TEST(test_battery_gate);
     return UNITY_END();
 }

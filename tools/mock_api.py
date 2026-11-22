@@ -32,7 +32,6 @@ SETTINGS = {
 
 # Mock-only: the update offered by "GitHub". check flips state to "checking" for 3 s; install "finishes" after 20 s.
 UPDATE_LATEST = "26.10.03"
-UPDATE_NOTES = "## 2026-10-03" + chr(10) + "- Update straight from GitHub" + chr(10) + "- Small fixes"
 UPDATE_CHECKED_AT = time.time() - 2 * 3600
 UPDATE_CHECKING_UNTIL = 0.0
 LAST_CHECK_REQUEST = 0.0
@@ -65,7 +64,7 @@ def update_latest():
         "current": SETTINGS["firmware_version"], "latest": UPDATE_LATEST, "available": available,
         "checked_seconds_ago": int(time.time() - UPDATE_CHECKED_AT),
         "state": "checking" if time.time() < UPDATE_CHECKING_UNTIL else "idle", "error": "",
-        "notes": UPDATE_NOTES, "size": 1262368, "last_install_error": "",
+        "size": 1262368, "last_install_error": "",
     }
 
 

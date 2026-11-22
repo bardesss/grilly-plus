@@ -26,10 +26,10 @@ struct Release {
     char     url[256]    = "";
     char     sha256[65]  = "";     // lowercase hex
     uint32_t size        = 0;
-    char     notes[601]  = "";     // the start of the release notes, cut on a character boundary
 };
 
-// Keeps only tag_name, body and assets[].name/browser_download_url/size/digest of the ~10 KB answer
+// Keeps only tag_name and assets[].name/browser_download_url/size/digest of the answer. The release
+// notes (body) are left out: they can be any length, and a long body ran the grill out of memory.
 void release_filter(JsonDocument& filter);
 // Reads a GitHub "latest release" object. nullptr when usable, otherwise why not.
 const char* read_release(JsonVariantConst release, Release& out);

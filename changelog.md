@@ -1,5 +1,14 @@
 # Changelog (firmware only)
 
+## Unreleased
+
+### Fixes
+- Checking for updates could fail with "GitHub's answer couldn't be read (NoMemory)" when a release had long notes. The grill no longer reads the release notes; **What's new in this release** links to them on GitHub instead
+- **Check now** gave no feedback: the status stayed as it was until the check was done, and often the app stopped waiting before then. It now says "Checking GitHub…" right away and shows the result when it's in
+
+### API
+- `notes` is gone from `GET /api/update/latest`
+
 ## 2026-11-22.2
 Phone notifications (Telegram, ntfy, Pushover, a webhook), Home Assistant discovery, stall and lid-open detection, a forecast on the graph, food icons on the grill screen and your own food presets. Grills on 2026-11-22 or later find this release under Settings > Firmware updates and install it with one tap; older versions install the `-ota.bin` file there.
 

@@ -172,7 +172,7 @@ While the app is open, an alarm opens a dialog that says which probe went off an
 
 ### From GitHub (recommended)
 
-1. Open the web app and go to **Settings**, then **Firmware updates**. When a new release is out, it says "*version* is available" and the Settings tab shows a dot. **What's new** shows the release notes; **Check now** checks right away instead of waiting for the daily check.
+1. Open the web app and go to **Settings**, then **Firmware updates**. When a new release is out, it says "*version* is available" and the Settings tab shows a dot. **What's new in this release** opens the release notes on GitHub; **Check now** checks right away instead of waiting for the daily check.
 2. If you set an admin password, enter it under **Current admin password**.
 3. Tap **Install** and confirm. Keep the grill on the charger or above 30 % battery.
 4. The grill restarts into update mode: the screen dims and shows a progress bar. After about a minute it restarts into the new version and the page reloads. If anything goes wrong, it keeps the old version and the app tells you why.

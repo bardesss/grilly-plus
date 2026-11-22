@@ -2,7 +2,7 @@
 (() => {
   let version, adminInput, adminRemove, warning, note, fileInput, authField, authInput, updateButton, progress, notice;
   let saver;
-  let ghStatus, ghDetails, ghNotes, ghInstall, ghCheck, ghFailed, ghNotice;
+  let ghStatus, ghNotes, ghInstall, ghCheck, ghFailed, ghNotice;
   let latest = null;       // last answer of /api/update/latest
   let busy = false;        // a check or install is running
   let retryAdmin = null;   // an admin password change waiting for the right current password
@@ -10,6 +10,7 @@
   let resetUntil = 0;      // Date.now() when the code on the grill's screen runs out
   let resetTimer = null;
 
+  const RELEASES = "https://github.com/bardesss/grilly-plus/releases/";
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
   // After the restart the grill takes a few seconds to come back, poll until it answers
@@ -171,8 +172,8 @@
     const available = view.kind === "available";
     ghStatus.textContent = view.text;
     ghStatus.classList.toggle("update-available", available);
-    ghDetails.hidden = !available || !latest.notes;
-    ghNotes.textContent = available ? latest.notes : "";
+    ghNotes.hidden = !available;
+    if (available) ghNotes.href = RELEASES + "tag/" + encodeURIComponent(latest.latest);
     ghInstall.hidden = !available;
     if (available) ghInstall.textContent = "Install " + latest.latest;
     ghInstall.disabled = busy;
@@ -196,6 +197,8 @@
     busy = true;
     ghNotice.textContent = "";
     renderLatest();
+    ghStatus.textContent = "Checking GitHub…";
+    ghStatus.classList.remove("update-available");
     try {
       await Api.post("/api/update/check", {});
       const deadline = Date.now() + 30000;
@@ -204,6 +207,7 @@
         await sleep(2000);
         await loadLatest();
       }
+      if (latest && latest.state === "checking") ghNotice.textContent = "GitHub is slow to answer. Open Settings again in a minute to see the result.";
     } catch (error) {
       ghNotice.textContent = error.message;
     } finally {
@@ -274,7 +278,7 @@
       '</div>' +
       '<h3 class="subheading first">Update from GitHub</h3>' +
       '<p class="update-status" role="status" data-gh-status>Not checked yet</p>' +
-      '<details class="update-notes" data-gh-details hidden><summary>What&#39;s new</summary><p data-gh-notes></p></details>' +
+      '<p class="update-notes"><a data-gh-notes target="_blank" rel="noopener" hidden>What&#39;s new in this release</a></p>' +
       '<p class="warning" data-gh-failed hidden></p>' +
       '<div class="update-actions">' +
       '<button type="button" class="button primary" data-gh-install hidden>Install</button>' +
@@ -305,7 +309,6 @@
     progress = card.querySelector(".progress");
     notice = card.querySelector("[data-file-notice]");
     ghStatus = card.querySelector("[data-gh-status]");
-    ghDetails = card.querySelector("[data-gh-details]");
     ghNotes = card.querySelector("[data-gh-notes]");
     ghInstall = card.querySelector("[data-gh-install]");
     ghCheck = card.querySelector("[data-gh-check]");

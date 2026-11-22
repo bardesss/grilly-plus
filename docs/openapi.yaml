@@ -1192,10 +1192,6 @@ paths:
                     type: string
                     example: ""
                     description: Why the last check failed, empty when it worked.
-                  notes:
-                    type: string
-                    example: "Adds the update check"
-                    description: Release notes of the latest release, cut off at 600 bytes.
                   size:
                     type: integer
                     example: 1262368
