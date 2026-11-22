@@ -313,7 +313,17 @@ void tick(){
         load_install_error();
     }
 
-    if(!grill::wifi_connected){ wifi_since_ms = 0; return; }
+    if(!grill::wifi_connected){
+        wifi_since_ms = 0;
+        SharedLock lock;    // the check state
+        if(check_requested){
+            // Asked for while WiFi was up; don't leave the app waiting on "checking"
+            check_requested = false;
+            state           = "error";
+            check_error     = "The grill isn't connected to WiFi";
+        }
+        return;
+    }
     if(wifi_since_ms == 0){ wifi_since_ms = now != 0 ? now : 1; }
 
     {
@@ -345,6 +355,9 @@ int request_check(){
     SharedLock lock;    // the check state
     if(check_running || (ever_checked && millis() - last_check_start_ms < CHECK_REQUEST_GAP_MS)){ return 429; }
     check_requested = true;
+    // Right away, not at the next tick: the app reads the state straight after asking and
+    // stopped waiting when it still said "idle", so Check now looked like it did nothing
+    state = "checking";
     return 202;
 }
 
@@ -408,7 +421,6 @@ void status_json(JsonObject out){
     out["checked_seconds_ago"] = ever_succeeded ? (long)((millis() - last_success_ms) / 1000) : -1L;
     out["state"]               = state;
     out["error"]               = check_error;
-    out["notes"]               = has_offer ? (const char*)offered.notes : "";
     out["size"]                = has_offer ? offered.size : 0;
     out["last_install_error"]  = last_install_error;
 }
