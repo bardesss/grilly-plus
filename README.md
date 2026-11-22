@@ -386,7 +386,7 @@ The web app lives in `web/`: plain HTML, CSS and JavaScript, with no build step 
 2. Run `python tools/dev_server.py --mock` for mock data, or `python tools/dev_server.py <grill-ip>` to use a real grill.
 3. Open http://localhost:8000 and reload after each change.
 
-`pio run` builds the web app into the firmware automatically.
+`pio run` builds the web app into the firmware automatically: one gzipped page, without comments and indentation, at most 50 KB. Comments are free, so write them; just keep strings and template literals on one line, because lines are trimmed.
 
 Tests (they also run in CI on every pull request):
 
