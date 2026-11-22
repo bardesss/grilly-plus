@@ -215,6 +215,8 @@ components:
                   In range mode, true after a sharp drop (8 °C within a minute, like opening the lid)
                   until the temperature is back within 2 °C or lid_pause_minutes are over. The "too
                   low" alarm waits meanwhile.
+              type_icon:
+                $ref: '#/components/schemas/TypeIcon'
             example:
               probe_id: 1
               name: Ambient Probe
@@ -323,6 +325,8 @@ components:
             - null
           default: 4250
           description: The reference beta coefficient value from the spec sheet - only used with type CUSTOM
+        type_icon:
+          $ref: '#/components/schemas/TypeIcon'
         offset_celcius:
           type:
             - "number"
@@ -416,6 +420,15 @@ components:
             - wpa2_wpa3_psk
             - wpapi_psk
             - unknown
+
+    TypeIcon:
+      type: string
+      enum: ["", beef, lamb, pork, poultry, fish, sausage, vegetables, pit, other]
+      default: ""
+      example: beef
+      description: >-
+        The food type, shown as an icon on the probe's card and on the grill's screen. "" = no icon.
+        Saved per socket, like the name.
 
     NotifyService:
       type: object

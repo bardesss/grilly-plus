@@ -14,7 +14,7 @@
 #include "SharedLock.h"
 
 // Set this to config::json_buffer_size, cant do this dynamically
-char mqtt_json_buffer[3000];
+char mqtt_json_buffer[4096];
 
 void Mqtt::setup(String mqtt_broker, int mqtt_port){
 

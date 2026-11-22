@@ -24,7 +24,7 @@ test("poultry is at least the USDA safe temperature", () => {
 
 test("groups keep the list order and the index into the list", () => {
   const groups = Presets.groups();
-  assert.deepEqual(groups.map((g) => g.name), ["Beef and lamb", "Pork", "Poultry", "Fish"]);
+  assert.deepEqual(groups.map((g) => g.name), ["Beef", "Lamb", "Pork", "Poultry", "Fish"]);
   const flat = groups.flatMap((g) => g.items);
   assert.equal(flat.length, Presets.LIST.length);
   flat.forEach((item, i) => assert.equal(item.index, i));
@@ -37,4 +37,10 @@ test("a preset renames only a probe without a name of its own", () => {
   assert.equal(Presets.shouldRename("Brisket", 2), true);      // an earlier preset's name
   assert.equal(Presets.shouldRename("Probe 3", 4), false);     // someone named probe 4 "Probe 3"
   assert.equal(Presets.shouldRename("Grandma's roast", 1), false);
+});
+
+test("every preset has a food type the grill knows", () => {
+  const Food = require("../js/food.js");
+  for (const preset of Presets.LIST) assert.ok(Food.find(preset.type), preset.label);
+  assert.equal(Presets.LIST.find((p) => p.name === "Sausage").type, "sausage");
 });

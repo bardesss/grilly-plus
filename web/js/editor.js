@@ -12,6 +12,7 @@ const Editor = (() => {
   let targetGroup, targetLabel, minGroup, targetStepper, minStepper;
   let presetGroup, presetSelect, presetUnit = null;
   let typeSelect, typeName, customBox, offsetStepper;
+  let foodGroup, foodInputs;
   const refInputs = {};
   let saver;
   let probeId = null;
@@ -90,7 +91,8 @@ const Editor = (() => {
       const optgroup = document.createElement("optgroup");
       optgroup.label = group.name;
       group.items.forEach((preset) => {
-        optgroup.append(new Option(preset.label + " · " + Presets.target(preset, u) + Format.unitSymbol(u), String(preset.index)));
+        const text = (Food.emoji(preset.type) ? Food.emoji(preset.type) + " " : "") + preset.label;
+        optgroup.append(new Option(text + " · " + Presets.target(preset, u) + Format.unitSymbol(u), String(preset.index)));
       });
       presetSelect.append(optgroup);
     });
@@ -103,12 +105,46 @@ const Editor = (() => {
     modeInputs.forEach((input) => { input.checked = input.value === "target"; });
     showMode("target");
     targetStepper.set(Presets.target(preset, unit()));
-    const fields = { target_temperature: targetStepper.get(), minimum_temperature: 0 };
+    const fields = { target_temperature: targetStepper.get(), minimum_temperature: 0, type_icon: preset.type || "" };
+    setFood(fields.type_icon);
     if (Presets.shouldRename(nameInput.value, probeId)) {
       nameInput.value = preset.name;
       fields.name = preset.name;
     }
     save(fields, { immediate: true });
+  }
+
+  function setFood(key) {
+    foodInputs.forEach((input) => { input.checked = input.value === key; });
+  }
+
+  function onFoodChange() {
+    const input = [...foodInputs].find((i) => i.checked);
+    if (input) save({ type_icon: input.value }, { immediate: true });
+  }
+
+  // A row of icon buttons: none plus every food type
+  function buildFoodPicker() {
+    const options = foodGroup.querySelector(".options");
+    [{ key: "", label: "None" }, ...Food.TYPES].forEach((type) => {
+      const label = document.createElement("label");
+      label.title = type.label;
+      const input = document.createElement("input");
+      input.type = "radio";
+      input.name = "editor-food";
+      input.value = type.key;
+      const span = document.createElement("span");
+      const icon = type.key ? Food.icon(type.key) : null;
+      if (icon) span.append(icon);
+      else span.textContent = "–";
+      const text = document.createElement("span");
+      text.className = "visually-hidden";
+      text.textContent = type.label;
+      label.append(input, span, text);
+      options.append(label);
+    });
+    foodInputs = options.querySelectorAll("input");
+    foodInputs.forEach((input) => input.addEventListener("change", onFoodChange));
   }
 
   function references() {
@@ -142,6 +178,7 @@ const Editor = (() => {
     minStepper.setSuffix(Format.unitSymbol(unit()));
 
     if (document.activeElement !== nameInput) nameInput.value = probe.name;
+    if (!Controls.isEditing(foodGroup)) setFood(probe.type_icon || "");
     const current = Format.alarmMode(probe);
     if (!Controls.isEditing(form.querySelector(".segmented"))) {
       modeInputs.forEach((input) => { input.checked = input.value === current; });
@@ -374,6 +411,7 @@ const Editor = (() => {
       '</div>' +
       '<fieldset class="editor-form">' +
       '  <label class="field"><span>Name</span><input id="editor-name" maxlength="32" autocomplete="off"></label>' +
+      '  <fieldset class="food-picker"><legend>Icon</legend><div class="options"></div></fieldset>' +
       '  <fieldset class="segmented"><legend>Alarm</legend><div class="options">' +
       '    <label><input type="radio" name="editor-mode" value="off"><span>Off</span></label>' +
       '    <label><input type="radio" name="editor-mode" value="target"><span>Target</span></label>' +
@@ -412,6 +450,8 @@ const Editor = (() => {
     minGroup = sheet.querySelector("#editor-min-group");
     presetGroup = sheet.querySelector("#editor-preset-group");
     presetSelect = sheet.querySelector("#editor-preset");
+    foodGroup = sheet.querySelector(".food-picker");
+    buildFoodPicker();
     typeSelect = sheet.querySelector("#editor-type");
     typeName = sheet.querySelector("#editor-type-name");
     customBox = sheet.querySelector("#editor-custom");

@@ -385,6 +385,7 @@ void GrillConfig::load_probes(){
     grill::probe_1.set_type(type, kohm, temp, beta);
     grill::probe_1.set_name(name);
     grill::probe_1.set_offset(offset);
+    grill::probe_1.set_type_icon(config::settings_storage.getString("p1_icon", ""));
 
     type = config::settings_storage.getString("p2_type");
     name = config::settings_storage.getString("p2_name", "Probe 2");
@@ -397,6 +398,7 @@ void GrillConfig::load_probes(){
     grill::probe_2.set_type(type, kohm, temp, beta);
     grill::probe_2.set_name(name);
     grill::probe_2.set_offset(offset);
+    grill::probe_2.set_type_icon(config::settings_storage.getString("p2_icon", ""));
 
     type = config::settings_storage.getString("p3_type");
     name = config::settings_storage.getString("p3_name", "Probe 3");
@@ -409,6 +411,7 @@ void GrillConfig::load_probes(){
     grill::probe_3.set_type(type, kohm, temp, beta);
     grill::probe_3.set_name(name);
     grill::probe_3.set_offset(offset);
+    grill::probe_3.set_type_icon(config::settings_storage.getString("p3_icon", ""));
 
     type = config::settings_storage.getString("p4_type");
     name = config::settings_storage.getString("p4_name", "Probe 4");
@@ -421,6 +424,7 @@ void GrillConfig::load_probes(){
     grill::probe_4.set_type(type, kohm, temp, beta);
     grill::probe_4.set_name(name);
     grill::probe_4.set_offset(offset);
+    grill::probe_4.set_type_icon(config::settings_storage.getString("p4_icon", ""));
 
     type = config::settings_storage.getString("p5_type");
     name = config::settings_storage.getString("p5_name", "Probe 5");
@@ -433,6 +437,7 @@ void GrillConfig::load_probes(){
     grill::probe_5.set_type(type, kohm, temp, beta);
     grill::probe_5.set_name(name);
     grill::probe_5.set_offset(offset);
+    grill::probe_5.set_type_icon(config::settings_storage.getString("p5_icon", ""));
 
     type = config::settings_storage.getString("p6_type");
     name = config::settings_storage.getString("p6_name", "Probe 6");
@@ -445,6 +450,7 @@ void GrillConfig::load_probes(){
     grill::probe_6.set_type(type, kohm, temp, beta);
     grill::probe_6.set_name(name);
     grill::probe_6.set_offset(offset);
+    grill::probe_6.set_type_icon(config::settings_storage.getString("p6_icon", ""));
 
     type = config::settings_storage.getString("p7_type");
     name = config::settings_storage.getString("p7_name", "Probe 7");
@@ -457,6 +463,7 @@ void GrillConfig::load_probes(){
     grill::probe_7.set_type(type, kohm, temp, beta);
     grill::probe_7.set_name(name);
     grill::probe_7.set_offset(offset);
+    grill::probe_7.set_type_icon(config::settings_storage.getString("p7_icon", ""));
 
     type = config::settings_storage.getString("p8_type");
     name = config::settings_storage.getString("p8_name", "Probe 8");
@@ -469,6 +476,7 @@ void GrillConfig::load_probes(){
     grill::probe_8.set_type(type, kohm, temp, beta);
     grill::probe_8.set_name(name);
     grill::probe_8.set_offset(offset);
+    grill::probe_8.set_type_icon(config::settings_storage.getString("p8_icon", ""));
 
     GrillConfig::print_probes();
 }
@@ -487,6 +495,7 @@ void GrillConfig::save_probes(){
         config::settings_storage.putFloat("p1_target_temp", grill::probe_1.target_temperature);
         config::settings_storage.putFloat("p1_min_temp", grill::probe_1.minimum_temperature);
         config::settings_storage.putFloat("p1_offset", grill::probe_1.offset_celcius);
+        config::settings_storage.putString("p1_icon", grill::probe_1.type_icon);
 
         config::settings_storage.putString("p2_type", grill::probe_2.type);
         config::settings_storage.putString("p2_name", grill::probe_2.name);
@@ -496,6 +505,7 @@ void GrillConfig::save_probes(){
         config::settings_storage.putFloat("p2_target_temp", grill::probe_2.target_temperature);
         config::settings_storage.putFloat("p2_min_temp", grill::probe_2.minimum_temperature);
         config::settings_storage.putFloat("p2_offset", grill::probe_2.offset_celcius);
+        config::settings_storage.putString("p2_icon", grill::probe_2.type_icon);
 
         config::settings_storage.putString("p3_type", grill::probe_3.type);
         config::settings_storage.putString("p3_name", grill::probe_3.name);
@@ -505,6 +515,7 @@ void GrillConfig::save_probes(){
         config::settings_storage.putFloat("p3_target_temp", grill::probe_3.target_temperature);
         config::settings_storage.putFloat("p3_min_temp", grill::probe_3.minimum_temperature);
         config::settings_storage.putFloat("p3_offset", grill::probe_3.offset_celcius);
+        config::settings_storage.putString("p3_icon", grill::probe_3.type_icon);
 
         config::settings_storage.putString("p4_type", grill::probe_4.type);
         config::settings_storage.putString("p4_name", grill::probe_4.name);
@@ -514,6 +525,7 @@ void GrillConfig::save_probes(){
         config::settings_storage.putFloat("p4_target_temp", grill::probe_4.target_temperature);
         config::settings_storage.putFloat("p4_min_temp", grill::probe_4.minimum_temperature);
         config::settings_storage.putFloat("p4_offset", grill::probe_4.offset_celcius);
+        config::settings_storage.putString("p4_icon", grill::probe_4.type_icon);
 
         config::settings_storage.putString("p5_type", grill::probe_5.type);
         config::settings_storage.putString("p5_name", grill::probe_5.name);
@@ -523,6 +535,7 @@ void GrillConfig::save_probes(){
         config::settings_storage.putFloat("p5_target_temp", grill::probe_5.target_temperature);
         config::settings_storage.putFloat("p5_min_temp", grill::probe_5.minimum_temperature);
         config::settings_storage.putFloat("p5_offset", grill::probe_5.offset_celcius);
+        config::settings_storage.putString("p5_icon", grill::probe_5.type_icon);
 
         config::settings_storage.putString("p6_type", grill::probe_6.type);
         config::settings_storage.putString("p6_name", grill::probe_6.name);
@@ -532,6 +545,7 @@ void GrillConfig::save_probes(){
         config::settings_storage.putFloat("p6_target_temp", grill::probe_6.target_temperature);
         config::settings_storage.putFloat("p6_min_temp", grill::probe_6.minimum_temperature);
         config::settings_storage.putFloat("p6_offset", grill::probe_6.offset_celcius);
+        config::settings_storage.putString("p6_icon", grill::probe_6.type_icon);
 
         config::settings_storage.putString("p7_type", grill::probe_7.type);
         config::settings_storage.putString("p7_name", grill::probe_7.name);
@@ -541,6 +555,7 @@ void GrillConfig::save_probes(){
         config::settings_storage.putFloat("p7_target_temp", grill::probe_7.target_temperature);
         config::settings_storage.putFloat("p7_min_temp", grill::probe_7.minimum_temperature);
         config::settings_storage.putFloat("p7_offset", grill::probe_7.offset_celcius);
+        config::settings_storage.putString("p7_icon", grill::probe_7.type_icon);
 
         config::settings_storage.putString("p8_type", grill::probe_8.type);
         config::settings_storage.putString("p8_name", grill::probe_8.name);
@@ -550,6 +565,7 @@ void GrillConfig::save_probes(){
         config::settings_storage.putFloat("p8_target_temp", grill::probe_8.target_temperature);
         config::settings_storage.putFloat("p8_min_temp", grill::probe_8.minimum_temperature);
         config::settings_storage.putFloat("p8_offset", grill::probe_8.offset_celcius);
+        config::settings_storage.putString("p8_icon", grill::probe_8.type_icon);
     }
 
     // Published by the mqtt and opengrill tasks on their next loop
@@ -571,6 +587,7 @@ void GrillConfig::initialize_probes(){
     config::settings_storage.putFloat("p1_min_temp", grill::probe_1.minimum_temperature);
     config::settings_storage.putFloat("p1_target_temp", grill::probe_1.target_temperature);
     config::settings_storage.putFloat("p1_offset", grill::probe_1.offset_celcius);
+    config::settings_storage.putString("p1_icon", "");
 
     config::settings_storage.putString("p2_type", "grilleye_iris");
     config::settings_storage.putString("p2_name", "Probe 2");
@@ -580,6 +597,7 @@ void GrillConfig::initialize_probes(){
     config::settings_storage.putFloat("p2_min_temp", grill::probe_2.minimum_temperature);
     config::settings_storage.putFloat("p2_target_temp", grill::probe_2.target_temperature);
     config::settings_storage.putFloat("p2_offset", grill::probe_2.offset_celcius);
+    config::settings_storage.putString("p2_icon", "");
 
     config::settings_storage.putString("p3_type", "grilleye_iris");
     config::settings_storage.putString("p3_name", "Probe 3");
@@ -589,6 +607,7 @@ void GrillConfig::initialize_probes(){
     config::settings_storage.putFloat("p3_min_temp", grill::probe_3.minimum_temperature);
     config::settings_storage.putFloat("p3_target_temp", grill::probe_3.target_temperature);
     config::settings_storage.putFloat("p3_offset", grill::probe_3.offset_celcius);
+    config::settings_storage.putString("p3_icon", "");
 
     config::settings_storage.putString("p4_type", "grilleye_iris");
     config::settings_storage.putString("p4_name", "Probe 4");
@@ -598,6 +617,7 @@ void GrillConfig::initialize_probes(){
     config::settings_storage.putFloat("p4_min_temp", grill::probe_4.minimum_temperature);
     config::settings_storage.putFloat("p4_target_temp", grill::probe_4.target_temperature);
     config::settings_storage.putFloat("p4_offset", grill::probe_4.offset_celcius);
+    config::settings_storage.putString("p4_icon", "");
 
     config::settings_storage.putString("p5_type", "grilleye_iris");
     config::settings_storage.putString("p5_name", "Probe 5");
@@ -607,6 +627,7 @@ void GrillConfig::initialize_probes(){
     config::settings_storage.putFloat("p5_min_temp", grill::probe_5.minimum_temperature);
     config::settings_storage.putFloat("p5_target_temp", grill::probe_5.target_temperature);
     config::settings_storage.putFloat("p5_offset", grill::probe_5.offset_celcius);
+    config::settings_storage.putString("p5_icon", "");
 
     config::settings_storage.putString("p6_type", "grilleye_iris");
     config::settings_storage.putString("p6_name", "Probe 6");
@@ -616,6 +637,7 @@ void GrillConfig::initialize_probes(){
     config::settings_storage.putFloat("p6_min_temp", grill::probe_6.minimum_temperature);
     config::settings_storage.putFloat("p6_target_temp", grill::probe_6.target_temperature);
     config::settings_storage.putFloat("p6_offset", grill::probe_6.offset_celcius);
+    config::settings_storage.putString("p6_icon", "");
 
     config::settings_storage.putString("p7_type", "grilleye_iris");
     config::settings_storage.putString("p7_name", "Probe 7");
@@ -625,6 +647,7 @@ void GrillConfig::initialize_probes(){
     config::settings_storage.putFloat("p7_min_temp", grill::probe_7.minimum_temperature);
     config::settings_storage.putFloat("p7_target_temp", grill::probe_7.target_temperature);
     config::settings_storage.putFloat("p7_offset", grill::probe_7.offset_celcius);
+    config::settings_storage.putString("p7_icon", "");
 
     config::settings_storage.putString("p8_type", "grilleye_iris");
     config::settings_storage.putString("p8_name", "Probe 8");
@@ -634,6 +657,7 @@ void GrillConfig::initialize_probes(){
     config::settings_storage.putFloat("p8_min_temp", grill::probe_8.minimum_temperature);
     config::settings_storage.putFloat("p8_target_temp", grill::probe_8.target_temperature);
     config::settings_storage.putFloat("p8_offset", grill::probe_8.offset_celcius);
+    config::settings_storage.putString("p8_icon", "");
 }
 
 void GrillConfig::print_probes(){

@@ -96,9 +96,9 @@ namespace config{
     // * Buffers
     // ***********************************
 
-    int json_buffer_size                = 3000;
-    int mqtt_buffer_size                = 3000;
-    int opengrill_buffer_size           = 3000;
+    int json_buffer_size                = 4096;
+    int mqtt_buffer_size                = 4096;
+    int opengrill_buffer_size           = 4096;
 
     // ***********************************
     // * Mqtt

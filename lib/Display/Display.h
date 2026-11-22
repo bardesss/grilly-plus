@@ -103,6 +103,8 @@ private:
     *	@brief Seconds until the probe reaches its target, -1 when unknown
     *   @param connectedProbe probe number
     */
+    // The food type index of a probe (FoodTypes), -1 = none
+    int get_food_icon(int connectedProbe);
     bool get_stalled(int connectedProbe);
     bool get_lid_open(int connectedProbe);
     int32_t get_eta(int connectedProbe);
