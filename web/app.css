@@ -366,7 +366,7 @@ details.probe-type[open] summary .icon { transform: rotate(90deg); }
 .update-status { margin: 8px 0 0; }
 .update-status.update-available { font-weight: 600; color: var(--accent-text); }
 .update-notes { margin: 8px 0; font-size: 14px; }
-.update-status + .button, .update-notes + .button, .warning + .button { margin-top: 10px; }
+.update-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; margin-top: 6px; }
 .update-notes summary { cursor: pointer; min-height: 32px; }
 .update-notes p { margin: 4px 0 0; white-space: pre-wrap; color: var(--muted); }
 .subheading { margin: 18px 0 0; font-size: 15px; }

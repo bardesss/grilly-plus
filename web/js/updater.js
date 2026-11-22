@@ -162,23 +162,27 @@
     card.innerHTML =
       '<h2 class="card-title"><span>Firmware updates</span><span class="save-note" role="status"></span></h2>' +
       '<p>Installed version: <strong data-version></strong></p>' +
+      '<label class="field" data-auth-field><span>Current admin password</span><input type="password" autocomplete="current-password" data-auth></label>' +
       '<h3 class="subheading first">Update from GitHub</h3>' +
       '<p class="update-status" role="status" data-gh-status>Not checked yet</p>' +
       '<details class="update-notes" data-gh-details hidden><summary>What&#39;s new</summary><p data-gh-notes></p></details>' +
       '<p class="warning" data-gh-failed hidden></p>' +
+      '<div class="update-actions">' +
       '<button type="button" class="button primary" data-gh-install hidden>Install</button>' +
       '<button type="button" class="link-button" data-gh-check>Check now</button>' +
+      '</div>' +
       '<p class="notice" role="status" data-gh-notice></p>' +
-      '<label class="field" data-auth-field><span>Current admin password</span><input type="password" autocomplete="current-password" data-auth></label>' +
-      '<label class="field"><span>Admin password</span><input type="password" autocomplete="new-password" data-admin></label>' +
-      '<button type="button" class="link-button" data-admin-remove>Remove saved password</button>' +
-      '<p class="warning" data-warning>No admin password is set. Anyone on your network can install firmware.</p>' +
       '<h3 class="subheading">Install from a file</h3>' +
       '<label class="field"><span>Firmware file</span><input type="file" accept=".bin" data-file></label>' +
       '<p class="hint">Use the grilly-plus-…-ota.bin file from the releases page.</p>' +
       '<button type="button" class="button primary" data-update disabled>Update</button>' +
       '<div class="progress upload" hidden><i></i></div>' +
-      '<p class="notice" role="status"></p>';
+      '<p class="notice" role="status" data-file-notice></p>' +
+      '<h3 class="subheading">Admin password</h3>' +
+      '<p class="hint">Protects firmware updates. Changing or removing it needs the current one above.</p>' +
+      '<label class="field"><span>New admin password</span><input type="password" autocomplete="new-password" data-admin></label>' +
+      '<button type="button" class="link-button" data-admin-remove>Remove saved password</button>' +
+      '<p class="warning" data-warning>No admin password is set. Anyone on your network can install firmware.</p>';
 
     version = card.querySelector("[data-version]");
     adminInput = card.querySelector("[data-admin]");
@@ -190,7 +194,7 @@
     authInput = card.querySelector("[data-auth]");
     updateButton = card.querySelector("[data-update]");
     progress = card.querySelector(".progress");
-    notice = card.querySelector(".notice:not([data-gh-notice])");
+    notice = card.querySelector("[data-file-notice]");
     ghStatus = card.querySelector("[data-gh-status]");
     ghDetails = card.querySelector("[data-gh-details]");
     ghNotes = card.querySelector("[data-gh-notes]");
