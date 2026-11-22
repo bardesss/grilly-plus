@@ -31,7 +31,8 @@ battery with fuel gauge, "off" = deep sleep — built from off-the-shelf modules
                 ├── LM4040 bias (270 Ω) → VREF 2.5 V → 8 probe dividers
                 ├── ADS1115 #1 / #2 VDD
                 ├── MAX17048 module VIN (I²C pull-ups)
-                └── LCD VDD
+                ├── LCD VDD + backlight (NPN, GPIO4)
+                └── Buzzer (NPN, GPIO25)
 
  I²C (GPIO21 SDA / GPIO22 SCL): ADS1115 0x48, ADS1115 0x49, MAX17048 0x36
 ```
@@ -111,11 +112,13 @@ the FireBeetle's onboard user button).
 
 ### LCD backlight and buzzer
 
-- Both via an NPN (BC337 / S8050) low-side switch, 1 kΩ base resistor from the GPIO.
+- Both via an NPN (BC337 / S8050) low-side switch, 1 kΩ base resistor from the GPIO and a 100 kΩ
+  pull-down from base to GND, so a floating GPIO (boot, deep sleep) can't half-switch it on.
+- Both are powered from the switched RAIL, so nothing can draw current in deep sleep.
 - Backlight: check whether the LCD module has its own LED series resistor; if not, add one
   (target ~20 mA).
 - Buzzer: a **passive** buzzer / magnetic transducer (the firmware plays tones, not on/off), 3 V type,
-  with a 1N4148 flyback diode across it. Power it from 3V3.
+  with a 1N4148 flyback diode across it.
 
 ### Power button
 
@@ -140,6 +143,78 @@ the FireBeetle's onboard user button).
   ~500 µA; users measure ~13–25 µA in deep sleep afterwards. **Measure it** on your board before
   relying on the standby figures above. After the cut the onboard RGB LED only works on USB power.
 
+## Wiring and soldering
+
+Module pin names vary between sellers; match by function, not by position. Check every
+transistor/reference pinout against its own datasheet before soldering — **BC337 is C-B-E but S8050
+is E-B-C** (flat side facing you, legs down), and the LM4040 TO-92 has a pin that isn't connected.
+
+### Nets (what connects to what)
+
+| Net | Connects |
+|---|---|
+| **BAT+** | 18650 holder + → master switch → FireBeetle PH2.0 BAT+ and MAX17048 battery + |
+| **BAT−** | 18650 holder − → FireBeetle PH2.0 BAT− and MAX17048 battery − |
+| **3V3** | FireBeetle 3V3 → AO3401 source (pin 2), 100 kΩ gate pull-up, 100 kΩ button pull-up |
+| **RAIL** | AO3401 drain (pin 3) → 270 Ω (reference), ADS1115 #1 + #2 VDD, MAX17048 VIN, LCD VDD, LCD backlight anode, buzzer + |
+| **GND** | FireBeetle GND → everything's GND, jack sleeves, LM4040 anode, emitters of both NPNs |
+| **VREF** | 270 Ω other end, LM4040 cathode, 10 µF + 100 nF to GND, top of all 8 × 10 kΩ |
+| **SDA / SCL** | GPIO21 / GPIO22 → both ADS1115s and the MAX17048 (daisy-chain) |
+| **ADDR** | ADS1115 #1 ADDR → GND (0x48), ADS1115 #2 ADDR → its VDD (0x49) |
+| **Probe n** (1–8) | 10 kΩ bottom → jack n tip, and → 1 kΩ → ADS input (#1 A0–A3 = probes 1–4, #2 A0–A3 = probes 5–8) with 100 nF to GND on the ADS side |
+| **Rail enable** | GPIO26 → AO3401 gate (pin 1), 100 kΩ to 3V3 |
+| **Button** | GPIO35 → button → GND, 100 kΩ to 3V3, optional 100 nF across the button |
+| **LCD** | GPIO18 → SCK/SCL, GPIO23 → SI/SDA, GPIO19 → CS, GPIO13 → A0/RS/DC, GPIO14 → RST |
+| **Backlight** | GPIO4 → 1 kΩ → NPN base (100 kΩ base → GND); collector → LCD backlight cathode (via series resistor if the module has none) |
+| **Buzzer** | GPIO25 → 1 kΩ → NPN base (100 kΩ base → GND); collector → buzzer −; 1N4148 across the buzzer, band (cathode) to RAIL |
+
+Leave unconnected: ADS1115 ALRT, MAX17048 INT, jack rings.
+
+### Perfboard layout
+
+Keep the analog part away from the switching parts and give it its own ground return:
+
+```
+ ┌───────────────────────────────────────────────────────────────┐
+ │  ANALOG                         │  DIGITAL / POWER             │
+ │                                 │                              │
+ │  LM4040 + 270Ω + 10µF           │   FireBeetle 2 ESP32-E       │
+ │  8× 10k 0.1% │ 8× 1k │ 8× 100nF │   (on female headers)        │
+ │  ADS1115 #1   ADS1115 #2        │                              │
+ │  (on female headers)            │   AO3401 rail switch         │
+ │                                 │   2× NPN (backlight, buzzer) │
+ │  ── probe GND star point ──┐    │   MAX17048 module            │
+ │                            └────┼── FireBeetle GND             │
+ └──────────────┬──────────────────┴───────────┬──────────────────┘
+                │ to the 8 jacks                 │ to LCD, button, buzzer, battery
+```
+
+- Ground: run the jack sleeves, the 100 nF caps, the LM4040 and the ADS1115 GNDs to one
+  **probe star point**, and connect that point to FireBeetle GND with one wire. The buzzer and
+  backlight currents (up to ~110 mA) return to FireBeetle GND on their own wire.
+- Put the 1 kΩ + 100 nF right next to the ADS1115 inputs.
+- Mount the FireBeetle and the modules on female headers, so they can be swapped.
+- Wire: 26–28 AWG; suggested colours: red 3V3, orange RAIL, black GND, yellow VREF, blue SDA,
+  green SCL. Twist each jack's tip/sleeve pair.
+
+### Build and test order
+
+Test each step before soldering the next one. A multimeter is enough until step 6.
+
+1. **FireBeetle**: cut the low-power pad, plug in USB, check 3V3.
+2. **Rail switch**: AO3401 + gate pull-up. RAIL must read 0 V; briefly bridge the gate to GND →
+   RAIL ≈ 3.3 V.
+3. **Reference**: 270 Ω + LM4040 + caps. With the rail on, VREF must read 2.50 V. If it reads
+   ~3.3 V, the LM4040 is reversed or not connected.
+4. **Dividers**: solder the 10 kΩ / 1 kΩ / 100 nF and the jacks. An empty jack reads 2.50 V; a
+   100 kΩ resistor in a plug reads ≈ 2.27 V.
+5. **ADS1115s and MAX17048**: modules on, ADDR set.
+6. **I²C check**: any I²C scanner sketch must find 0x48, 0x49 and 0x36 (0x36 only with the battery
+   connected).
+7. **LCD, button, backlight, buzzer.**
+8. **Battery last**: check holder polarity with the multimeter before inserting the cell, and keep
+   the master switch off while wiring. A reversed Li-ion cell can destroy the board or catch fire.
+
 ## Bill of materials (rough prices, EUR)
 
 | Qty | Part | ≈ € | Notes |
@@ -152,7 +227,7 @@ the FireBeetle's onboard user button).
 | 8 | 10 kΩ 0.1 % 25 ppm resistor | 8× 0.5 | Divider resistors |
 | 8 | 1 kΩ resistor | | ADC input series resistors |
 | 1 | 270 Ω resistor | | Reference bias |
-| 2 | 100 kΩ resistor | | Rail gate pull-up, button pull-up |
+| 4 | 100 kΩ resistor | | Rail gate pull-up, button pull-up, 2× NPN base pull-down |
 | 2 | 1 kΩ resistor | | NPN base resistors |
 | 2 | BC337 or S8050 NPN | | Backlight, buzzer |
 | 1 | AO3401A P-MOSFET + SOT-23 → DIP adapter | 1 | Peripheral rail |
