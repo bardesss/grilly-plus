@@ -5,6 +5,7 @@
 ### Fixes
 - Checking for updates could fail with "GitHub's answer couldn't be read (NoMemory)" when a release had long notes. The grill no longer reads the release notes; **What's new in this release** links to them on GitHub instead
 - **Check now** gave no feedback: the status stayed as it was until the check was done, and often the app stopped waiting before then. It now says "Checking GitHub…" right away and shows the result when it's in
+- With Bitwarden in Firefox or Waterfox, the confirmation dialogs (like Install) and the alarm popup flashed away the moment they opened: Bitwarden moves whatever comes after its own elements at the end of the page, and a moved dialog loses its place on top. The dialogs now go at the start of the page, and come back on top if something moves them anyway
 
 ### API
 - `notes` is gone from `GET /api/update/latest`

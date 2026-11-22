@@ -86,7 +86,7 @@ const AlarmSound = (() => {
       '<button type="button" class="button" data-close>Close</button>' +
       '<button type="button" class="button primary" data-mute>Mute</button>' +
       "</div>";
-    document.body.appendChild(dialog);
+    Dialog.place(dialog);
     const close = () => { dismissed = true; dialog.close(); };
     dialog.querySelector("[data-close]").addEventListener("click", close);
     dialog.addEventListener("cancel", (event) => { event.preventDefault(); close(); });
@@ -111,8 +111,9 @@ const AlarmSound = (() => {
       item.append(message.detail);
       return item;
     }));
-    if (!dialog.open) {
-      dialog.showModal();
+    // Also when something moved it off the top layer (Bitwarden does); this runs with every status
+    if (!Dialog.isModal(dialog)) {
+      Dialog.reshow(dialog);
       dialog.querySelector("[data-mute]").focus();
     }
   }
