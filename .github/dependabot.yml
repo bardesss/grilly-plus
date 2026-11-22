@@ -1,0 +1,16 @@
+# Dependabot keeps the GitHub Actions in .github/workflows up to date. The actions are pinned to a
+# commit (with the version in a comment), Dependabot updates both.
+#
+# Not covered: the PlatformIO platform and libraries in platformio.ini (Dependabot can't read it)
+# and the platformio pip package in checks.yml. Check those by hand before a release.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "CI"
