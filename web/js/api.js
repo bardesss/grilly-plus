@@ -13,6 +13,7 @@ const Api = (() => {
       if (!response.ok) {
         const error = new Error(body && body.error ? body.error : "The grill answered " + response.status);
         error.status = response.status;
+        error.body = body;
         throw error;
       }
       return body;

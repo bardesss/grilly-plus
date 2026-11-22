@@ -159,7 +159,13 @@ const Format = (() => {
     return { kind: "unknown", text: "Not checked yet" };
   }
 
-  return { checkedAgo, updateStatus, unitSymbol, number, temperature, signal, battery, batteryDiagnostics, resetReasonText,
+  // Seconds as m:ss, for the password reset code countdown
+  function countdown(seconds) {
+    const left = Math.max(0, Math.ceil(seconds));
+    return Math.floor(left / 60) + ":" + String(left % 60).padStart(2, "0");
+  }
+
+  return { countdown, checkedAgo, updateStatus, unitSymbol, number, temperature, signal, battery, batteryDiagnostics, resetReasonText,
            offReasonText, alarmMode, probeStatus, alarmLabel, duration, ago, eta, emptySockets, changedFields };
 })();
 

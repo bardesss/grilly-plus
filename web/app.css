@@ -267,6 +267,12 @@ body.offline .live { opacity: .4; }
 /* Edge adds its own reveal button to password fields; the app has its own eye button */
 input::-ms-reveal, input::-ms-clear { display: none; }
 
+/* Forgotten admin password: the code from the grill's screen */
+[data-reset-start] { display: block; }
+.reset-panel { margin-top: 10px; padding: 4px 14px 12px; border-radius: 12px; background: var(--surface-2); }
+.reset-panel .hint { margin: 10px 0 0; }
+.reset-panel input[data-reset-code] { letter-spacing: .3em; font-variant-numeric: tabular-nums; }
+
 /* Confirmation dialog (Dialog.confirm) */
 .confirm-dialog {
   width: min(400px, calc(100vw - 32px)); padding: 20px; border: 1px solid var(--border); border-radius: 20px;

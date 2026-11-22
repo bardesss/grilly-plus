@@ -6,6 +6,9 @@
   let latest = null;       // last answer of /api/update/latest
   let busy = false;        // a check or install is running
   let retryAdmin = null;   // an admin password change waiting for the right current password
+  let resetStart, resetPanel, resetHint, resetCode, resetPassword, resetSubmit, resetCancel, resetNotice;
+  let resetUntil = 0;      // Date.now() when the code on the grill's screen runs out
+  let resetTimer = null;
 
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -36,6 +39,91 @@
     retryAdmin = password;
     if (currentPasswordMissing((text) => Controls.showNote(note, "error", new Error(text)))) return;
     saver.change({ admin_password: password }, { immediate: true });
+  }
+
+  // Forgotten admin password: the grill shows a code on its screen, entering it here sets a new password
+  function showResetCountdown() {
+    const left = (resetUntil - Date.now()) / 1000;
+    if (left <= 0) {
+      clearInterval(resetTimer);
+      resetTimer = null;
+      resetHint.textContent = "The code ran out. Ask for a new one.";
+      resetSubmit.disabled = true;
+      return;
+    }
+    resetHint.textContent = "The grill's screen now shows a 6-digit code (valid for " + Format.countdown(left) + "). " +
+      "Enter it with a new admin password, or leave the password empty to remove it.";
+  }
+
+  async function startReset() {
+    resetStart.disabled = true;
+    resetNotice.textContent = "";
+    try {
+      const answer = await Api.post("/api/admin/reset/start", {});
+      resetUntil = Date.now() + answer.seconds_left * 1000;
+      resetPanel.hidden = false;
+      resetStart.hidden = true;
+      resetSubmit.disabled = false;
+      resetCode.value = "";
+      resetPassword.value = "";
+      showResetCountdown();
+      clearInterval(resetTimer);
+      resetTimer = setInterval(showResetCountdown, 1000);
+      resetCode.focus();
+    } catch (error) {
+      resetPanel.hidden = false;
+      resetHint.textContent = "";
+      resetNotice.textContent = error.message;
+    } finally {
+      resetStart.disabled = false;
+    }
+  }
+
+  function closeReset() {
+    clearInterval(resetTimer);
+    resetTimer = null;
+    resetPanel.hidden = true;
+    resetStart.hidden = false;
+    resetNotice.textContent = "";
+    resetCode.value = "";
+    resetPassword.value = "";
+  }
+
+  async function submitReset() {
+    const code = resetCode.value.trim();
+    if (!/^[0-9]{6}$/.test(code)) {
+      resetNotice.textContent = "The code has 6 digits.";
+      resetCode.focus();
+      return;
+    }
+    const password = resetPassword.value;
+    resetSubmit.disabled = true;
+    resetNotice.textContent = "";
+    try {
+      await Api.post("/api/admin/reset", { code, admin_password: password });
+      closeReset();
+      authInput.value = password;   // the new password is the current one from now on
+      retryAdmin = null;
+      Controls.showNote(note, "saved", password ? "Admin password reset" : "Admin password removed");
+      const settings = await Api.get("/api/settings");
+      Settings.fill(settings);
+    } catch (error) {
+      const left = error.body && typeof error.body.attempts_left === "number" ? error.body.attempts_left : null;
+      if (error.status === 403 && left > 0) {
+        resetNotice.textContent = "Wrong code, " + left + (left === 1 ? " try" : " tries") + " left.";
+        resetSubmit.disabled = false;
+        resetCode.select();
+      } else {
+        resetNotice.textContent = error.message;
+        resetSubmit.disabled = error.status === 403 || error.status === 410;
+        if (resetSubmit.disabled) {
+          clearInterval(resetTimer);
+          resetTimer = null;
+          resetHint.textContent = "";
+          resetStart.hidden = false;
+        }
+      }
+    }
   }
 
   function setProgress(fraction) {
@@ -163,6 +251,18 @@
       '<h2 class="card-title"><span>Firmware updates</span><span class="save-note" role="status"></span></h2>' +
       '<p>Installed version: <strong data-version></strong></p>' +
       '<label class="field" data-auth-field><span>Current admin password</span><input type="password" autocomplete="current-password" data-auth></label>' +
+      '<button type="button" class="link-button" data-reset-start>Forgot the admin password?</button>' +
+      '<div class="reset-panel" data-reset-panel hidden>' +
+      '<p class="hint" data-reset-hint></p>' +
+      '<label class="field"><span>Code from the grill&#39;s screen</span>' +
+      '<input type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" data-reset-code></label>' +
+      '<label class="field"><span>New admin password</span><input type="password" autocomplete="new-password" data-reset-password></label>' +
+      '<div class="update-actions">' +
+      '<button type="button" class="button primary" data-reset-submit>Reset password</button>' +
+      '<button type="button" class="link-button" data-reset-cancel>Cancel</button>' +
+      '</div>' +
+      '<p class="notice" role="status" data-reset-notice></p>' +
+      '</div>' +
       '<h3 class="subheading first">Update from GitHub</h3>' +
       '<p class="update-status" role="status" data-gh-status>Not checked yet</p>' +
       '<details class="update-notes" data-gh-details hidden><summary>What&#39;s new</summary><p data-gh-notes></p></details>' +
@@ -202,6 +302,19 @@
     ghCheck = card.querySelector("[data-gh-check]");
     ghFailed = card.querySelector("[data-gh-failed]");
     ghNotice = card.querySelector("[data-gh-notice]");
+    resetStart = card.querySelector("[data-reset-start]");
+    resetPanel = card.querySelector("[data-reset-panel]");
+    resetHint = card.querySelector("[data-reset-hint]");
+    resetCode = card.querySelector("[data-reset-code]");
+    resetPassword = card.querySelector("[data-reset-password]");
+    resetSubmit = card.querySelector("[data-reset-submit]");
+    resetCancel = card.querySelector("[data-reset-cancel]");
+    resetNotice = card.querySelector("[data-reset-notice]");
+    resetStart.addEventListener("click", startReset);
+    resetSubmit.addEventListener("click", submitReset);
+    resetCancel.addEventListener("click", closeReset);
+    resetCode.addEventListener("keydown", (event) => { if (event.key === "Enter") submitReset(); });
+    resetPassword.addEventListener("keydown", (event) => { if (event.key === "Enter") submitReset(); });
     ghInstall.addEventListener("click", installFromGitHub);
     ghCheck.addEventListener("click", checkNow);
 
@@ -240,6 +353,8 @@
     adminRemove.hidden = !isSet;
     warning.hidden = isSet;
     authField.hidden = !isSet;
+    if (!isSet && !resetPanel.hidden) closeReset();
+    resetStart.hidden = !isSet || !resetPanel.hidden;
     if (!busy) loadLatest();
   }
 

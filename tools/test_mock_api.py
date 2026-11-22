@@ -137,5 +137,63 @@ class UpdateTest(unittest.TestCase):
         mock_api.SETTINGS["firmware_version"] = "26.09.27"
 
 
+class AdminResetTest(unittest.TestCase):
+    JSON = {"Content-Type": "application/json"}
+
+    def setUp(self):
+        mock_api.ADMIN_PASSWORD = "forgotten"
+        mock_api.SETTINGS["admin_password_set"] = True
+        mock_api.RESET_STARTED_AT = None
+        mock_api.RESET_ACTIVE = False
+        mock_api.RESET_WRONG_TOTAL = 0
+
+    def tearDown(self):
+        mock_api.ADMIN_PASSWORD = ""
+        mock_api.SETTINGS["admin_password_set"] = False
+        mock_api.RESET_STARTED_AT = None
+        mock_api.RESET_ACTIVE = False
+        mock_api.RESET_WRONG_TOTAL = 0
+
+    def reset(self, code, password=""):
+        body = json.dumps({"code": code, "admin_password": password}).encode()
+        return mock_api.handle("POST", "/api/admin/reset", body, self.JSON)
+
+    def test_code_sets_a_new_password(self):
+        status, data = mock_api.handle("POST", "/api/admin/reset/start", b"{}", self.JSON)
+        self.assertEqual(202, status)
+        self.assertEqual(300, data["seconds_left"])
+        self.assertEqual((200, {"success": True}), self.reset("123456", "new"))
+        self.assertEqual("new", mock_api.ADMIN_PASSWORD)
+        self.assertEqual(410, self.reset("123456")[0])   # works once
+
+    def test_empty_password_removes_it(self):
+        mock_api.handle("POST", "/api/admin/reset/start", b"{}", self.JSON)
+        self.assertEqual(200, self.reset("123456")[0])
+        self.assertFalse(mock_api.SETTINGS["admin_password_set"])
+
+    def test_five_wrong_codes_end_it(self):
+        mock_api.handle("POST", "/api/admin/reset/start", b"{}", self.JSON)
+        status, data = self.reset("000000")
+        self.assertEqual((403, 4), (status, data["attempts_left"]))
+        for _ in range(4):
+            status, data = self.reset("000000")
+        self.assertEqual((403, 0), (status, data["attempts_left"]))
+        self.assertEqual(410, self.reset("123456")[0])
+        self.assertEqual(429, mock_api.handle("POST", "/api/admin/reset/start", b"{}", self.JSON)[0])
+
+    def test_fifteen_wrong_codes_lock_until_restart(self):
+        for _ in range(3):
+            mock_api.RESET_STARTED_AT = None   # skip the minute between codes
+            self.assertEqual(202, mock_api.handle("POST", "/api/admin/reset/start", b"{}", self.JSON)[0])
+            for _ in range(5):
+                self.reset("000000")
+        mock_api.RESET_STARTED_AT = None
+        self.assertEqual(423, mock_api.handle("POST", "/api/admin/reset/start", b"{}", self.JSON)[0])
+
+    def test_needs_a_password_to_reset(self):
+        mock_api.ADMIN_PASSWORD = ""
+        self.assertEqual(409, mock_api.handle("POST", "/api/admin/reset/start", b"{}", self.JSON)[0])
+
+
 if __name__ == "__main__":
     unittest.main()
