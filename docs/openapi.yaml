@@ -421,6 +421,59 @@ components:
             - wpapi_psk
             - unknown
 
+    Presets:
+      type: object
+      properties:
+        presets:
+          type: array
+          maxItems: 30
+          items:
+            type: object
+            required: [name, c, f]
+            properties:
+              name:
+                type: string
+                maxLength: 24
+                example: Brisket flat
+                description: Shown in the Food list, and the probe's name when it hasn't got one of its own.
+              group:
+                type: string
+                maxLength: 20
+                example: BBQ
+                description: The Food list group, "My presets" when left out.
+              type:
+                $ref: '#/components/schemas/TypeIcon'
+              c:
+                type: number
+                minimum: 1
+                maximum: 300
+                example: 93
+                description: Target in °C (the maximum for a range).
+              f:
+                type: number
+                minimum: 34
+                maximum: 572
+                example: 200
+                description: Target in °F, its own value so both units get round numbers.
+              min_c:
+                type: number
+                example: 107
+                description: With min_f, makes it a range preset. Below c.
+              min_f:
+                type: number
+                example: 225
+                description: With min_c, makes it a range preset. Below f.
+        hidden:
+          type: array
+          maxItems: 30
+          items:
+            type: string
+            pattern: "^[a-z0-9-]{1,24}$"
+          example: ["brisket", "salmon-glassy"]
+          description: >-
+            Ids of built-in presets that don't show in the Food list: the label in lower case with
+            dashes.
+
     TypeIcon:
       type: string
       enum: ["", beef, lamb, pork, poultry, fish, sausage, vegetables, pit, other]
@@ -958,6 +1011,54 @@ paths:
                   error:
                     type: string
                     example: "Content-Type should be application/json"
+
+  /presets:
+    get:
+      tags:
+        - settings
+      summary: Your own food presets and the hidden built-in ones
+      description: >
+        Kept on the grill, so every phone and browser shows the same Food list. The built-in presets
+        live in the web app; hidden holds the ids of the ones switched off.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Presets'
+    post:
+      tags:
+        - settings
+      summary: Replace your own presets and/or the hidden list
+      description: >
+        Send presets, hidden or both; each list sent replaces the stored one. Checked as a whole: one
+        bad preset and nothing is stored. Answers with the stored lists, like GET.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Presets'
+      responses:
+        '200':
+          description: Stored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Presets'
+        '400':
+          description: A preset or id isn't valid
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "c should be 1 to 300 and f 34 to 572 (preset 2)"
+        '413':
+          description: More than fits in the grill's storage (about 3000 bytes of presets)
 
   /notify:
     get:

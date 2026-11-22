@@ -89,6 +89,36 @@ PROBES = [
 CONNECTED_AT = {1: START - 18720, 2: START - 13200, 3: START - 19200}
 BASE_TEMPERATURE = {1: 71.4, 2: 90.2, 3: 118.0}
 
+# Own food presets and hidden built-in ids, like the grill keeps them
+PRESETS = {"presets": [{"name": "Pit, low and slow", "type": "pit", "c": 121, "f": 250, "min_c": 107, "min_f": 225}],
+           "hidden": []}
+
+
+def clean_presets(value):
+    """The grill's checks (lib/Presets), returns (clean list, error)."""
+    if not isinstance(value, list):
+        return None, "presets should be a list"
+    if len(value) > 30:
+        return None, "At most 30 presets"
+    out = []
+    number = lambda v: isinstance(v, (int, float)) and not isinstance(v, bool)
+    for i, item in enumerate(value, 1):
+        name = item.get("name") if isinstance(item, dict) else None
+        if not isinstance(name, str) or not 1 <= len(name.encode()) <= 24:
+            return None, "name should be 1 to 24 characters (preset %d)" % i
+        if item.get("type", "") not in FOOD_TYPES:
+            return None, "type should be empty or a food type (preset %d)" % i
+        if not (number(item.get("c")) and 1 <= item["c"] <= 300 and number(item.get("f")) and 34 <= item["f"] <= 572):
+            return None, "c should be 1 to 300 and f 34 to 572 (preset %d)" % i
+        clean = {k: item[k] for k in ("name", "group", "type", "c", "f", "min_c", "min_f") if item.get(k) not in (None, "", 0)}
+        if ("min_c" in clean) != ("min_f" in clean):
+            return None, "min_c and min_f go together (preset %d)" % i
+        if "min_c" in clean and not (clean["min_c"] < clean["c"] and clean["min_f"] < clean["f"]):
+            return None, "min_c and min_f should be below c and f (preset %d)" % i
+        out.append(clean)
+    return out, ""
+
+
 FOOD_TYPES = ("", "beef", "lamb", "pork", "poultry", "fish", "sausage", "vegetables", "pit", "other")
 
 # Mock-only: probe_id -> time.time() when its history was cleared via /api/history/clear
@@ -394,6 +424,24 @@ def handle(method, path, body, headers=None, query=""):
             probe = next((p for p in PROBES if p["probe_id"] == int(update["probe_id"])), None)
             probe.update({k: v for k, v in update.items() if k != "probe_id"})
         return 200, probes()
+    if method == "GET" and path == "/api/presets":
+        return 200, PRESETS
+    if method == "POST" and path == "/api/presets":
+        update = json.loads(body or b"{}")
+        if not isinstance(update, dict) or ("presets" not in update and "hidden" not in update):
+            return 400, {"error": "Send presets and/or hidden"}
+        if "presets" in update:
+            clean, error = clean_presets(update["presets"])
+            if error:
+                return 400, {"error": error}
+        if "hidden" in update:
+            hidden = update["hidden"]
+            if not isinstance(hidden, list) or len(hidden) > 30 or not all(isinstance(h, str) and re.match(r"^[a-z0-9-]{1,24}$", h) for h in hidden):
+                return 400, {"error": "hidden should hold preset ids"}
+            PRESETS["hidden"] = hidden
+        if "presets" in update:
+            PRESETS["presets"] = clean
+        return 200, PRESETS
     if method == "GET" and path == "/api/notify":
         return 200, notify_status()
     if method == "POST" and path == "/api/notify/test":

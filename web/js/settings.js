@@ -70,8 +70,8 @@ const Settings = (() => {
   let loadError;
 
   // Card ids per desktop column, and the single-column order on phones
-  const LAYOUT = [["grill", "alarms", "notify", "display", "updates"], ["network", "browser", "mqtt", "opengrill"]];
-  const PHONE_ORDER = ["grill", "alarms", "notify", "browser", "display", "network", "mqtt", "opengrill", "updates"];
+  const LAYOUT = [["grill", "alarms", "notify", "display", "updates"], ["presets", "network", "browser", "mqtt", "opengrill"]];
+  const PHONE_ORDER = ["grill", "alarms", "presets", "notify", "browser", "display", "network", "mqtt", "opengrill", "updates"];
   const footers = {};       // card id -> { build(), fill(settings) }, below the card's fields
 
   // card: { id, build(), fill(settings) }, id as used in LAYOUT
