@@ -8,10 +8,13 @@ const App = (() => {
   let failures = 0;
   let pollTimer = null;
   let polling = false;
+  let inBackground = () => false;   // whether to keep polling while the page is hidden
+  const BACKGROUND_POLL_MS = 5000;
 
   function register(name, view) { views[name] = view; }
   function onStatus(listener) { listeners.push(listener); }
   function getStatus() { return status; }
+  function pollInBackground(predicate) { inBackground = predicate; }
 
   function route() {
     const requested = (location.hash || "#grill").slice(1);
@@ -88,13 +91,13 @@ const App = (() => {
       }
     } finally {
       polling = false;
-      schedule(1000);
+      schedule(document.hidden ? BACKGROUND_POLL_MS : 1000);
     }
   }
 
   // One request at a time: the next poll is only planned after the previous one finished
   function schedule(delay) {
-    if (document.hidden || pollTimer !== null || polling) return;
+    if ((document.hidden && !inBackground()) || pollTimer !== null || polling) return;
     pollTimer = setTimeout(poll, delay);
   }
 
@@ -129,9 +132,12 @@ const App = (() => {
     window.addEventListener("hashchange", route);
     document.addEventListener("visibilitychange", () => {
       if (document.hidden) {
+        if (inBackground()) return;   // the running poll plans the next one at the slower pace
         clearTimeout(pollTimer);
         pollTimer = null;
       } else {
+        clearTimeout(pollTimer);       // a slow background poll may be waiting
+        pollTimer = null;
         schedule(0);
       }
     });
@@ -139,5 +145,5 @@ const App = (() => {
     schedule(0);
   }
 
-  return { register, onStatus, getStatus, start };
+  return { register, onStatus, getStatus, pollInBackground, start };
 })();
