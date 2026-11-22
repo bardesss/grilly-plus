@@ -176,6 +176,16 @@ String update_probe(Probe& probe, JsonObjectConst item, bool apply, bool null_is
 
 }
 
+void add_timer_json(JsonObject out, int slot, uint32_t now_ms){
+    const timers::Timer& timer = grill::timer_list.at(slot);
+    out["id"]          = timer.id;
+    out["name"]        = (const char*)timer.name;
+    out["remaining_s"] = (grill::timer_list.remaining_ms(slot, now_ms) + 999) / 1000;
+    out["length_s"]    = timer.length_ms / 1000;
+    out["done"]        = timer.done;
+    out["probe"]       = timer.probe;
+}
+
 void JsonUtilities::load_json_status(char *buffer){
     JsonDocument jsondoc;
     jsondoc.clear();
@@ -199,6 +209,13 @@ void JsonUtilities::load_json_status(char *buffer){
     jsondoc["temperature_unit"]   = config::temperature_unit;
     jsondoc["alarm_sounding"]     = grill::alarm_sounding;
     jsondoc["update_available"]   = updater::update_available();
+    jsondoc["alarm_timers"]       = grill::alarm_timers;
+
+    JsonArray timer_data = jsondoc["timers"].to<JsonArray>();
+    uint32_t now_ms = millis();
+    for (int i = 0; i < (int)timers::MAX_TIMERS; i++) {
+        if (grill::timer_list.at(i).id != 0) { add_timer_json(timer_data.add<JsonObject>(), i, now_ms); }
+    }
 
     JsonArray probeData = jsondoc["probes"].to<JsonArray>();
 
@@ -900,7 +917,8 @@ void JsonUtilities::load_json_info(char* buffer){
     // Features added on top of Free-Grilly. A client checks for a name before using the feature.
     JsonArray capabilities = jsondoc["capabilities"].to<JsonArray>();
     for (const char* capability : {"history", "eta", "clear_history", "alarm_mute", "alarm_probes",
-                                   "calibration_offset", "diagnostics", "ota_upload", "github_update", "admin_reset"}) {
+                                   "calibration_offset", "diagnostics", "ota_upload", "github_update", "admin_reset",
+                                   "timers"}) {
         capabilities.add(capability);
     }
 

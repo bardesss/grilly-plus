@@ -150,6 +150,10 @@ The [WiFi guide](docs/how_to_connect_to_wifi.md) walks through it with screensho
 | Hold 3 s (3 beeps) | Switch off |
 | Hold 10 s (3 long beeps) | Factory reset: clears **all** settings |
 
+### Timers
+
+Tap **+ Timer** on the Grill page, give it a name ("Flip the ribs") and the minutes, or tap 5, 10, 15, 30 or 60. Up to 6 timers run at once, on the grill itself, so they keep going with the app closed. The grill's top bar shows the one that ends first. When one runs out the grill beeps like a probe alarm and shows **TIME'S UP** with its name; a short press on the button stops it and goes back to the page you were on. The app shows it in the alarm popup, and **Mute** stops it too. Tap the cross on a timer to stop it early. Timers are kept in the grill's memory, so switching the grill off or restarting it clears them.
+
 ### Probes and alarms
 
 Tap a probe card in the app to set it up:

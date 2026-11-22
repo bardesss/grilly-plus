@@ -145,6 +145,16 @@ private:
     */
     void draw_screen_reset_code(const char* code, uint32_t seconds_left);
     /**
+    *	@brief The timer that ends first, in the top bar: an hourglass and m:ss (h:mm from an hour up)
+    */
+    void draw_timer_bar(void);
+    /**
+    *	@brief A timer ran out: its name and TIME'S UP, instead of every page until it is stopped
+    *   @param slot the first finished timer slot
+    *   @param more how many other timers are finished too
+    */
+    void draw_timer_done(int slot, int more);
+    /**
     *	@brief The text cut to max_width pixels in the current font, ending in "." when it was cut
     */
     String fit(const String& text, int max_width);

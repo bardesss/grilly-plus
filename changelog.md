@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### New
+- Timers: start one on the Grill page with **+ Timer**, a name and the minutes (quick picks 5, 10, 15, 30 and 60). Up to 6 run at once on the grill itself, so they keep going with the app closed. The grill's top bar shows the one that ends first. When one runs out the grill beeps like a probe alarm and shows TIME'S UP with its name until you press the button or mute it; the app shows it in the alarm popup. A restart clears the timers
+
+### API and MQTT
+- `timers` (`id`, `name`, `remaining_s`, `length_s`, `done`, `probe`) and `alarm_timers` in `/api/grill` and the MQTT `grill` topic; `POST /api/timers` and `POST /api/timers/cancel`; a mute also clears the timers that ran out; `timers` in the capabilities
+
 ### Changes
 - Settings > Notifications is a lot shorter: each service (Telegram, ntfy, Pushover, Webhook) is one row that folds open, with "Set up", "Not finished" or "Not set up" on it. Opening one closes the others
 

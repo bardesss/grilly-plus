@@ -1,4 +1,5 @@
 #pragma once
+#include <ArduinoJson.h>
 
 class Preferences;
 class Probe;
@@ -11,6 +12,9 @@ struct jsonResult
     String message;
     bool unauthorized;      // Rejected because the current admin password was needed (api answers 401)
 };
+
+// One timer as the API and mqtt show it: {id, name, remaining_s, length_s, done, probe}
+void add_timer_json(JsonObject out, int slot, uint32_t now_ms);
 
 class JsonUtilities{
 

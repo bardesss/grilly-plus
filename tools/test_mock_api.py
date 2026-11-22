@@ -4,6 +4,43 @@ import unittest
 import mock_api
 
 
+JSON = {"Content-Type": "application/json"}
+
+
+class TimersTest(unittest.TestCase):
+    def setUp(self):
+        mock_api.TIMERS.clear()
+        mock_api.ALARM_SOUNDING = False
+
+    def test_start_shows_in_the_status_and_cancel_removes_it(self):
+        status, timer = mock_api.handle("POST", "/api/timers", json.dumps({"name": "Flip the ribs", "minutes": 20}), JSON)
+        self.assertEqual(201, status)
+        self.assertEqual("Flip the ribs", timer["name"])
+        self.assertEqual(1200, timer["remaining_s"])
+        _, grill = mock_api.handle("GET", "/api/grill", None)
+        self.assertEqual([timer["id"]], [t["id"] for t in grill["timers"]])
+        self.assertEqual(200, mock_api.handle("POST", "/api/timers/cancel", json.dumps({"id": timer["id"]}), JSON)[0])
+        self.assertEqual(404, mock_api.handle("POST", "/api/timers/cancel", json.dumps({"id": timer["id"]}), JSON)[0])
+
+    def test_bad_timers_are_refused(self):
+        self.assertEqual(400, mock_api.handle("POST", "/api/timers", json.dumps({"minutes": 0}), JSON)[0])
+        self.assertEqual(400, mock_api.handle("POST", "/api/timers", json.dumps({"name": "x" * 25, "minutes": 5}), JSON)[0])
+        for _ in range(6):
+            self.assertEqual(201, mock_api.handle("POST", "/api/timers", json.dumps({"minutes": 5}), JSON)[0])
+        status, data = mock_api.handle("POST", "/api/timers", json.dumps({"minutes": 5}), JSON)
+        self.assertEqual((409, "At most 6 timers"), (status, data["error"]))
+
+    def test_a_timer_that_ran_out_sounds_until_muted(self):
+        _, timer = mock_api.handle("POST", "/api/timers", json.dumps({"seconds": 0}), JSON)
+        _, grill = mock_api.handle("GET", "/api/grill", None)
+        self.assertTrue(grill["timers"][0]["done"])
+        self.assertTrue(grill["alarm_sounding"])
+        self.assertEqual(1, grill["alarm_timers"])
+        mock_api.handle("POST", "/api/alarm/mute", "{}", JSON)
+        _, grill = mock_api.handle("GET", "/api/grill", None)
+        self.assertEqual([], grill["timers"])
+
+
 class InfoTest(unittest.TestCase):
     def test_info_names_the_firmware_and_its_capabilities(self):
         status, data = mock_api.handle("GET", "/api/info", None)
