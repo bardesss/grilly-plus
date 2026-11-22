@@ -70,6 +70,33 @@ void test_start_again_keeps_code_and_waits_a_minute(){
     TEST_ASSERT_EQUAL_STRING("333333", reset.code(60000));
 }
 
+void test_three_failed_codes_lock_until_restart(){
+    AdminReset reset;
+    uint32_t now = 0;
+    for(int code = 0; code < 3; code++){
+        TEST_ASSERT_TRUE(reset.start(now, 123456) == AdminReset::Start::STARTED);
+        for(int i = 0; i < 5; i++){ reset.check("000000", now); }
+        now += 60000;
+    }
+    TEST_ASSERT_TRUE(reset.start(now, 123456) == AdminReset::Start::LOCKED);
+    TEST_ASSERT_TRUE(reset.start(now + 3600000UL, 123456) == AdminReset::Start::LOCKED);
+    TEST_ASSERT_FALSE(reset.active(now));
+
+    AdminReset after_restart;   // the state is only in RAM
+    TEST_ASSERT_TRUE(after_restart.start(now, 123456) == AdminReset::Start::STARTED);
+}
+
+void test_expired_codes_do_not_lock(){
+    AdminReset reset;
+    uint32_t now = 0;
+    for(int code = 0; code < 4; code++){
+        TEST_ASSERT_TRUE(reset.start(now, 123456) == AdminReset::Start::STARTED);
+        reset.check("000000", now);   // one wrong try, then it runs out
+        now += AdminReset::VALID_MS;
+    }
+    TEST_ASSERT_TRUE(reset.start(now, 123456) == AdminReset::Start::STARTED);
+}
+
 void test_cancel(){
     AdminReset reset;
     reset.start(0, 123456);
@@ -96,6 +123,8 @@ int main(int, char**){
     RUN_TEST(test_five_wrong_tries_end_the_code);
     RUN_TEST(test_code_expires_after_five_minutes);
     RUN_TEST(test_start_again_keeps_code_and_waits_a_minute);
+    RUN_TEST(test_three_failed_codes_lock_until_restart);
+    RUN_TEST(test_expired_codes_do_not_lock);
     RUN_TEST(test_cancel);
     RUN_TEST(test_millis_wraparound);
     return UNITY_END();

@@ -980,8 +980,9 @@ paths:
       description: >
         Shows a 6-digit code on the grill's own screen for 5 minutes (and beeps once), so only someone
         at the grill can reset the admin password with POST /admin/reset. Asking again while a code is
-        valid keeps the same code; a new code can be asked for a minute after the previous one. Needs
-        the json content type (no admin password). Not available over MQTT.
+        valid keeps the same code; a new code can be asked for a minute after the previous one. After 3
+        codes ended by wrong tries, no new code is given until the grill restarts. Needs the json
+        content type (no admin password). Not available over MQTT.
       requestBody:
         required: true
         content:
@@ -1019,6 +1020,16 @@ paths:
                   error:
                     type: string
                     example: "Content-Type should be application/json"
+        '423':
+          description: 3 codes ended by wrong tries since the grill started; restart it to try again
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Too many wrong codes. Restart the grill to try again"
         '429':
           description: A new code was asked for within a minute of the previous one
           content:

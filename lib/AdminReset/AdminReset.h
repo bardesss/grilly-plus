@@ -7,16 +7,19 @@
 //
 // - start() makes a 6-digit code that is valid for 5 minutes. Asking again while one is valid keeps
 //   the same code; a new code can only be made a minute after the previous one.
-// - check() accepts the code once. 5 wrong tries end the code, so guessing means starting over and
-//   waiting a minute each time, while the grill shows every new code on its screen.
+// - check() accepts the code once. 5 wrong tries end the code.
+// - After 3 codes ended by wrong tries, no new code is made until the grill restarts (this state is
+//   only in RAM). So someone on the network gets at most 15 guesses of a 6-digit code per restart,
+//   while someone at the grill can always restart it and try again.
 // All times are millis() values; the unsigned subtractions survive the 49-day wraparound.
 class AdminReset {
 public:
-    static constexpr uint32_t VALID_MS      = 5UL * 60UL * 1000UL;
-    static constexpr uint32_t RESTART_MS    = 60UL * 1000UL;
-    static constexpr int      MAX_ATTEMPTS  = 5;
+    static constexpr uint32_t VALID_MS          = 5UL * 60UL * 1000UL;
+    static constexpr uint32_t RESTART_MS        = 60UL * 1000UL;
+    static constexpr int      MAX_ATTEMPTS      = 5;
+    static constexpr int      MAX_FAILED_CODES  = 3;
 
-    enum class Start { STARTED, ALREADY_ACTIVE, TOO_SOON };
+    enum class Start { STARTED, ALREADY_ACTIVE, TOO_SOON, LOCKED };
     enum class Check { OK, WRONG, NOT_ACTIVE };
 
     // random is any 32-bit random value (esp_random() on the grill)
@@ -35,5 +38,6 @@ private:
     bool     started_    = false;   // a code was made at least once, so RESTART_MS applies
     uint32_t started_ms_ = 0;
     int      attempts_   = 0;
+    int      failed_codes_ = 0;     // codes ended by MAX_ATTEMPTS wrong tries since the restart
     char     code_[7]    = "";
 };

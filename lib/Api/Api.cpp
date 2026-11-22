@@ -256,6 +256,10 @@ void post_api_admin_reset_start(){
         result = config::admin_reset.start(millis(), esp_random());
         seconds_left = config::admin_reset.seconds_left(millis());
     }
+    if(result == AdminReset::Start::LOCKED){
+        web::webserver.send(423, "application/json", "{\"error\": \"Too many wrong codes. Restart the grill to try again\"}");
+        return;
+    }
     if(result == AdminReset::Start::TOO_SOON){
         web::webserver.send(429, "application/json", "{\"error\": \"Wait a minute before asking for a new code\"}");
         return;
