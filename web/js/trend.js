@@ -99,7 +99,9 @@ const Trend = (() => {
   // A probe's points ({t, v} in the display unit) as CSV: a time column and a temperature column.
   // A gap (probe unplugged) is an empty temperature.
   function csv(points, unit, name) {
-    const header = '"Time","' + String(name).replace(/"/g, '""') + " (" + (unit === "fahrenheit" ? "°F" : "°C") + ')"';
+    // A name starting with = + - @ would be run as a formula by a spreadsheet, a ' keeps it text
+    const safe = /^[=+\-@\t\r]/.test(String(name)) ? "'" + name : String(name);
+    const header = '"Time","' + safe.replace(/"/g, '""') + " (" + (unit === "fahrenheit" ? "°F" : "°C") + ')"';
     const rows = points.map((p) => stamp(p.t) + "," + (p.v === null ? "" : p.v.toFixed(1)));
     return [header, ...rows].join("\r\n") + "\r\n";
   }
