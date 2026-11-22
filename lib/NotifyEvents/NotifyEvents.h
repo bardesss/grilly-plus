@@ -1,6 +1,7 @@
 #pragma once
 #include <stddef.h>
 #include <stdint.h>
+#include <string>
 
 // What phone notifications are about, and their text. Plain C++ without Arduino, so
 // test/test_notify_events runs on the host: pio test -e native
@@ -78,8 +79,12 @@ void telegram_error(char* out, size_t size, int status, const char* body);
 
 // Splits an ntfy topic URL, "https://ntfy.sh/my-topic" or "http://192.168.1.5:8080/grill", into the
 // server ("https://ntfy.sh") and the topic ("my-topic"). False when it isn't http(s)://host/topic with
-// a topic of letters, digits, - and _ (at most 64), which is what ntfy accepts.
+// a topic of letters, digits, - and _ (at most 64), which is what ntfy accepts, or has a user:password@.
 bool ntfy_split(const char* url, char* server, size_t server_size, char* topic, size_t topic_size);
+
+// The server part of an ntfy topic URL ("https://ntfy.sh"), "" when the URL isn't valid. What the
+// access token is tied to.
+std::string ntfy_server_of(const char* url);
 
 // ntfy's priority for an event, 1 (min) to 5 (max): 4 for ready and outside the range, 3 otherwise
 int ntfy_priority(uint8_t event);

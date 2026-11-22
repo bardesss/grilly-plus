@@ -162,7 +162,8 @@ bool ntfy_split(const char* url, char* server, size_t server_size, char* topic, 
         if(!ok){ return false; }
     }
     for(const char* p = host; p < slash; p++){
-        if(*p == ' ' || *p == '?' || *p == '#'){ return false; }
+        // No user:password@ either: the token is the only way to log in, and it is kept secret
+        if(*p == ' ' || *p == '?' || *p == '#' || *p == '@'){ return false; }
     }
 
     size_t server_length = (size_t)(slash - url);
@@ -171,6 +172,21 @@ bool ntfy_split(const char* url, char* server, size_t server_size, char* topic, 
     server[server_length] = 0;
     memcpy(topic, name, name_length + 1);
     return true;
+}
+
+std::string ntfy_server_of(const char* url){
+    char server[160], topic[65];
+    // The settings trim the URL after this is read, so trim here too
+    std::string text = url == nullptr ? "" : url;
+    const char* blanks = " \t\r\n";
+    size_t first = text.find_first_not_of(blanks);
+    size_t last  = text.find_last_not_of(blanks);
+    text = first == std::string::npos ? "" : text.substr(first, last - first + 1);
+    if(!ntfy_split(text.c_str(), server, sizeof(server), topic, sizeof(topic))){ return ""; }
+    // Host names don't care about case, so "NTFY.sh" is the same server
+    std::string result = server;
+    for(char& ch : result){ if(ch >= 'A' && ch <= 'Z'){ ch = ch - 'A' + 'a'; } }
+    return result;
 }
 
 int ntfy_priority(uint8_t event){

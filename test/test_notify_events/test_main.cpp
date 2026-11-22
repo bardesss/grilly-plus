@@ -179,10 +179,19 @@ void test_ntfy_split_refuses_what_ntfy_would_refuse(){
     char server[64], topic[65];
     const char* bad[] = {"", "ntfy.sh/grill", "ftp://ntfy.sh/grill", "https://ntfy.sh", "https://ntfy.sh/",
                          "https:///grill", "https://ntfy.sh/my grill", "https://ntfy.sh/grill?x=1",
-                         "https://ntfy.sh/a.b"};
+                         "https://ntfy.sh/a.b", "https://me:secret@ntfy.sh/grill"};
     for(const char* url : bad){ TEST_ASSERT_FALSE_MESSAGE(ntfy_split(url, server, sizeof(server), topic, sizeof(topic)), url); }
     char tiny[8];
     TEST_ASSERT_FALSE(ntfy_split("https://ntfy.sh/grill", tiny, sizeof(tiny), topic, sizeof(topic)));
+}
+
+void test_ntfy_server_of(){
+    TEST_ASSERT_EQUAL_STRING("https://ntfy.sh", ntfy_server_of("https://ntfy.sh/grill").c_str());
+    TEST_ASSERT_EQUAL_STRING("https://ntfy.sh", ntfy_server_of(" https://NTFY.sh/other-topic\n").c_str());
+    TEST_ASSERT_EQUAL_STRING("http://192.168.1.5:8080", ntfy_server_of("http://192.168.1.5:8080/grill").c_str());
+    TEST_ASSERT_EQUAL_STRING("", ntfy_server_of("").c_str());
+    TEST_ASSERT_EQUAL_STRING("", ntfy_server_of("nonsense").c_str());
+    TEST_ASSERT_TRUE(ntfy_server_of("https://ntfy.sh/a") != ntfy_server_of("http://ntfy.sh/a"));   // http would leak it
 }
 
 void test_ntfy_priority_and_errors(){
@@ -219,6 +228,7 @@ int main(int argc, char** argv){
     RUN_TEST(test_telegram_errors);
     RUN_TEST(test_ntfy_split);
     RUN_TEST(test_ntfy_split_refuses_what_ntfy_would_refuse);
+    RUN_TEST(test_ntfy_server_of);
     RUN_TEST(test_ntfy_priority_and_errors);
     return UNITY_END();
 }
