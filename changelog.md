@@ -1,5 +1,10 @@
 # Changelog (firmware only)
 
+## Unreleased
+
+### Fixes
+- Install from GitHub with an admin password set but not filled in: the confirmation closed and only a small line said why. The app now asks for the password before the confirmation, and scrolls to the field
+
 ## 2026-11-22.1
 Alarm dialog, food presets, CSV export and a reset for a forgotten admin password. Grills on 2026-11-22 find this release under Settings > Firmware updates and install it with one tap; older versions install the `-ota.bin` file there.
 

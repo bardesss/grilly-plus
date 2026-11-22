@@ -31,7 +31,8 @@
     const settings = Settings.current();
     if (!settings || !settings.admin_password_set || authInput.value !== "") return false;
     show("Enter the current admin password first.");
-    authInput.focus();
+    authInput.scrollIntoView({ block: "center", behavior: "smooth" });   // it's at the top of the card
+    authInput.focus({ preventScroll: true });
     return true;
   }
 
@@ -216,6 +217,8 @@
     const version = latest.latest;
     const status = App.getStatus();
     const probes = status && status.probes && status.probes.some((probe) => probe.connected);
+    // Before the confirmation: asking afterwards closed the dialog with only a small line of text
+    if (currentPasswordMissing((text) => { ghNotice.textContent = text; })) return;
     const confirmed = await Dialog.confirm({
       title: "Install " + version + "?",
       message: "The grill restarts into update mode for about a minute. Keep it on the charger or above 30 % battery." +
@@ -223,7 +226,6 @@
       confirm: "Install",
     });
     if (!confirmed || busy) return;
-    if (currentPasswordMissing((text) => { ghNotice.textContent = text; })) return;
     busy = true;
     renderLatest();
     ghNotice.textContent = "";
