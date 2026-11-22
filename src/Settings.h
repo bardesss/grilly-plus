@@ -5,6 +5,7 @@
 
 #include "Probe.h"
 #include "History.h"
+#include "Timers.h"
 #include "Buzzer.h"
 #include "Mqtt.h"
 #include "Opengrill.h"
@@ -224,6 +225,8 @@ namespace grill{
     // Bitmask of probes that caused the current alarm, bit (n-1) for probe n. Written only by
     // task_alarm, cleared with alarm_sounding once the alarm is finished or muted.
     volatile uint8_t alarm_probes       = 0;
+    volatile uint8_t alarm_timers       = 0;
+    timers::TimerList timer_list;
 
     // ***********************************
     // * Probes
