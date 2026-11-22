@@ -1,6 +1,9 @@
 """Tests for tools/build_web.py: python -m unittest discover -s tools -p "test_*.py" """
 import importlib.util
 import os
+import re
+import shutil
+import subprocess
 import tempfile
 import unittest
 
@@ -38,6 +41,30 @@ class InlinePageTest(unittest.TestCase):
             write(folder, "index.html", '<script src="js/missing.js"></script>')
             with self.assertRaises(FileNotFoundError):
                 build_web.inline_page(folder)
+
+
+class StripTest(unittest.TestCase):
+    def test_js_loses_comment_lines_indentation_and_empty_lines(self):
+        source = "// header\nconst A = (() => {\n\n  // why\n  let x = 1;   // keeps an end comment\n  return x;\n})();\n"
+        self.assertEqual(build_web.strip_js(source),
+                         "const A = (() => {\nlet x = 1;   // keeps an end comment\nreturn x;\n})();")
+
+    def test_css_loses_block_comments(self):
+        source = "/* Cards */\n.card {\n  color: red; /* why */\n}\n/* two\n   lines */\n.b { }\n"
+        self.assertEqual(build_web.strip_css(source), ".card {\ncolor: red;\n}\n.b { }")
+
+    @unittest.skipUnless(shutil.which("node"), "needs node")
+    def test_every_script_of_the_real_page_still_parses(self):
+        page = build_web.inline_page(os.path.join(os.path.dirname(HERE), "web"))
+        scripts = re.findall(r"<script>\n(.*?)\n</script>", page, flags=re.S)
+        self.assertGreater(len(scripts), 10)
+        with tempfile.TemporaryDirectory() as folder:
+            for index, script in enumerate(scripts):
+                path = os.path.join(folder, "script%d.js" % index)
+                with open(path, "w", encoding="utf-8") as f:
+                    f.write(script)
+                result = subprocess.run(["node", "--check", path], capture_output=True, text=True)
+                self.assertEqual(result.returncode, 0, result.stderr)
 
 
 class HeaderTest(unittest.TestCase):
