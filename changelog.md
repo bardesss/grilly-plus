@@ -1,5 +1,10 @@
 # Changelog (firmware only)
 
+## Unreleased
+
+### Changes
+- Settings > Notifications is a lot shorter: each service (Telegram, ntfy, Pushover, Webhook) is one row that folds open, with "Set up", "Not finished" or "Not set up" on it. Opening one closes the others
+
 ## 2026-11-22.3
 Fixes for updating from GitHub and for dialogs with Bitwarden. Grills on 2026-11-22 or later install it under Settings > Firmware updates with one tap.
 

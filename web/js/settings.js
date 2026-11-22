@@ -25,24 +25,30 @@ const Settings = (() => {
         suffix: (v) => (v === 0 ? "never" : "min") },
     ] },
     { id: "notify", title: "Notifications", fields: [
-      { type: "heading", label: "Telegram" },
+      { type: "group", label: "Telegram", ready: (s) => s.telegram_token_set && !!s.telegram_chat_id,
+        started: (s) => s.telegram_token_set || !!s.telegram_chat_id, fields: [
       { key: "telegram_token", label: "Telegram bot token", type: "password", saved: "token",
         hint: "Create a bot with @BotFather in Telegram and paste the token it gives you." },
       { key: "telegram_chat_id", label: "Chat ID", type: "text", placeholder: "Like 123456789",
         hint: "Send your bot a message first. @userinfobot tells you your chat ID." },
-      { type: "heading", label: "ntfy" },
+      ] },
+      { type: "group", label: "ntfy", ready: (s) => s.ntfy_url_set, started: (s) => s.ntfy_url_set || s.ntfy_token_set, fields: [
       { key: "ntfy_url", label: "Topic URL", type: "password", saved: "topic URL", newPlaceholder: "https://ntfy.sh/your-topic",
         hint: "Pick a hard-to-guess topic and subscribe to it in the ntfy app. Your own ntfy server works too." },
       { key: "ntfy_token", label: "Access token", type: "password", saved: "token",
         hint: "Only for a protected topic or your own server." },
-      { type: "heading", label: "Pushover" },
+      ] },
+      { type: "group", label: "Pushover", ready: (s) => s.pushover_user_set && s.pushover_token_set,
+        started: (s) => s.pushover_user_set || s.pushover_token_set, fields: [
       { key: "pushover_user", label: "User key", type: "password", saved: "user key",
         hint: "Your user key (or a group key) from pushover.net." },
       { key: "pushover_token", label: "App token", type: "password", saved: "token",
         hint: "Create an application on pushover.net and paste its API token." },
-      { type: "heading", label: "Webhook" },
+      ] },
+      { type: "group", label: "Webhook", ready: (s) => s.webhook_url_set, started: (s) => s.webhook_url_set, fields: [
       { key: "webhook_url", label: "URL", type: "password", saved: "URL", newPlaceholder: "https://…/api/webhook/grill",
         hint: "Gets a JSON POST for every notification, for Home Assistant, Node-RED and the like." },
+      ] },
       { type: "heading", label: "Notify me when" },
       { key: "notify_ready", label: "Ready", type: "toggle" },
       { key: "notify_almost", label: "Almost ready (early warning)", type: "toggle" },
@@ -118,8 +124,39 @@ const Settings = (() => {
     return hint;
   }
 
+  // A part of a card that folds open, like one notification service: the label and how far it is
+  // set up on the row, its fields underneath. Opening one closes the others in the same card.
+  function buildGroup(field, saver) {
+    const group = document.createElement("details");
+    group.className = "settings-group";
+    const summary = document.createElement("summary");
+    summary.innerHTML = '<span class="settings-group-label"></span><span class="settings-group-state"></span>' +
+      '<svg class="icon settings-group-chevron" aria-hidden="true"><use href="#i-chevron"/></svg>';
+    summary.querySelector(".settings-group-label").textContent = field.label;
+    const state = summary.querySelector(".settings-group-state");
+    const body = document.createElement("div");
+    body.className = "settings-group-body";
+    field.fields.forEach((inner) => body.append(buildField(inner, saver)));
+    group.append(summary, body);
+    group.addEventListener("toggle", () => {
+      if (!group.open || !group.parentElement) return;
+      group.parentElement.querySelectorAll(":scope > details.settings-group[open]").forEach((other) => {
+        if (other !== group) other.open = false;
+      });
+    });
+    controls.push({ set: (s) => {
+      const ready = !!field.ready(s);
+      const started = !ready && !!field.started(s);
+      state.textContent = ready ? "Set up" : started ? "Not finished" : "Not set up";
+      state.dataset.state = ready ? "ready" : started ? "started" : "off";
+    }, saver });
+    return group;
+  }
+
   function buildField(field, saver) {
     const send = (value, options) => saver.change({ [field.key]: value }, options);
+
+    if (field.type === "group") return buildGroup(field, saver);
 
     if (field.type === "heading") {
       const heading = document.createElement("h3");
