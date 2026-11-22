@@ -19,10 +19,13 @@
       '<div class="graph-wrap">' +
       '<svg class="graph" viewBox="0 0 ' + GRAPH_WIDTH + ' ' + GRAPH_HEIGHT + '" preserveAspectRatio="none" aria-hidden="true" hidden>' +
       '<rect class="graph-band" x="0" width="' + GRAPH_WIDTH + '"/><path class="graph-area"/><path class="graph-line"/>' +
-      '<line class="graph-target" x1="0" x2="' + GRAPH_WIDTH + '"/></svg>' +
+      '<line class="graph-target" x1="0" x2="' + GRAPH_WIDTH + '"/><path class="graph-forecast"/></svg>' +
+      // HTML on top of the stretched svg, so the dot stays round and the text unscaled
+      '<span class="graph-dot" hidden></span><span class="graph-target-label" hidden></span>' +
       '</div>' +
       // Under the strip instead of on it, where they collided with the line
-      '<div class="graph-labels" hidden><span class="graph-start"></span><span class="graph-range"></span><span>now</span></div>' +
+      '<div class="graph-labels" hidden><span class="graph-start"></span><span class="graph-range"></span>' +
+      '<span class="graph-now">now</span><span class="graph-ready" hidden></span></div>' +
       '<div class="graph-empty">Collecting readings…</div>' +
       '<div class="card-meta"><span class="probe-status"></span><span class="probe-time"></span></div>';
     card.addEventListener("click", () => {
@@ -36,12 +39,15 @@
   // steady reading isn't rebuilt every second.
   function drawGraph(card, probe, unit) {
     const mode = Format.alarmMode(probe);
-    const key = [Trend.version(probe.probe_id), unit, mode, probe.target_temperature, probe.minimum_temperature].join("|");
+    // The time to target counts down every second; a minute is plenty for where the forecast ends
+    const eta = mode === "target" && !probe.stalled && probe.eta_seconds > 0 ? probe.eta_seconds : -1;
+    const key = [Trend.version(probe.probe_id), unit, mode, probe.target_temperature, probe.minimum_temperature,
+                 eta > 0 ? Math.round(eta / 60) : -1].join("|");
     if (card.dataset.graphKey === key) return;
     card.dataset.graphKey = key;
     const result = Graph.layout(Trend.points(probe.probe_id, unit), {
       width: GRAPH_WIDTH, height: GRAPH_HEIGHT, mode,
-      target: probe.target_temperature, minimum: probe.minimum_temperature,
+      target: probe.target_temperature, minimum: probe.minimum_temperature, etaSeconds: eta,
     });
     const svg = card.querySelector(".graph");
     const labels = card.querySelector(".graph-labels");
@@ -64,10 +70,36 @@
       band.setAttribute("height", Math.max(0, result.minimum - result.target));
     }
 
+    const forecast = svg.querySelector(".graph-forecast");
+    forecast.style.display = result.forecast ? "" : "none";
+    if (result.forecast) forecast.setAttribute("d", result.forecast);
+
+    const pct = (value, of) => (value / of * 100) + "%";
+    const dot = card.querySelector(".graph-dot");
+    dot.hidden = result.now === null;
+    if (result.now) { dot.style.left = pct(result.now.x, GRAPH_WIDTH); dot.style.top = pct(result.now.y, GRAPH_HEIGHT); }
+    const targetLabel = card.querySelector(".graph-target-label");
+    targetLabel.hidden = mode !== "target";
+    if (mode === "target") {
+      targetLabel.textContent = Math.round(probe.target_temperature) + "°";
+      targetLabel.style.top = pct(result.target, GRAPH_HEIGHT);
+    }
+
+    // Off mode has no guide lines, so it keeps the lowest and highest reading as a hint of the scale
     const high = Math.round(result.highest);
     const low = Math.round(result.lowest);
     card.querySelector(".graph-start").textContent = Format.ago((result.endT - result.startT) / 1000);
-    card.querySelector(".graph-range").textContent = low === high ? high + "°" : low + "–" + high + "°";
+    card.querySelector(".graph-range").textContent = mode !== "off" ? "" : low === high ? high + "°" : low + "–" + high + "°";
+    const nowLabel = card.querySelector(".graph-now");
+    const ready = card.querySelector(".graph-ready");
+    ready.hidden = !result.forecast;
+    labels.classList.toggle("has-forecast", !!result.forecast);
+    if (result.forecast) {
+      ready.textContent = Format.readyAt(eta);   // the card says "ready in …" right below
+      nowLabel.style.left = pct(result.nowX, GRAPH_WIDTH);
+    } else {
+      nowLabel.style.left = "";
+    }
   }
 
   function fill(card, probe, unit) {

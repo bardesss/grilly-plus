@@ -3,6 +3,8 @@
 const Graph = (() => {
   const MIN_SPAN = 5;      // degrees, so a flat line doesn't turn noise into mountains
   const PADDING = 0.08;    // share of the range kept free above and below
+  const FORECAST_MIN = 0.2;    // share of the width for the forecast, whatever the time to target
+  const FORECAST_MAX = 0.45;   // so a long cook or a far target don't squeeze the readings
 
   const round = (value) => Math.round(value * 10) / 10;
 
@@ -27,8 +29,18 @@ const Graph = (() => {
     return result;
   }
 
+  // Share of the width for the forecast: the time to target in proportion to the readings shown,
+  // within FORECAST_MIN..FORECAST_MAX. 0 without a forecast.
+  function forecastShare(spanMs, etaSeconds) {
+    if (!(etaSeconds > 0)) return 0;
+    const share = etaSeconds * 1000 / (spanMs + etaSeconds * 1000);
+    return Math.min(FORECAST_MAX, Math.max(FORECAST_MIN, share));
+  }
+
   // Path data for a width x height box, or null with fewer than 2 readings. The target (and the
-  // range minimum) are part of the scale, so their guide lines are always visible.
+  // range minimum) are part of the scale, so their guide lines are always visible. In target mode
+  // with opts.etaSeconds > 0 the readings take the left part and a dotted forecast runs from the
+  // newest reading to the target at the right edge.
   function layout(points, opts) {
     const values = points.filter((point) => point.v !== null).map((point) => point.v);
     if (values.length < 2) return null;
@@ -58,7 +70,9 @@ const Graph = (() => {
     const shown = downsample(points, opts.width);
     const first = shown[0].t;
     const span = shown[shown.length - 1].t - first || 1;
-    const x = (t) => round((t - first) / span * opts.width);
+    const share = opts.mode === "target" ? forecastShare(points[points.length - 1].t - points[0].t, opts.etaSeconds) : 0;
+    const nowX = round(opts.width * (1 - share));
+    const x = (t) => round((t - first) / span * nowX);
     const y = (v) => round((high - v) / (high - low) * opts.height);
 
     // Split at gaps, each run of readings is its own line and area
@@ -85,9 +99,18 @@ const Graph = (() => {
       "M" + r[0][0] + " " + opts.height + "L" + r.map(([px, py]) => px + " " + py).join("L") +
       "L" + r[r.length - 1][0] + " " + opts.height + "Z").join("");
 
+    // The newest reading, for the "now" dot and the start of the forecast
+    const last = runs.length ? runs[runs.length - 1][runs[runs.length - 1].length - 1] : null;
+    const lastIsNow = last !== null && shown[shown.length - 1].v !== null;
+    const forecast = share > 0 && lastIsNow
+      ? "M" + last[0] + " " + last[1] + "L" + opts.width + " " + y(opts.target) : null;
+
     return {
       line,
       area,
+      forecast,
+      nowX,
+      now: lastIsNow ? { x: last[0], y: last[1] } : null,
       target: opts.mode === "off" ? null : y(opts.target),
       minimum: opts.mode === "range" ? y(opts.minimum) : null,
       highest,
@@ -108,7 +131,7 @@ const Graph = (() => {
     return result;
   }
 
-  return { downsample, layout, ticks };
+  return { downsample, forecastShare, layout, ticks };
 })();
 
 if (typeof module === "object" && module.exports) module.exports = Graph;

@@ -214,7 +214,15 @@ body.offline .live { opacity: .4; }
 .graph-area { fill: var(--graph); opacity: .12; }
 .graph-target { stroke: var(--accent); stroke-width: 1; stroke-dasharray: 4 4; vector-effect: non-scaling-stroke; }
 .graph-band { fill: var(--good); opacity: .14; }
-.graph-labels { display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; font-size: 11px; line-height: 1; color: var(--muted); }
+.graph-labels { position: relative; display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; font-size: 11px; line-height: 1; color: var(--muted); }
+.graph-labels.has-forecast .graph-now { position: absolute; transform: translateX(-50%); }
+.graph-labels.has-forecast .graph-range { display: none; }
+.graph-ready { color: var(--accent-text); }
+.graph-forecast { fill: none; stroke: var(--graph); stroke-width: 2; stroke-dasharray: 1 5; stroke-linecap: round; opacity: .8; vector-effect: non-scaling-stroke; }
+.graph-dot { position: absolute; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: var(--graph);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--graph) 25%, transparent); pointer-events: none; }
+.graph-target-label { position: absolute; right: 0; transform: translateY(-120%); padding: 0 2px; font-size: 11px; line-height: 1;
+  font-weight: 600; color: var(--accent-text); pointer-events: none; }
 .graph-empty { display: flex; align-items: center; justify-content: center; height: 61px;  /* graph + label row, so cards keep their height */ margin-top: 8px; border: 1px dashed var(--border); border-radius: 8px; font-size: 12px; color: var(--muted); }
 .probe-time.eta { color: var(--accent-text); font-weight: 600; }
 /* Card for a probe currently causing a sounding alarm: a red outline that pulses, static under

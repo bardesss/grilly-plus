@@ -114,3 +114,27 @@ test("ticks are nice values inside the range", () => {
   assert.deepEqual(Graph.ticks(0, 300), [0, 100, 200, 300]);
   assert.deepEqual(Graph.ticks(20.2, 21.4), [20.5, 21]);
 });
+
+test("forecastShare follows the time to target within 20-45 % of the width", () => {
+  assert.equal(Graph.forecastShare(600000, -1), 0);
+  assert.equal(Graph.forecastShare(600000, 0), 0);
+  assert.equal(Graph.forecastShare(3600000, 600), 0.2);      // 10 min left of a 1 h cook: at least 20 %
+  assert.equal(Graph.forecastShare(600000, 2100), 0.45);     // 35 min left after 10 min: at most 45 %
+  assert.equal(Graph.forecastShare(3000000, 1500), 1500 / 4500);
+});
+
+test("a forecast runs from the newest reading to the target at the right edge", () => {
+  const result = Graph.layout(series([20, 22, 24, 26]), { ...box, mode: "target", target: 74, etaSeconds: 2100 });
+  assert.equal(result.nowX, 132);                            // 240 * (1 - 0.45)
+  assert.deepEqual(result.now, { x: 132, y: Number(result.line.match(/([\d.]+) ([\d.]+)$/)[2]) });
+  assert.equal(result.forecast, "M132 " + result.now.y + "L240 " + result.target);
+});
+
+test("no forecast without a time to target, outside target mode, or after a gap", () => {
+  const opts = { ...box, mode: "target", target: 74 };
+  assert.equal(Graph.layout(series([20, 22]), opts).forecast, null);
+  assert.equal(Graph.layout(series([20, 22]), opts).nowX, 240);
+  assert.equal(Graph.layout(series([20, 22]), { ...opts, mode: "range", minimum: 60, etaSeconds: 600 }).forecast, null);
+  assert.equal(Graph.layout(series([20, 22, null]), { ...opts, etaSeconds: 600 }).forecast, null);
+  assert.equal(Graph.layout(series([20, 22, null]), { ...opts, etaSeconds: 600 }).now, null);
+});
