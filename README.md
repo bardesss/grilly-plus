@@ -88,7 +88,7 @@ Grilly+ is a fork of [Free-Grilly](https://github.com/epiecs/free-grilly) by [Ep
 
 ### In the web app
 - **Dashboard** with a card per connected probe: temperature, a graph of the whole cook with a dot at the current reading, the target line (labelled) or range band, and "ready in ~1h 20m". With a time to target, a dotted forecast runs from now up to the target and ends at the clock time it'll be ready.
-- **Food presets:** pick steak medium-rare, pulled pork, chicken breast or one of about 20 other foods, and the target fills in. Safe temperatures follow the USDA.
+- **Food presets:** pick steak medium-rare, pulled pork, chicken breast or one of about 20 other foods, and the target fills in. Safe temperatures follow the USDA. Add your own (also ranges, like your smoker's sweet spot), and hide the ones you never use.
 - **Food icons** on the cards and on the grill's screen, so you see at a glance which probe is in the chicken.
 - **Probe editor:** name, alarm (off / target / range) with large steppers, probe type, calibration offset, and a large chart with temperature labels, a "30 min / Whole cook" switch, **Download CSV** and **Clear history**.
 - **Temperature history** on the grill: the last 30 minutes at 10 seconds per reading plus the whole cook at a coarser step, in a fixed ~5 KB, so even a 24-hour cook fits. It's kept until a restart, until a probe has been unplugged for more than 10 minutes, or until you clear it.
@@ -159,6 +159,8 @@ Tap a probe card in the app to set it up:
   Opening the lid drops the temperature fast. Grilly+ sees that and waits up to 5 minutes before calling it too low (**Settings › Alarms › Lid open pause**, 0 turns it off).
 
 Not sure what temperature to use? Pick a food under **Food** and the target fills in. A probe that still has its default name ("Probe 3") gets the food's name.
+
+Your own presets go on top of that list. Set a probe up the way you like it and tap **Save as preset** in its editor, or add, edit and delete them under **Settings › Food presets**. A preset can be a target or a range, has an icon and optionally a group of its own. That card also lets you switch off built-in presets you never use, or copy one to tweak it. Up to 30 presets, kept on the grill, so every phone and browser has the same list.
 
 Each probe can have an icon for what's on it: beef, lamb, pork, poultry, fish, sausage, vegetables, the pit or smoker, or other. Picking a food sets it, or choose one under **Icon** in the editor. It shows on the probe's card and on the grill's screen, next to the temperature with one probe, next to the probe number with two to four, and after the temperature with five or more.
 

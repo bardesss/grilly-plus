@@ -10,7 +10,7 @@ const Editor = (() => {
 
   let backdrop, sheet, form, title, live, note, nameInput, modeInputs;
   let targetGroup, targetLabel, minGroup, targetStepper, minStepper;
-  let presetGroup, presetSelect, presetUnit = null;
+  let presetGroup, presetSelect, presetKey = null, savePresetButton, savePresetTimer = null;
   let typeSelect, typeName, customBox, offsetStepper;
   let foodGroup, foodInputs;
   const refInputs = {};
@@ -49,7 +49,8 @@ const Editor = (() => {
 
   function showMode(current) {
     targetGroup.hidden = current === "off";
-    presetGroup.hidden = current === "range";
+    presetGroup.hidden = current === "off";
+    savePresetButton.hidden = current === "off";
     minGroup.hidden = current !== "range";
     targetLabel.textContent = current === "range" ? "Maximum temperature" : "Target temperature";
     targetStepper.setLabel(current === "range" ? "Maximum temperature" : "Target temperature");
@@ -82,36 +83,68 @@ const Editor = (() => {
     save({ target_temperature: targetStepper.get(), minimum_temperature: value });
   }
 
-  // Options read "Brisket · 95°C", so they're rebuilt when the unit changes
+  // Options read "Brisket · 95°C", so they're rebuilt when the unit or the presets change
   function fillPresets(u) {
-    if (presetUnit === u) return;
-    presetUnit = u;
-    presetSelect.length = 1;
+    const key = u + "|" + Presets.version();
+    if (presetKey === key) return;
+    presetKey = key;
+    presetSelect.querySelectorAll("optgroup").forEach((group) => group.remove());   // length = 1 leaves them
     Presets.groups().forEach((group) => {
       const optgroup = document.createElement("optgroup");
       optgroup.label = group.name;
       group.items.forEach((preset) => {
-        const text = (Food.emoji(preset.type) ? Food.emoji(preset.type) + " " : "") + preset.label;
-        optgroup.append(new Option(text + " · " + Presets.target(preset, u) + Format.unitSymbol(u), String(preset.index)));
+        optgroup.append(new Option(Presets.optionText(preset, u, Format.unitSymbol(u)), preset.value));
       });
       presetSelect.append(optgroup);
     });
   }
 
   function onPresetChange() {
-    const preset = Presets.LIST[Number(presetSelect.value)];
+    const preset = Presets.byValue(presetSelect.value);
     presetSelect.value = "";
     if (!preset) return;
-    modeInputs.forEach((input) => { input.checked = input.value === "target"; });
-    showMode("target");
+    const min = Presets.minimum(preset, unit());
+    const current = min > 0 ? "range" : "target";
+    modeInputs.forEach((input) => { input.checked = input.value === current; });
+    showMode(current);
     targetStepper.set(Presets.target(preset, unit()));
-    const fields = { target_temperature: targetStepper.get(), minimum_temperature: 0, type_icon: preset.type || "" };
+    if (min > 0) minStepper.set(min);
+    const fields = { target_temperature: targetStepper.get(), minimum_temperature: min > 0 ? minStepper.get() : 0, type_icon: preset.type || "" };
     setFood(fields.type_icon);
     if (Presets.shouldRename(nameInput.value, probeId)) {
       nameInput.value = preset.name;
       fields.name = preset.name;
     }
     save(fields, { immediate: true });
+  }
+
+  // Saves what the editor holds as a preset of your own; one with the same name is replaced
+  async function onSavePreset() {
+    clearTimeout(savePresetTimer);
+    const name = nameInput.value.trim() || "Probe " + probeId;
+    const food = [...foodInputs].find((i) => i.checked);
+    const preset = Presets.make({
+      name, group: "", type: food ? food.value : "", unit: unit(),
+      target: targetStepper.get(), minimum: mode() === "range" ? minStepper.get() : 0,
+    });
+    const list = Presets.get().presets;
+    const index = list.findIndex((p) => p.name === preset.name);
+    if (index >= 0) preset.group = list[index].group;
+    if (index < 0 && list.length >= Presets.MAX_OWN) {
+      savePresetButton.textContent = "You have 30 presets already, remove one under Settings";
+    } else {
+      if (index >= 0) list[index] = preset; else list.push(preset);
+      savePresetButton.disabled = true;
+      try {
+        await Presets.save({ presets: list });
+        savePresetButton.textContent = (index >= 0 ? "Updated" : "Saved as") + " preset “" + preset.name + "”";
+      } catch (error) {
+        savePresetButton.textContent = error.message || "Couldn't save the preset";
+      } finally {
+        savePresetButton.disabled = false;
+      }
+    }
+    savePresetTimer = setTimeout(() => { savePresetButton.textContent = "Save as preset"; }, 3000);
   }
 
   function setFood(key) {
@@ -332,6 +365,7 @@ const Editor = (() => {
     if (probeId !== null && probeId !== id) saver.flush();
     probeId = id;
     returnFocus = trigger || null;
+    Presets.load();     // presets of your own may have changed on another phone
     title.textContent = "Probe " + id;
     Controls.showNote(note, "idle");
     form.disabled = true;
@@ -419,6 +453,7 @@ const Editor = (() => {
       '  </div></fieldset>' +
       '  <label class="field" id="editor-preset-group"><span>Food</span><select id="editor-preset">' +
       '    <option value="">Pick a food to set the target</option></select></label>' +
+      '  <button type="button" class="link-button" id="editor-save-preset">Save as preset</button>' +
       '  <div class="field" id="editor-min-group"><span class="field-label">Minimum temperature</span><div id="editor-min"></div></div>' +
       '  <div class="field" id="editor-target-group"><span class="field-label" id="editor-target-label"></span><div id="editor-target"></div></div>' +
       '  <details class="probe-type"><summary><span>Probe type</span><span class="summary-value"><span id="editor-type-name"></span> <svg class="icon"><use href="#i-chevron"/></svg></span></summary>' +
@@ -450,6 +485,7 @@ const Editor = (() => {
     minGroup = sheet.querySelector("#editor-min-group");
     presetGroup = sheet.querySelector("#editor-preset-group");
     presetSelect = sheet.querySelector("#editor-preset");
+    savePresetButton = sheet.querySelector("#editor-save-preset");
     foodGroup = sheet.querySelector(".food-picker");
     buildFoodPicker();
     typeSelect = sheet.querySelector("#editor-type");
@@ -490,6 +526,8 @@ const Editor = (() => {
     modeInputs.forEach((input) => input.addEventListener("change", onModeChange));
     typeSelect.addEventListener("change", onTypeChange);
     presetSelect.addEventListener("change", onPresetChange);
+    savePresetButton.addEventListener("click", onSavePreset);
+    Presets.onChange(() => fillPresets(unit()));
     Object.entries(refInputs).forEach(([key, input]) => {
       input.addEventListener("change", () => save({ probe_type: "custom", ...references() }, { immediate: true }));
     });

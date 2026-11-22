@@ -28,29 +28,118 @@ const Presets = (() => {
     { type: "fish", group: "Fish", name: "Fish", label: "Fish, cooked through", c: 63, f: 145 },
   ];
 
+  // Ids for hiding a built-in preset: its label in lower case with dashes ("steak-medium-rare")
+  LIST.forEach((preset) => { preset.id = preset.label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); });
+
+  const OWN_GROUP = "My presets";
+  const MAX_OWN = 30;
+
+  // Your own presets and the hidden built-in ids, as the grill keeps them (GET /api/presets)
+  let own = [];
+  let hidden = [];
+  let version = 0;
+  const listeners = [];
+
   function target(preset, unit) {
     return unit === "fahrenheit" ? preset.f : preset.c;
   }
 
-  // The groups in order, each with its presets
+  // The range minimum, 0 for a target preset
+  function minimum(preset, unit) {
+    return (unit === "fahrenheit" ? preset.min_f : preset.min_c) || 0;
+  }
+
+  function label(preset) {
+    return preset.label || preset.name;
+  }
+
+  // "Brisket · 95°C" or "Pit · 107–121°C", with the type's emoji in front
+  function optionText(preset, unit, symbol) {
+    const min = minimum(preset, unit);
+    const temps = (min ? min + "–" : "") + target(preset, unit) + symbol;
+    const emoji = typeof Food !== "undefined" ? Food.emoji(preset.type) : "";
+    return (emoji ? emoji + " " : "") + label(preset) + " · " + temps;
+  }
+
+  // The groups the Food list shows: your own first (in their group, or "My presets"), then the
+  // built-in ones that aren't hidden. value finds the preset again with byValue().
   function groups() {
     const result = [];
+    const add = (name, item) => {
+      let group = result.find((g) => g.name === name);
+      if (!group) { group = { name, items: [] }; result.push(group); }
+      group.items.push(item);
+    };
+    own.forEach((preset, index) => add(preset.group || OWN_GROUP, { value: "own:" + index, ...preset }));
     LIST.forEach((preset, index) => {
-      let group = result.find((g) => g.name === preset.group);
-      if (!group) { group = { name: preset.group, items: [] }; result.push(group); }
-      group.items.push({ index, ...preset });
+      if (!hidden.includes(preset.id)) add(preset.group, { value: "builtin:" + index, ...preset });
     });
     return result;
+  }
+
+  function byValue(value) {
+    const [kind, index] = String(value).split(":");
+    if (kind === "own") return own[Number(index)] || null;
+    if (kind === "builtin") return LIST[Number(index)] || null;
+    return null;
+  }
+
+  // Both units from the one typed in, rounded to whole degrees
+  function convert(value, unit) {
+    return unit === "fahrenheit"
+      ? { c: Math.round((value - 32) / 1.8), f: Math.round(value) }
+      : { c: Math.round(value), f: Math.round(value * 1.8 + 32) };
+  }
+
+  // A preset of your own from what the editor or the form holds, temperatures in `unit`
+  function make({ name, group, type, target: max, minimum: min, unit }) {
+    const top = convert(max, unit);
+    const preset = { name: name.trim().slice(0, 24), c: top.c, f: top.f };
+    if (group && group.trim() && group.trim() !== OWN_GROUP) preset.group = group.trim().slice(0, 20);
+    if (type) preset.type = type;
+    if (min > 0) {
+      const low = convert(min, unit);
+      preset.min_c = Math.min(low.c, top.c - 1);
+      preset.min_f = Math.min(low.f, top.f - 1);
+    }
+    return preset;
+  }
+
+  function set(data) {
+    own = data && Array.isArray(data.presets) ? data.presets : [];
+    hidden = data && Array.isArray(data.hidden) ? data.hidden : [];
+    version++;
+    listeners.forEach((listener) => listener());
+  }
+
+  function get() {
+    return { presets: own.slice(), hidden: hidden.slice() };
+  }
+
+  function onChange(listener) { listeners.push(listener); }
+  function getVersion() { return version; }
+
+  async function load() {
+    try { set(await Api.get("/api/presets", 5000)); } catch (error) { /* the built-in ones still work */ }
+  }
+
+  // change: { presets: [...] } and/or { hidden: [...] }, as the grill should store them
+  async function save(change) {
+    set(await Api.post("/api/presets", change));
   }
 
   // A preset may rename the probe when the user hasn't named it: the default "Probe 3", empty,
   // or a name an earlier preset put there
   function shouldRename(name, probeId) {
     const current = (name || "").trim();
-    return current === "" || current === "Probe " + probeId || LIST.some((preset) => preset.name === current);
+    return current === "" || current === "Probe " + probeId
+      || LIST.some((preset) => preset.name === current) || own.some((preset) => preset.name === current);
   }
 
-  return { LIST, target, groups, shouldRename };
+  return {
+    LIST, OWN_GROUP, MAX_OWN, target, minimum, label, optionText, groups, byValue, convert, make,
+    set, get, onChange, version: getVersion, load, save, shouldRename,
+  };
 })();
 
 if (typeof module === "object" && module.exports) module.exports = Presets;

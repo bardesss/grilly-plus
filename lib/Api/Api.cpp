@@ -15,6 +15,7 @@
 #include "Grill.h"
 #include "JsonUtilities.h"
 #include "Notify.h"
+#include "Presets.h"
 #include "SharedLock.h"
 #include "Updater.h"
 #include "Web.h"
@@ -49,6 +50,10 @@ void setup_api_routes()
     web::webserver.on("/api/update/check", HTTP_OPTIONS, cors_api_update_check);
     web::webserver.on("/api/update/install", HTTP_POST, post_api_update_install);
     web::webserver.on("/api/update/install", HTTP_OPTIONS, cors_api_update_install);
+
+    web::webserver.on("/api/presets", HTTP_GET, get_api_presets);
+    web::webserver.on("/api/presets", HTTP_POST, post_api_presets);
+    web::webserver.on("/api/presets", HTTP_OPTIONS, cors_api_presets);
 
     web::webserver.on("/api/notify", HTTP_GET, get_api_notify);
     web::webserver.on("/api/notify/test", HTTP_POST, post_api_notify_test);
@@ -184,6 +189,83 @@ void get_api_update_latest(){
     serializeJson(jsondoc, api_json_buffer, sizeof(api_json_buffer));
     allow_cross_origin_read();
     web::webserver.send(200, "application/json", api_json_buffer);
+}
+
+// Own food presets and hidden built-in ones, kept in NVS as JSON text
+// Both lists go out in one answer through the 4096 byte buffer (and an NVS string holds about 4000)
+const size_t PRESETS_STORE_MAX = 3000;
+const size_t HIDDEN_STORE_MAX  = 900;
+
+void get_api_presets(){
+    String saved, hidden;
+    {
+        SharedLock lock;    // the settings storage is also written by other tasks
+        saved  = config::settings_storage.isKey("presets") ? config::settings_storage.getString("presets") : "[]";
+        hidden = config::settings_storage.isKey("presets_hid") ? config::settings_storage.getString("presets_hid") : "[]";
+    }
+    JsonDocument doc, list;
+    JsonArray out_presets = doc["presets"].to<JsonArray>();
+    JsonArray out_hidden  = doc["hidden"].to<JsonArray>();
+    // Whatever was stored went through the same checks; anything unreadable shows as empty
+    if(deserializeJson(list, saved) != DeserializationError::Ok
+       || !presets::clean_presets(list.as<JsonVariantConst>(), out_presets).empty()){ out_presets.clear(); }
+    if(deserializeJson(list, hidden) != DeserializationError::Ok
+       || !presets::clean_hidden(list.as<JsonVariantConst>(), out_hidden).empty()){ out_hidden.clear(); }
+    serializeJson(doc, api_json_buffer, sizeof(api_json_buffer));
+    allow_cross_origin_read();
+    web::webserver.send(200, "application/json", api_json_buffer);
+}
+
+// {"presets": [...]} and/or {"hidden": [...]}: replaces the list(s) sent
+void post_api_presets(){
+    if(!is_json_request()) { return; }
+    if(web::webserver.hasArg("plain") == false) { web::webserver.send(400, "application/json", "{\"error\": \"empty body\"}"); return;}
+    const String& body = web::webserver.arg("plain");
+    if(body.length() >= sizeof(api_json_buffer)){
+        web::webserver.send(413, "application/json", "{\"error\": \"Too much to store, remove a few presets\"}");
+        return;
+    }
+
+    JsonDocument in;
+    if(deserializeJson(in, body) != DeserializationError::Ok || !in.is<JsonObject>()
+       || (in["presets"].isNull() && in["hidden"].isNull())){
+        web::webserver.send(400, "application/json", "{\"error\": \"Send presets and/or hidden\"}");
+        return;
+    }
+
+    String presets_text, hidden_text;
+    if(!in["presets"].isNull()){
+        JsonDocument clean;
+        std::string error = presets::clean_presets(in["presets"].as<JsonVariantConst>(), clean.to<JsonArray>());
+        if(!error.empty()){ web::webserver.send(400, "application/json", String("{\"error\": \"") + error.c_str() + "\"}"); return; }
+        serializeJson(clean, presets_text);
+    }
+    if(!in["hidden"].isNull()){
+        JsonDocument clean;
+        std::string error = presets::clean_hidden(in["hidden"].as<JsonVariantConst>(), clean.to<JsonArray>());
+        if(!error.empty()){ web::webserver.send(400, "application/json", String("{\"error\": \"") + error.c_str() + "\"}"); return; }
+        serializeJson(clean, hidden_text);
+    }
+    if(presets_text.length() > PRESETS_STORE_MAX || hidden_text.length() > HIDDEN_STORE_MAX){
+        web::webserver.send(413, "application/json", "{\"error\": \"Too much to store, remove a few presets\"}");
+        return;
+    }
+
+    bool stored = true;
+    {
+        SharedLock lock;
+        if(!presets_text.isEmpty()){ stored = config::settings_storage.putString("presets", presets_text) > 0 && stored; }
+        if(!hidden_text.isEmpty()){ stored = config::settings_storage.putString("presets_hid", hidden_text) > 0 && stored; }
+    }
+    if(!stored){
+        web::webserver.send(500, "application/json", "{\"error\": \"Couldn't store the presets\"}");
+        return;
+    }
+    get_api_presets();
+}
+
+void cors_api_presets(){
+    web::webserver.send(204);
 }
 
 void get_api_notify(){
