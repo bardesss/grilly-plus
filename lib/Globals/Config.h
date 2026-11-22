@@ -41,6 +41,9 @@ namespace config{
     extern String telegram_chat_id;
     extern String ntfy_url;
     extern String ntfy_token;
+    extern String pushover_user;
+    extern String pushover_token;
+    extern String webhook_url;
     extern bool   notify_ready;
     extern bool   notify_almost;
     extern bool   notify_outside;

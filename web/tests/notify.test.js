@@ -9,6 +9,9 @@ test("anySetUp needs a Telegram token and chat ID, or an ntfy topic URL", () => 
   assert.equal(NotifyCard.anySetUp({ telegram_token_set: true, telegram_chat_id: "" }), false);
   assert.equal(NotifyCard.anySetUp({ telegram_token_set: true, telegram_chat_id: "42" }), true);
   assert.equal(NotifyCard.anySetUp({ ntfy_url_set: true }), true);
+  assert.equal(NotifyCard.anySetUp({ pushover_user_set: true }), false);
+  assert.equal(NotifyCard.anySetUp({ pushover_user_set: true, pushover_token_set: true }), true);
+  assert.equal(NotifyCard.anySetUp({ webhook_url_set: true }), true);
   assert.equal(NotifyCard.anySetUp(null), false);
 });
 
@@ -34,4 +37,9 @@ test("a test is finished when every service that is set up reported on it", () =
   assert.equal(NotifyCard.testFinished(state(sent({ test: true, seconds_ago: 60 })), 3000), false);   // an older test
   assert.equal(NotifyCard.testFinished(state(sent({ test: true, seconds_ago: 1 })), 3000), true);
   assert.equal(NotifyCard.testFinished({ ...state(sent({ test: true })), sending: true }, 3000), false);
+});
+
+test("a refused webhook says the status without repeating the name", () => {
+  const lines = NotifyCard.describe({ webhook: { set_up: true, last: sent({ ok: false, test: true, error: "The webhook answered 404" }) } });
+  assert.deepEqual(lines, [{ text: "Webhook: test failed, answered 404", error: true }]);
 });

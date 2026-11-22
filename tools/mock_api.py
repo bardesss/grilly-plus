@@ -17,7 +17,8 @@ SETTINGS = {
     "name": "Big Green Egg", "uuid": "43c62ed2-4dc0-41a5-8f71-16db60155739", "firmware_version": "26.09.27",
     "temperature_unit": "celcius", "beep_enabled": True, "beep_volume": 4, "beep_degrees_before": 5, "lid_pause_minutes": 5,
     "telegram_token_set": False, "telegram_chat_id": "",
-    "ntfy_url_set": False, "ntfy_server": "", "ntfy_token_set": False, "notify_ready": True, "notify_almost": True,
+    "ntfy_url_set": False, "ntfy_server": "", "ntfy_token_set": False,
+    "pushover_user_set": False, "pushover_token_set": False, "webhook_url_set": False, "webhook_server": "", "notify_ready": True, "notify_almost": True,
     "notify_outside": True, "notify_stall": True, "notify_battery": True,
     "beep_outside_target": True, "beep_on_ready": True, "cucaracha_enabled": False,
     "screen_timeout_minutes": 0, "backlight_timeout_minutes": 5, "backlight_brightness": 4,
@@ -138,13 +139,24 @@ def ntfy_server(value):
     return match.group(1).lower() if match else ""
 
 
+# The saved webhook URL, only webhook_url_set and webhook_server are in SETTINGS (like the grill)
+WEBHOOK_URL = ""
+
+
+def url_server(value):
+    match = re.match(r"^(https?://[^\s/?#@\\]+)(/\S*)?$", (value or "").strip())
+    return match.group(1).lower() if match else ""
+
+
 # The last notification per service: {"at": seconds, "error": "", "test": bool}, sent 2 s after it was queued
 NOTIFY_LAST = {}
 
 
 def notify_set_up():
     return {"telegram": bool(SETTINGS["telegram_token_set"] and SETTINGS["telegram_chat_id"]),
-            "ntfy": bool(NTFY_URL)}
+            "ntfy": bool(NTFY_URL),
+            "pushover": bool(SETTINGS["pushover_user_set"] and SETTINGS["pushover_token_set"]),
+            "webhook": bool(WEBHOOK_URL)}
 
 
 def notify_status():
@@ -166,6 +178,8 @@ def notify_error(service):
         return "Telegram: Bad Request: chat not found, check the chat ID and send the bot a message first"
     if service == "ntfy" and NTFY_URL.endswith("-denied"):
         return "ntfy: forbidden, check the access token"
+    if service == "webhook" and WEBHOOK_URL.endswith("/missing"):
+        return "The webhook answered 404"
     return ""
 
 
@@ -247,7 +261,7 @@ WIFI_SCAN = [
 
 def handle(method, path, body, headers=None, query=""):
     """Returns (status, json_body) for an /api request."""
-    global ADMIN_PASSWORD, ALARM_SOUNDING, ALARM_PROBE_ID, NTFY_URL
+    global ADMIN_PASSWORD, ALARM_SOUNDING, ALARM_PROBE_ID, NTFY_URL, WEBHOOK_URL
     global UPDATE_CHECKED_AT, UPDATE_CHECKING_UNTIL, LAST_CHECK_REQUEST, INSTALL_DONE_AT
     global RESET_STARTED_AT, RESET_ACTIVE, RESET_ATTEMPTS, RESET_WRONG_TOTAL
     headers = headers or {}
@@ -381,7 +395,7 @@ def handle(method, path, body, headers=None, query=""):
     if method == "POST" and path == "/api/notify/test":
         set_up = [service for service, ok in notify_set_up().items() if ok]
         if not set_up:
-            return 400, {"error": "No notifications are set up yet: save Telegram or ntfy first"}
+            return 400, {"error": "No notifications are set up yet: save a service first"}
         for delay, service in enumerate(set_up):
             NOTIFY_LAST[service] = {"at": time.time() + 2 + delay, "error": notify_error(service), "test": True}
         return 202, {"success": True}
@@ -392,6 +406,9 @@ def handle(method, path, body, headers=None, query=""):
         password = update.get("local_ap_password")
         if password and len(password) < 8:
             return 400, {"error": "local_ap_password should be empty or at least 8 characters"}
+        hook = update.get("webhook_url")
+        if hook and not url_server(hook):
+            return 400, {"error": "webhook_url should be empty or an http(s):// URL without spaces or user:password@"}
         url = update.get("ntfy_url")
         if url and not ntfy_server(url):
             return 400, {"error": "ntfy_url should be empty or look like https://ntfy.sh/your-topic"}
@@ -407,10 +424,14 @@ def handle(method, path, body, headers=None, query=""):
             NTFY_URL = (update.pop("ntfy_url") or "").strip()
             SETTINGS["ntfy_url_set"] = NTFY_URL != ""
             SETTINGS["ntfy_server"] = ntfy_server(NTFY_URL)
+        if "webhook_url" in update:
+            WEBHOOK_URL = (update.pop("webhook_url") or "").strip()
+            SETTINGS["webhook_url_set"] = WEBHOOK_URL != ""
+            SETTINGS["webhook_server"] = url_server(WEBHOOK_URL)
         for key, value in update.items():
             if key == "admin_password":
                 ADMIN_PASSWORD = value
-            if key.endswith("_password") or key in ("telegram_token", "ntfy_token"):
+            if key.endswith("_password") or key in ("telegram_token", "ntfy_token", "pushover_user", "pushover_token"):
                 SETTINGS[key + "_set"] = value != ""
             else:
                 SETTINGS[key] = value

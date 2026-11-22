@@ -2,7 +2,7 @@
 const NotifyCard = (() => {
   const POLL_MS = 1500;
   const WAIT_MS = 120000;   // the grill retries a failed message on every service, give it time
-  const SERVICES = [["telegram", "Telegram"], ["ntfy", "ntfy"]];
+  const SERVICES = [["telegram", "Telegram"], ["ntfy", "ntfy"], ["pushover", "Pushover"], ["webhook", "Webhook"]];
 
   let button, status;
   let settings = null;
@@ -10,7 +10,8 @@ const NotifyCard = (() => {
 
   // Whether the settings have at least one service ready to send
   function anySetUp(s) {
-    return !!(s && ((s.telegram_token_set && s.telegram_chat_id) || s.ntfy_url_set));
+    return !!(s && ((s.telegram_token_set && s.telegram_chat_id) || s.ntfy_url_set ||
+      (s.pushover_user_set && s.pushover_token_set) || s.webhook_url_set));
   }
 
   // One line per service that is set up and sent something: [{ text, error }]
@@ -20,7 +21,8 @@ const NotifyCard = (() => {
       const last = state[key].last;
       if (!last.ok) {
         // The grill's errors start with the service name, which the line already has
-        const why = last.error.startsWith(label + ": ") ? last.error.slice(label.length + 2) : last.error;
+        const why = last.error.startsWith(label + ": ") ? last.error.slice(label.length + 2)
+          : last.error.startsWith("The " + label.toLowerCase() + " ") ? last.error.slice(label.length + 5) : last.error;
         return { text: label + (last.test ? ": test failed, " : ": last notification failed, ") + why, error: true };
       }
       if (last.test) return { text: label + ": test sent.", error: false };
@@ -93,7 +95,7 @@ const NotifyCard = (() => {
     settings = newSettings;
     if (!button) return;
     if (!testing) button.disabled = !anySetUp(settings);
-    button.title = anySetUp(settings) ? "" : "Set up Telegram or ntfy first";
+    button.title = anySetUp(settings) ? "" : "Set up a service first";
     refresh();
   }
 

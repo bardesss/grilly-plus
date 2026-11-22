@@ -330,6 +330,11 @@ void JsonUtilities::load_json_settings(char* buffer){
     jsondoc["ntfy_url_set"]              = config::ntfy_url.length() > 0;
     jsondoc["ntfy_server"]               = notify::ntfy_server_of(config::ntfy_url.c_str());
     jsondoc["ntfy_token_set"]            = config::ntfy_token.length() > 0;
+    jsondoc["pushover_user_set"]         = config::pushover_user.length() > 0;
+    jsondoc["pushover_token_set"]        = config::pushover_token.length() > 0;
+    // A webhook URL often holds a secret id (Home Assistant), so only its server is shown
+    jsondoc["webhook_url_set"]           = config::webhook_url.length() > 0;
+    jsondoc["webhook_server"]            = notify::url_server_of(config::webhook_url.c_str());
     jsondoc["notify_ready"]              = config::notify_ready;
     jsondoc["notify_almost"]             = config::notify_almost;
     jsondoc["notify_outside"]            = config::notify_outside;
@@ -406,6 +411,9 @@ jsonResult JsonUtilities::save_json_settings(char* raw_json, bool admin_authoriz
             fields.text("telegram_chat_id",             config::telegram_chat_id);
             fields.text("ntfy_url",                     config::ntfy_url);
             fields.text("ntfy_token",                   config::ntfy_token);
+            fields.text("pushover_user",                config::pushover_user);
+            fields.text("pushover_token",               config::pushover_token);
+            fields.text("webhook_url",                  config::webhook_url);
             fields.boolean("notify_ready",              config::notify_ready);
             fields.boolean("notify_almost",             config::notify_almost);
             fields.boolean("notify_outside",            config::notify_outside);
@@ -460,6 +468,14 @@ jsonResult JsonUtilities::save_json_settings(char* raw_json, bool admin_authoriz
             }
         }
 
+        if(check.present("webhook_url")){
+            String url = json_data["webhook_url"].as<String>();
+            url.trim();
+            if(!url.isEmpty() && !notify::webhook_url_ok(url.c_str())){
+                return {false, "webhook_url should be empty or an http(s):// URL without spaces or user:password@"};
+            }
+        }
+
         if(check.present("temperature_unit")){
             String unit = json_data["temperature_unit"].as<String>();
             if(unit != "celcius" && unit != "fahrenheit"){
@@ -480,6 +496,9 @@ jsonResult JsonUtilities::save_json_settings(char* raw_json, bool admin_authoriz
         config::telegram_chat_id.trim();
         config::ntfy_url.trim();
         config::ntfy_token.trim();
+        config::pushover_user.trim();
+        config::pushover_token.trim();
+        config::webhook_url.trim();
         if(check.present("ntfy_url") && !check.present("ntfy_token")
            && notify::ntfy_server_of(config::ntfy_url.c_str()) != old_ntfy_server){
             config::ntfy_token = "";
