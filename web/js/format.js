@@ -96,6 +96,18 @@ const Format = (() => {
     return "";
   }
 
+  // What the alarm dialog says about one alarming probe: { title, detail }
+  function alarmMessage(probe, unit) {
+    const now = temperature(probe.temperature, unit);
+    const name = probe.name || "Probe " + probe.probe_id;
+    const status = probeStatus(probe);
+    const range = alarmLabel(probe);
+    if (status.kind === "ready") return { title: name + " is ready", detail: now + " · target " + range.replace("→ ", "") };
+    if (status.kind === "high") return { title: name + " is too hot", detail: now + " · range " + range };
+    if (status.kind === "low") return { title: name + " is too cold", detail: now + " · range " + range };
+    return { title: name, detail: now };
+  }
+
   function duration(seconds) {
     if (!(seconds > 0)) return "";
     if (seconds < 60) return "<1m";
@@ -165,7 +177,7 @@ const Format = (() => {
     return Math.floor(left / 60) + ":" + String(left % 60).padStart(2, "0");
   }
 
-  return { countdown, checkedAgo, updateStatus, unitSymbol, number, temperature, signal, battery, batteryDiagnostics, resetReasonText,
+  return { alarmMessage, countdown, checkedAgo, updateStatus, unitSymbol, number, temperature, signal, battery, batteryDiagnostics, resetReasonText,
            offReasonText, alarmMode, probeStatus, alarmLabel, duration, ago, eta, emptySockets, changedFields };
 })();
 

@@ -1,12 +1,15 @@
-// Alarm in the browser: while the grill's alarm sounds, this page beeps, vibrates (Android) and puts a
-// bell in the tab title. On by default, switched per browser in Settings. Browsers only allow sound
-// after the page was tapped or clicked once, so the audio is unlocked on the first interaction.
+// Alarm in the browser: while the grill's alarm sounds, this page shows a dialog with the probe and
+// the reason, beeps, vibrates (Android) and puts a bell in the tab title. The sound is on by default
+// and switched per browser in Settings. Browsers only allow sound after the page was tapped or clicked
+// once, so the audio is unlocked on the first interaction.
 const AlarmSound = (() => {
   const KEY = "grilly-plus.alarm-sound";
   const REPEAT_MS = 2000;
   let context = null;
   let timer = null;
   let title = null;
+  let dialog = null;
+  let dismissed = false;   // closed or muted: stays away until this alarm is over, the grill takes ~2 s to stop
 
   function enabled() {
     try { return localStorage.getItem(KEY) !== "off"; } catch (error) { return true; }
@@ -65,9 +68,64 @@ const AlarmSound = (() => {
     title = null;
   }
 
+  // Mute from the dialog or the bar at the top
+  function muted() {
+    stop();
+    dismissed = true;
+    if (dialog && dialog.open) dialog.close();
+  }
+
+  function buildDialog() {
+    dialog = document.createElement("dialog");
+    dialog.className = "confirm-dialog alarm-dialog";
+    dialog.setAttribute("aria-labelledby", "alarm-dialog-title");
+    dialog.innerHTML =
+      '<h2 id="alarm-dialog-title"><svg class="icon" aria-hidden="true"><use href="#i-bell"/></svg><span></span></h2>' +
+      '<ul class="alarm-dialog-list"></ul>' +
+      '<div class="confirm-dialog-buttons">' +
+      '<button type="button" class="button" data-close>Close</button>' +
+      '<button type="button" class="button primary" data-mute>Mute</button>' +
+      "</div>";
+    document.body.appendChild(dialog);
+    const close = () => { dismissed = true; dialog.close(); };
+    dialog.querySelector("[data-close]").addEventListener("click", close);
+    dialog.addEventListener("cancel", (event) => { event.preventDefault(); close(); });
+    // The header's mute button does the request and keeps its own bar hidden while the grill catches up
+    dialog.querySelector("[data-mute]").addEventListener("click", () => document.getElementById("alarm-mute-btn").click());
+  }
+
+  function showDialog(status) {
+    if (!dialog) buildDialog();
+    const alarming = status.probes.filter((probe) => probe.alarm && probe.connected);
+    const messages = alarming.map((probe) => Format.alarmMessage(probe, status.temperature_unit));
+    dialog.querySelector("h2 span").textContent =
+      messages.length === 1 ? messages[0].title : messages.length > 1 ? messages.length + " alarms" : "Alarm";
+    const list = dialog.querySelector(".alarm-dialog-list");
+    list.replaceChildren(...messages.map((message) => {
+      const item = document.createElement("li");
+      if (messages.length > 1) {
+        const strong = document.createElement("strong");
+        strong.textContent = message.title;
+        item.append(strong, document.createElement("br"));
+      }
+      item.append(message.detail);
+      return item;
+    }));
+    if (!dialog.open) {
+      dialog.showModal();
+      dialog.querySelector("[data-mute]").focus();
+    }
+  }
+
   function onStatus(status) {
-    if (status.alarm_sounding && enabled()) start();
-    else stop();
+    if (status.alarm_sounding) {
+      if (!dismissed) showDialog(status);
+      if (enabled()) start(); else stop();
+    } else {
+      dismissed = false;
+      if (dialog && dialog.open) dialog.close();
+      stop();
+    }
   }
 
   // The settings card for this browser
@@ -94,7 +152,7 @@ const AlarmSound = (() => {
   if (typeof App !== "undefined") {
     App.onStatus(onStatus);
     ["pointerdown", "keydown"].forEach((type) => document.addEventListener(type, unlock, { capture: true, passive: true }));
-    document.getElementById("alarm-mute-btn").addEventListener("click", stop);
+    document.getElementById("alarm-mute-btn").addEventListener("click", muted);
     Settings.addCard({ id: "browser", build, fill: () => {} });
     App.pollInBackground(wantsBackground);
   }

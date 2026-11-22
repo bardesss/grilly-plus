@@ -116,3 +116,12 @@ test("countdown shows minutes and seconds", () => {
   assert.equal(Format.countdown(9), "0:09");
   assert.equal(Format.countdown(-3), "0:00");
 });
+
+test("alarmMessage says which probe and why", () => {
+  const p = (temperature, target, minimum, name = "Brisket") =>
+    ({ probe_id: 2, name, temperature, target_temperature: target, minimum_temperature: minimum });
+  assert.deepEqual(Format.alarmMessage(p(95.2, 95, 0), "celcius"), { title: "Brisket is ready", detail: "95.2°C · target 95°" });
+  assert.deepEqual(Format.alarmMessage(p(125, 120, 110, "Grill"), "celcius"), { title: "Grill is too hot", detail: "125.0°C · range 110–120°" });
+  assert.deepEqual(Format.alarmMessage(p(104, 120, 110, "Grill"), "fahrenheit"), { title: "Grill is too cold", detail: "104.0°F · range 110–120°" });
+  assert.deepEqual(Format.alarmMessage(p(60, 0, 0, ""), "celcius"), { title: "Probe 2", detail: "60.0°C" });
+});

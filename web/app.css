@@ -283,6 +283,12 @@ input::-ms-reveal, input::-ms-clear { display: none; }
 .confirm-dialog-message { margin: 0 0 20px; color: var(--muted); line-height: 1.45; }
 .confirm-dialog-buttons { display: flex; justify-content: flex-end; gap: 10px; }
 .confirm-dialog-buttons .button { min-width: 100px; }
+.alarm-dialog { border-color: var(--bad); }
+.alarm-dialog h2 { display: flex; align-items: center; gap: 10px; color: var(--bad); }
+.alarm-dialog h2 .icon { flex: none; width: 22px; height: 22px; }
+.alarm-dialog-list { margin: 0 0 20px; padding: 0; list-style: none; color: var(--muted); line-height: 1.45; }
+.alarm-dialog-list li + li { margin-top: 10px; }
+.alarm-dialog-list strong { color: var(--text); font-weight: 600; }
 @media (max-width: 420px) {
   .confirm-dialog-buttons .button { flex: 1; }
 }
