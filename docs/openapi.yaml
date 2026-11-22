@@ -516,17 +516,32 @@ components:
             Notifications are only sent with both a token and a chat ID.
         ntfy_url:
           type: string
+          writeOnly: true
           example: "https://ntfy.sh/my-grill-8f3k2"
           description: >-
             ntfy topic URL: http(s)://server/topic, the topic made of letters, digits, - and _ (at most
-            64). http:// is for an ntfy server on the home network. "" switches ntfy off.
+            64), without user:password@. http:// is for an ntfy server on the home network. "" switches
+            ntfy off. Write-only: on ntfy.sh anyone who knows the topic can read the messages, so only
+            ntfy_url_set and ntfy_server are returned.
+        ntfy_url_set:
+          type: boolean
+          readOnly: true
+          example: true
+          description: Whether an ntfy topic URL is saved.
+        ntfy_server:
+          type: string
+          readOnly: true
+          example: "https://ntfy.sh"
+          description: The server part of the saved topic URL, "" when none is saved.
         ntfy_token:
           type: string
           writeOnly: true
           example: "tk_..."
           description: >-
             Optional ntfy access token, sent as a Bearer token. Write-only, never returned. Leave it out
-            to keep the saved token, send "" to remove it.
+            to keep the saved token, send "" to remove it. The token is tied to the server of ntfy_url:
+            changing the URL to another server (or from https to http) without sending a new token
+            removes the saved one, so it can't be redirected elsewhere.
         ntfy_token_set:
           type: boolean
           readOnly: true

@@ -8,7 +8,7 @@ const sent = (extra) => ({ ok: true, error: "", seconds_ago: 3, test: false, ...
 test("anySetUp needs a Telegram token and chat ID, or an ntfy topic URL", () => {
   assert.equal(NotifyCard.anySetUp({ telegram_token_set: true, telegram_chat_id: "" }), false);
   assert.equal(NotifyCard.anySetUp({ telegram_token_set: true, telegram_chat_id: "42" }), true);
-  assert.equal(NotifyCard.anySetUp({ ntfy_url: "https://ntfy.sh/grill" }), true);
+  assert.equal(NotifyCard.anySetUp({ ntfy_url_set: true }), true);
   assert.equal(NotifyCard.anySetUp(null), false);
 });
 

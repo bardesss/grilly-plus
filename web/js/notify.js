@@ -10,7 +10,7 @@ const NotifyCard = (() => {
 
   // Whether the settings have at least one service ready to send
   function anySetUp(s) {
-    return !!(s && ((s.telegram_token_set && s.telegram_chat_id) || s.ntfy_url));
+    return !!(s && ((s.telegram_token_set && s.telegram_chat_id) || s.ntfy_url_set));
   }
 
   // One line per service that is set up and sent something: [{ text, error }]

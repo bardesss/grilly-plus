@@ -31,7 +31,7 @@ const Settings = (() => {
       { key: "telegram_chat_id", label: "Chat ID", type: "text", placeholder: "Like 123456789",
         hint: "Send your bot a message first. @userinfobot tells you your chat ID." },
       { type: "heading", label: "ntfy" },
-      { key: "ntfy_url", label: "Topic URL", type: "text", placeholder: "https://ntfy.sh/your-topic",
+      { key: "ntfy_url", label: "Topic URL", type: "password", saved: "topic URL", newPlaceholder: "https://ntfy.sh/your-topic",
         hint: "Pick a hard-to-guess topic and subscribe to it in the ntfy app. Your own ntfy server works too." },
       { key: "ntfy_token", label: "Access token", type: "password", saved: "token",
         hint: "Only for a protected topic or your own server." },
@@ -164,7 +164,7 @@ const Settings = (() => {
       wrapper.append(remove);
       controls.push({ set: (s) => {
         const isSet = !!s[field.key + "_set"];
-        input.placeholder = isSet ? "Saved, type to change" : "Not set";
+        input.placeholder = isSet ? "Saved, type to change" : (field.newPlaceholder || "Not set");
         if (document.activeElement !== input) input.value = "";
         remove.hidden = !isSet;
       }, saver });

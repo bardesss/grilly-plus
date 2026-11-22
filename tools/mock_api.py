@@ -17,7 +17,7 @@ SETTINGS = {
     "name": "Big Green Egg", "uuid": "43c62ed2-4dc0-41a5-8f71-16db60155739", "firmware_version": "26.09.27",
     "temperature_unit": "celcius", "beep_enabled": True, "beep_volume": 4, "beep_degrees_before": 5, "lid_pause_minutes": 5,
     "telegram_token_set": False, "telegram_chat_id": "",
-    "ntfy_url": "", "ntfy_token_set": False, "notify_ready": True, "notify_almost": True,
+    "ntfy_url_set": False, "ntfy_server": "", "ntfy_token_set": False, "notify_ready": True, "notify_almost": True,
     "notify_outside": True, "notify_stall": True, "notify_battery": True,
     "beep_outside_target": True, "beep_on_ready": True, "cucaracha_enabled": False,
     "screen_timeout_minutes": 0, "backlight_timeout_minutes": 5, "backlight_brightness": 4,
@@ -129,13 +129,22 @@ def history(only_probe=None):
     return {"probes": result}
 
 
+# The saved ntfy topic URL, only ntfy_url_set and ntfy_server are in SETTINGS (like the grill)
+NTFY_URL = ""
+
+
+def ntfy_server(value):
+    match = re.match(r"^(https?://[^\s?#@/]+(?:/[^\s?#@]*)?)/[A-Za-z0-9_-]{1,64}$", (value or "").strip())
+    return match.group(1).lower() if match else ""
+
+
 # The last notification per service: {"at": seconds, "error": "", "test": bool}, sent 2 s after it was queued
 NOTIFY_LAST = {}
 
 
 def notify_set_up():
     return {"telegram": bool(SETTINGS["telegram_token_set"] and SETTINGS["telegram_chat_id"]),
-            "ntfy": bool(SETTINGS["ntfy_url"])}
+            "ntfy": bool(NTFY_URL)}
 
 
 def notify_status():
@@ -155,7 +164,7 @@ def notify_error(service):
     """Mock: Telegram chat ID "0" and an ntfy topic ending in "-denied" play a refused message."""
     if service == "telegram" and SETTINGS["telegram_chat_id"] == "0":
         return "Telegram: Bad Request: chat not found, check the chat ID and send the bot a message first"
-    if service == "ntfy" and SETTINGS["ntfy_url"].endswith("-denied"):
+    if service == "ntfy" and NTFY_URL.endswith("-denied"):
         return "ntfy: forbidden, check the access token"
     return ""
 
@@ -238,7 +247,7 @@ WIFI_SCAN = [
 
 def handle(method, path, body, headers=None, query=""):
     """Returns (status, json_body) for an /api request."""
-    global ADMIN_PASSWORD, ALARM_SOUNDING, ALARM_PROBE_ID
+    global ADMIN_PASSWORD, ALARM_SOUNDING, ALARM_PROBE_ID, NTFY_URL
     global UPDATE_CHECKED_AT, UPDATE_CHECKING_UNTIL, LAST_CHECK_REQUEST, INSTALL_DONE_AT
     global RESET_STARTED_AT, RESET_ACTIVE, RESET_ATTEMPTS, RESET_WRONG_TOTAL
     headers = headers or {}
@@ -384,13 +393,20 @@ def handle(method, path, body, headers=None, query=""):
         if password and len(password) < 8:
             return 400, {"error": "local_ap_password should be empty or at least 8 characters"}
         url = update.get("ntfy_url")
-        if url and not re.match(r"^https?://[^/\s?#]+(/[^\s?#]*)?/[A-Za-z0-9_-]{1,64}$", url.strip()):
+        if url and not ntfy_server(url):
             return 400, {"error": "ntfy_url should be empty or look like https://ntfy.sh/your-topic"}
         for key, (low, high) in NUMBER_LIMITS.items():
             if key in update and not low <= int(update[key] or 0) <= high:
                 return 400, {"error": "%s should be between %d and %d" % (key, low, high)}
         if "admin_password" in update and not admin_authorized(headers):
             return 401, {"error": "The current admin password is needed to change it"}
+        # Like the grill: an ntfy token is tied to its server
+        if "ntfy_url" in update:
+            if "ntfy_token" not in update and ntfy_server(update["ntfy_url"]) != ntfy_server(NTFY_URL):
+                SETTINGS["ntfy_token_set"] = False
+            NTFY_URL = (update.pop("ntfy_url") or "").strip()
+            SETTINGS["ntfy_url_set"] = NTFY_URL != ""
+            SETTINGS["ntfy_server"] = ntfy_server(NTFY_URL)
         for key, value in update.items():
             if key == "admin_password":
                 ADMIN_PASSWORD = value

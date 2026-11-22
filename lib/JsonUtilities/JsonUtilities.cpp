@@ -326,7 +326,9 @@ void JsonUtilities::load_json_settings(char* buffer){
 
     jsondoc["telegram_token_set"]        = config::telegram_token.length() > 0;
     jsondoc["telegram_chat_id"]          = config::telegram_chat_id;
-    jsondoc["ntfy_url"]                  = config::ntfy_url;
+    // On ntfy.sh whoever knows the topic can read along, so the topic is kept secret like a password
+    jsondoc["ntfy_url_set"]              = config::ntfy_url.length() > 0;
+    jsondoc["ntfy_server"]               = notify::ntfy_server_of(config::ntfy_url.c_str());
     jsondoc["ntfy_token_set"]            = config::ntfy_token.length() > 0;
     jsondoc["notify_ready"]              = config::notify_ready;
     jsondoc["notify_almost"]             = config::notify_almost;
@@ -465,6 +467,11 @@ jsonResult JsonUtilities::save_json_settings(char* raw_json, bool admin_authoriz
             }
         }
 
+        // The ntfy token belongs to its server. Whoever can change the settings must not be able to
+        // point the URL at their own server and receive the saved token: a new server without a new
+        // token drops the old one.
+        std::string old_ntfy_server = notify::ntfy_server_of(config::ntfy_url.c_str());
+
         FieldReader store(json_data, true);
         read_settings(store);
 
@@ -473,6 +480,10 @@ jsonResult JsonUtilities::save_json_settings(char* raw_json, bool admin_authoriz
         config::telegram_chat_id.trim();
         config::ntfy_url.trim();
         config::ntfy_token.trim();
+        if(check.present("ntfy_url") && !check.present("ntfy_token")
+           && notify::ntfy_server_of(config::ntfy_url.c_str()) != old_ntfy_server){
+            config::ntfy_token = "";
+        }
 
         // Set default value for empty topics
         if(config::mqtt_topic.length() == 0){
