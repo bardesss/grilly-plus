@@ -86,15 +86,32 @@ void test_three_failed_codes_lock_until_restart(){
     TEST_ASSERT_TRUE(after_restart.start(now, 123456) == AdminReset::Start::STARTED);
 }
 
-void test_expired_codes_do_not_lock(){
+void test_wrong_tries_on_expired_codes_count_too(){
     AdminReset reset;
     uint32_t now = 0;
-    for(int code = 0; code < 4; code++){
+    for(int code = 0; code < 3; code++){
+        TEST_ASSERT_TRUE(reset.start(now, 123456) == AdminReset::Start::STARTED);
+        for(int i = 0; i < 4; i++){ reset.check("000000", now); }   // 4 wrong, then let it run out
+        now += AdminReset::VALID_MS;
+    }
+    // 12 wrong so far: the next code ends after 3 more instead of 5
+    TEST_ASSERT_TRUE(reset.start(now, 123456) == AdminReset::Start::STARTED);
+    TEST_ASSERT_EQUAL_INT(3, reset.attempts_left());
+    for(int i = 0; i < 3; i++){ TEST_ASSERT_TRUE(reset.check("000000", now) == AdminReset::Check::WRONG); }
+    TEST_ASSERT_FALSE(reset.active(now));
+    TEST_ASSERT_TRUE(reset.start(now + AdminReset::VALID_MS, 123456) == AdminReset::Start::LOCKED);
+}
+
+void test_few_wrong_tries_do_not_lock(){
+    AdminReset reset;
+    uint32_t now = 0;
+    for(int code = 0; code < 7; code++){
         TEST_ASSERT_TRUE(reset.start(now, 123456) == AdminReset::Start::STARTED);
         reset.check("000000", now);   // one wrong try, then it runs out
         now += AdminReset::VALID_MS;
     }
     TEST_ASSERT_TRUE(reset.start(now, 123456) == AdminReset::Start::STARTED);
+    TEST_ASSERT_TRUE(reset.check("123456", now) == AdminReset::Check::OK);
 }
 
 void test_cancel(){
@@ -124,7 +141,8 @@ int main(int, char**){
     RUN_TEST(test_code_expires_after_five_minutes);
     RUN_TEST(test_start_again_keeps_code_and_waits_a_minute);
     RUN_TEST(test_three_failed_codes_lock_until_restart);
-    RUN_TEST(test_expired_codes_do_not_lock);
+    RUN_TEST(test_wrong_tries_on_expired_codes_count_too);
+    RUN_TEST(test_few_wrong_tries_do_not_lock);
     RUN_TEST(test_cancel);
     RUN_TEST(test_millis_wraparound);
     return UNITY_END();

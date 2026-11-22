@@ -3,7 +3,7 @@
 
 AdminReset::Start AdminReset::start(uint32_t now_ms, uint32_t random){
     if(active(now_ms)){ return Start::ALREADY_ACTIVE; }
-    if(failed_codes_ >= MAX_FAILED_CODES){ return Start::LOCKED; }
+    if(wrong_total_ >= MAX_WRONG_TOTAL){ return Start::LOCKED; }
     if(started_ && now_ms - started_ms_ < RESTART_MS){ return Start::TOO_SOON; }
 
     uint32_t number = random % 1000000UL;
@@ -34,10 +34,8 @@ AdminReset::Check AdminReset::check(const char* code, uint32_t now_ms){
     }
 
     attempts_++;
-    if(attempts_ >= MAX_ATTEMPTS){
-        failed_codes_++;
-        cancel();
-    }
+    wrong_total_++;
+    if(attempts_ >= MAX_ATTEMPTS || wrong_total_ >= MAX_WRONG_TOTAL){ cancel(); }
     return Check::WRONG;
 }
 
