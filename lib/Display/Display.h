@@ -141,6 +141,15 @@ private:
     */
     void draw_screen_reset_code(const char* code, uint32_t seconds_left);
     /**
+    *	@brief The text cut to max_width pixels in the current font, ending in "." when it was cut
+    */
+    String fit(const String& text, int max_width);
+    /**
+    *	@brief Draws text in the current font over up to max_lines lines of max_width pixels, breaking
+    *   between words; the last line is cut with fit()
+    */
+    void draw_wrapped(int x, int y, int max_width, int line_height, int max_lines, const String& text);
+    /**
     *	@brief enables / disables the screen background LED
     *	@return true 
     */

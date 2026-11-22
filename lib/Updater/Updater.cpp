@@ -476,9 +476,7 @@ void run_update_mode_if_requested(){
     } else {
         Serial.printf("Update mode failed: %s\n", install_error.c_str());
         config::settings_storage.putString("upd_err", install_error);
-        char shown[26];     // about 25 characters fit at profont10
-        strlcpy(shown, install_error.c_str(), sizeof(shown));
-        display.draw_update(job.version.c_str(), -1, shown);
+        display.draw_update(job.version.c_str(), -1, install_error.c_str());   // wrapped over 3 lines
         delay(4000);
     }
     ESP.restart();
