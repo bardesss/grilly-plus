@@ -34,6 +34,7 @@ namespace config{
     extern bool   beep_on_ready;
     extern int    beep_volume;
     extern int    beep_degrees_before;
+    extern int    lid_pause_minutes;
 
     // Buffers
     extern int json_buffer_size;

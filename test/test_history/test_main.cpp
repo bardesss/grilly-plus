@@ -261,6 +261,57 @@ void test_stall_survives_a_short_unplug_but_not_a_long_one(){
     TEST_ASSERT_FALSE(h.stalled(93.0f));                // 105 of 120 valid
 }
 
+void test_sharp_drop_of_8_degrees_within_a_minute(){
+    feed(10, 120.0f, 0.0f);
+    feed(1, 115.0f, 0.0f);
+    TEST_ASSERT_EQUAL_INT16(NO_VALUE, h.sharp_drop_from());     // 5 degrees
+    feed(1, 111.0f, 0.0f);
+    TEST_ASSERT_EQUAL_INT16(1200, h.sharp_drop_from());         // 9 degrees below the high of 120
+}
+
+void test_slow_fall_is_no_sharp_drop(){
+    feed(30, 120.0f, -0.5f);                                     // 3 degrees per minute, fire going out
+    TEST_ASSERT_EQUAL_INT16(NO_VALUE, h.sharp_drop_from());
+}
+
+void test_sharp_drop_forgets_a_high_older_than_a_minute(){
+    feed(5, 120.0f, 0.0f);
+    feed(7, 110.0f, 0.0f);                                       // the 120s are now 70 s old
+    TEST_ASSERT_EQUAL_INT16(NO_VALUE, h.sharp_drop_from());
+}
+
+void test_lid_opens_on_a_drop_and_closes_when_recovered(){
+    LidWatch lid;
+    lid.update(100, true, 300, NO_VALUE, 1200);
+    TEST_ASSERT_FALSE(lid.open());
+    lid.update(110, true, 300, 1200, 1050);
+    TEST_ASSERT_TRUE(lid.open());
+    lid.update(120, true, 300, NO_VALUE, 1100);
+    TEST_ASSERT_TRUE(lid.open());
+    lid.update(130, true, 300, NO_VALUE, 1180);                  // within 2 degrees of 120
+    TEST_ASSERT_FALSE(lid.open());
+}
+
+void test_lid_closes_after_the_pause(){
+    LidWatch lid;
+    lid.update(100, true, 300, 1200, 1050);
+    lid.update(399, true, 300, NO_VALUE, 1050);
+    TEST_ASSERT_TRUE(lid.open());
+    lid.update(400, true, 300, NO_VALUE, 1050);
+    TEST_ASSERT_FALSE(lid.open());
+}
+
+void test_lid_only_in_range_mode_with_a_pause(){
+    LidWatch lid;
+    lid.update(100, false, 300, 1200, 1050);
+    TEST_ASSERT_FALSE(lid.open());
+    lid.update(100, true, 0, 1200, 1050);
+    TEST_ASSERT_FALSE(lid.open());
+    lid.update(100, true, 300, 1200, 1050);
+    lid.update(110, false, 300, NO_VALUE, 1050);                 // switched out of range mode
+    TEST_ASSERT_FALSE(lid.open());
+}
+
 int main(int argc, char** argv){
     UNITY_BEGIN();
     RUN_TEST(test_to_tenths);
@@ -293,5 +344,11 @@ int main(int argc, char** argv){
     RUN_TEST(test_stall_not_near_the_target);
     RUN_TEST(test_stall_only_in_target_mode);
     RUN_TEST(test_stall_survives_a_short_unplug_but_not_a_long_one);
+    RUN_TEST(test_sharp_drop_of_8_degrees_within_a_minute);
+    RUN_TEST(test_slow_fall_is_no_sharp_drop);
+    RUN_TEST(test_sharp_drop_forgets_a_high_older_than_a_minute);
+    RUN_TEST(test_lid_opens_on_a_drop_and_closes_when_recovered);
+    RUN_TEST(test_lid_closes_after_the_pause);
+    RUN_TEST(test_lid_only_in_range_mode_with_a_pause);
     return UNITY_END();
 }

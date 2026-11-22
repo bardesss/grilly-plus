@@ -72,6 +72,7 @@ namespace config{
     bool beep_outside_target            = true;
     int  beep_volume                    = 5;
     int  beep_degrees_before            = 5;
+    int  lid_pause_minutes              = 5;     // range mode: minutes the "too low" alarm waits after a sharp drop, 0 = off
 
     // ***********************************
     // * Buffers

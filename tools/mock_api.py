@@ -14,7 +14,7 @@ ALARM_PROBE_ID = None
 
 SETTINGS = {
     "name": "Big Green Egg", "uuid": "43c62ed2-4dc0-41a5-8f71-16db60155739", "firmware_version": "26.09.27",
-    "temperature_unit": "celcius", "beep_enabled": True, "beep_volume": 4, "beep_degrees_before": 5,
+    "temperature_unit": "celcius", "beep_enabled": True, "beep_volume": 4, "beep_degrees_before": 5, "lid_pause_minutes": 5,
     "beep_outside_target": True, "beep_on_ready": True, "cucaracha_enabled": False,
     "screen_timeout_minutes": 0, "backlight_timeout_minutes": 5, "backlight_brightness": 4,
     "opengrill_server": "", "mqtt_broker": "192.168.1.10", "mqtt_port": 1883, "mqtt_topic": "grilly-plus",
@@ -159,14 +159,14 @@ def grill():
              "connected": p["connected"],
              "connected_seconds": int(time.time() - CONNECTED_AT[p["probe_id"]]) if p["connected"] else 0,
              "alarm": p["probe_id"] == ALARM_PROBE_ID, "eta_seconds": eta_seconds(p),
-             "stalled": p["probe_id"] in STALLED}
+             "stalled": p["probe_id"] in STALLED, "lid_open": False}
             for p in PROBES
         ],
     }
 
 
 def probes():
-    return [dict(p, temperature=temperature(p), eta_seconds=eta_seconds(p), stalled=p["probe_id"] in STALLED)
+    return [dict(p, temperature=temperature(p), eta_seconds=eta_seconds(p), stalled=p["probe_id"] in STALLED, lid_open=False)
             for p in PROBES]
 
 

@@ -198,6 +198,7 @@ body.offline .live { opacity: .4; }
 .card-meta { display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; font-size: 13px; color: var(--muted); }
 .probe-card[data-status="ready"] .probe-status,
 .probe-card[data-status="in-range"] .probe-status { color: var(--good); font-weight: 600; }
+.probe-card[data-status="lid"] .probe-status { color: var(--muted); font-weight: 600; }
 .probe-card[data-status="low"] .probe-status,
 .probe-card[data-status="high"] .probe-status { color: var(--warn); font-weight: 600; }
 /* Graph strip: the line colour follows the probe's status */

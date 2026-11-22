@@ -138,3 +138,10 @@ test("readyAt is the clock time the target is reached", () => {
   assert.equal(Format.readyAt(5 * 3600, now), "22:30");
   assert.equal(Format.readyAt(-1, now), "");
 });
+
+test("probeStatus says Lid open instead of Too low while the lid watch waits", () => {
+  const pit = { temperature: 101, target_temperature: 120, minimum_temperature: 110 };
+  assert.equal(Format.probeStatus({ ...pit, lid_open: true }).text, "Lid open");
+  assert.equal(Format.probeStatus({ ...pit, lid_open: false }).text, "Too low");
+  assert.equal(Format.probeStatus({ ...pit, temperature: 115, lid_open: true }).text, "In range");
+});

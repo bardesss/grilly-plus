@@ -60,6 +60,7 @@ void GrillConfig::load_settings(){
     config::cucaracha_enabled         = config::settings_storage.getBool("cucaracha", false);
     config::beep_volume               = config::settings_storage.getInt("beep_volume");
     config::beep_degrees_before       = config::settings_storage.getInt("beep_before");
+    config::lid_pause_minutes         = config::settings_storage.getInt("lid_pause", 5);
 
     config::screen_timeout_minutes    = config::settings_storage.getInt("screen_to_mins");
     config::backlight_timeout_minutes = config::settings_storage.getInt("backl_to_mins");
@@ -118,6 +119,7 @@ void GrillConfig::save_settings(){
         config::settings_storage.putBool("cucaracha", config::cucaracha_enabled);
         config::settings_storage.putInt("beep_volume", config::beep_volume);
         config::settings_storage.putInt("beep_before", config::beep_degrees_before);
+        config::settings_storage.putInt("lid_pause", config::lid_pause_minutes);
         config::settings_storage.putInt("screen_to_mins", config::screen_timeout_minutes);
         config::settings_storage.putInt("backl_to_mins", config::backlight_timeout_minutes);
         config::settings_storage.putInt("backl_bright", config::backlight_brightness);
@@ -210,6 +212,7 @@ void GrillConfig::initialize_settings(){
     config::settings_storage.putBool("cucaracha", config::cucaracha_enabled);
     config::settings_storage.putInt("beep_volume", config::beep_volume);
     config::settings_storage.putInt("beep_before", config::beep_degrees_before);
+    config::settings_storage.putInt("lid_pause", config::lid_pause_minutes);
     config::settings_storage.putInt("screen_to_mins", config::screen_timeout_minutes);
     config::settings_storage.putInt("backl_to_mins", config::backlight_timeout_minutes);
     config::settings_storage.putInt("backl_bright", config::backlight_brightness);

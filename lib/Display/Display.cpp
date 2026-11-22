@@ -364,7 +364,7 @@ bool disp::draw_screen_temp(void){
                     screen.setDrawColor(1);
                     }
                 else if (current_active_temp < current_minimum_temp){
-                    screen.drawStr(125-screen.getStrWidth("LOW"), y_offset+17, "LOW");
+                    screen.drawStr(125-screen.getStrWidth("LOW"), y_offset+17, get_lid_open(connectedProbeInfo.second[i]) ? "LID" : "LOW");
                     screen.setDrawColor(2);
                     screen.drawBox(107, y_offset+9, 19, 9);
                     screen.setDrawColor(1);
@@ -414,7 +414,7 @@ bool disp::draw_screen_temp(void){
                         screen.setDrawColor(1);
                     }
                     else if (current_active_temp < current_minimum_temp){
-                        screen.drawStr(x_offset+16, y_offset, "LOW");
+                        screen.drawStr(x_offset+16, y_offset, get_lid_open(connectedProbeInfo.second[i]) ? "LID" : "LOW");
                         screen.setDrawColor(2);
                         screen.drawBox(x_offset+15, y_offset-7, 16, 8);
                         screen.setDrawColor(1);
@@ -524,7 +524,7 @@ bool disp::draw_screen_details(int connectedProbe){
             screen.setDrawColor(1);
             }
         else if (current_active_temp < current_minimum_temp){
-            screen.drawStr(105, 62, "LOW");
+            screen.drawStr(105, 62, get_lid_open(connectedProbe) ? "LID" : "LOW");
             screen.setDrawColor(2);
             screen.drawBox(104, 55, 16, 8);
             screen.setDrawColor(1);
@@ -694,6 +694,20 @@ std::string disp::get_connection_time(int connectedProbe) {
     return oss.str();
 }
 
+
+bool disp::get_lid_open(int connectedProbe) {
+    switch (connectedProbe) {
+        case 1: return grill::probe_1.lid_open;
+        case 2: return grill::probe_2.lid_open;
+        case 3: return grill::probe_3.lid_open;
+        case 4: return grill::probe_4.lid_open;
+        case 5: return grill::probe_5.lid_open;
+        case 6: return grill::probe_6.lid_open;
+        case 7: return grill::probe_7.lid_open;
+        case 8: return grill::probe_8.lid_open;
+        default: return false;
+    }
+}
 
 bool disp::get_stalled(int connectedProbe) {
     switch (connectedProbe) {

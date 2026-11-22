@@ -16,6 +16,10 @@ namespace {
     constexpr int16_t STALL_HIGH           = 800;        // tenths: 80 degrees
     constexpr float   STALL_TARGET_ABOVE   = 5.0f;       // degrees between the reading and the target
 
+    constexpr int     DROP_WINDOW_SAMPLES  = 7;          // the newest reading and the minute before it
+    constexpr int16_t DROP_MIN             = 80;         // tenths: 8 degrees
+    constexpr int16_t LID_RECOVERED_WITHIN = 20;         // tenths: back within 2 degrees of the high
+
     int16_t average(int16_t a, int16_t b){
         if(a == NO_VALUE){ return b; }
         if(b == NO_VALUE){ return a; }
@@ -153,6 +157,32 @@ bool ProbeHistory::stalled(float target_celcius) const {
     if(high - low > STALL_MAX_SPREAD){ return false; }
     if(newest < STALL_LOW || newest > STALL_HIGH){ return false; }
     return target_celcius - newest / 10.0f >= STALL_TARGET_ABOVE;
+}
+
+int16_t ProbeHistory::newest() const {
+    return fine_count_ > 0 ? fine_at(fine_count_ - 1) : NO_VALUE;
+}
+
+int16_t ProbeHistory::sharp_drop_from() const {
+    int16_t now = newest();
+    if(now == NO_VALUE){ return NO_VALUE; }
+    int first = fine_count_ > DROP_WINDOW_SAMPLES ? fine_count_ - DROP_WINDOW_SAMPLES : 0;
+    int16_t high = NO_VALUE;
+    for(int i = first; i < fine_count_; i++){
+        int16_t value = fine_at(i);
+        if(value != NO_VALUE && (high == NO_VALUE || value > high)){ high = value; }
+    }
+    return high - now >= DROP_MIN ? high : NO_VALUE;
+}
+
+void LidWatch::update(uint32_t now_s, bool range_mode, uint32_t pause_s, int16_t drop_from, int16_t newest){
+    if(!range_mode || pause_s == 0){ open_ = false; return; }
+    if(!open_){
+        if(drop_from != NO_VALUE){ open_ = true; until_s_ = now_s + pause_s; before_ = drop_from; }
+        return;
+    }
+    bool recovered = newest != NO_VALUE && newest >= before_ - LID_RECOVERED_WITHIN;
+    if(now_s >= until_s_ || recovered){ open_ = false; }
 }
 
 bool stalled_for_probe(const ProbeHistory& history, bool connected, float target, float minimum, bool fahrenheit){
