@@ -35,6 +35,8 @@ When publishing to the `probes` and `settings` topic the messages will have thei
 
 Messages on `/config/probes` and `/config/settings` may be partial: only the keys you send are changed, missing keys keep their current value. For probes, `probe_id` (1-8) is required in every entry. If any value has the wrong type or is out of range, the whole message is rejected and nothing is changed. The reason is published (not retained) to `<prefix>/<uuid>/error` as `{"topic": "<config topic>", "error": "<reason>"}`. A bad `/config/clear_history` payload publishes the same way.
 
+Passwords and the Telegram bot token are never published on the `settings` topic, only whether they're set (`mqtt_password_set`, `telegram_token_set` and so on).
+
 `admin_password` can't be changed over MQTT: a `/config/settings` message that contains it is rejected as a whole. Resetting a forgotten admin password with the code on the grill's screen is only possible through the web app or the local API.
 
 For the topics that Grilly+ is subscribed to (`/config/probes`, `/config/settings`, `/config/mute` and `/config/clear_history`), Grilly+ takes into account that there might be a message with the retain flag set. So after reading the message Grilly+ will also publish a new message with retain set to true and a 0 byte payload to clear the existing message.

@@ -323,6 +323,14 @@ void JsonUtilities::load_json_settings(char* buffer){
     jsondoc["beep_on_ready"]             = config::beep_on_ready;
     jsondoc["cucaracha_enabled"]         = config::cucaracha_enabled;
 
+    jsondoc["telegram_token_set"]        = config::telegram_token.length() > 0;
+    jsondoc["telegram_chat_id"]          = config::telegram_chat_id;
+    jsondoc["notify_ready"]              = config::notify_ready;
+    jsondoc["notify_almost"]             = config::notify_almost;
+    jsondoc["notify_outside"]            = config::notify_outside;
+    jsondoc["notify_stall"]              = config::notify_stall;
+    jsondoc["notify_battery"]            = config::notify_battery;
+
     jsondoc["screen_timeout_minutes"]    = config::screen_timeout_minutes;
     jsondoc["backlight_timeout_minutes"] = config::backlight_timeout_minutes;
     jsondoc["backlight_brightness"]      = config::backlight_brightness;
@@ -389,6 +397,14 @@ jsonResult JsonUtilities::save_json_settings(char* raw_json, bool admin_authoriz
             fields.boolean("beep_on_ready",             config::beep_on_ready);
             fields.boolean("cucaracha_enabled",         config::cucaracha_enabled);
 
+            fields.text("telegram_token",               config::telegram_token);
+            fields.text("telegram_chat_id",             config::telegram_chat_id);
+            fields.boolean("notify_ready",              config::notify_ready);
+            fields.boolean("notify_almost",             config::notify_almost);
+            fields.boolean("notify_outside",            config::notify_outside);
+            fields.boolean("notify_stall",              config::notify_stall);
+            fields.boolean("notify_battery",            config::notify_battery);
+
             fields.number("screen_timeout_minutes",     config::screen_timeout_minutes, 0, 10000);
             fields.number("backlight_timeout_minutes",  config::backlight_timeout_minutes, 0, 10000);
             fields.number("backlight_brightness",       config::backlight_brightness, 0, 5);
@@ -437,6 +453,10 @@ jsonResult JsonUtilities::save_json_settings(char* raw_json, bool admin_authoriz
 
         FieldReader store(json_data, true);
         read_settings(store);
+
+        // Pasted tokens and chat IDs often carry a space or a newline
+        config::telegram_token.trim();
+        config::telegram_chat_id.trim();
 
         // Set default value for empty topics
         if(config::mqtt_topic.length() == 0){

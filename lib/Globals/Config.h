@@ -36,6 +36,15 @@ namespace config{
     extern int    beep_degrees_before;
     extern int    lid_pause_minutes;
 
+    // Notifications
+    extern String telegram_token;
+    extern String telegram_chat_id;
+    extern bool   notify_ready;
+    extern bool   notify_almost;
+    extern bool   notify_outside;
+    extern bool   notify_stall;
+    extern bool   notify_battery;
+
     // Buffers
     extern int json_buffer_size;
     extern int mqtt_buffer_size;

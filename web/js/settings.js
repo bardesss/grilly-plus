@@ -24,6 +24,18 @@ const Settings = (() => {
       { key: "backlight_timeout_minutes", label: "Backlight off after", type: "stepper", min: 0, max: 10000,
         suffix: (v) => (v === 0 ? "never" : "min") },
     ] },
+    { id: "notify", title: "Notifications", fields: [
+      { key: "telegram_token", label: "Telegram bot token", type: "password", saved: "token",
+        hint: "Create a bot with @BotFather in Telegram and paste the token it gives you." },
+      { key: "telegram_chat_id", label: "Chat ID", type: "text", placeholder: "Like 123456789",
+        hint: "Send your bot a message first. @userinfobot tells you your chat ID." },
+      { type: "heading", label: "Notify me when" },
+      { key: "notify_ready", label: "Ready", type: "toggle" },
+      { key: "notify_almost", label: "Almost ready (early warning)", type: "toggle" },
+      { key: "notify_outside", label: "Too hot or too cold", type: "toggle" },
+      { key: "notify_stall", label: "In the stall", type: "toggle" },
+      { key: "notify_battery", label: "Battery at 20 % and 10 %", type: "toggle" },
+    ] },
     { id: "mqtt", title: "MQTT", fields: [
       { key: "mqtt_broker", label: "Broker", type: "text", placeholder: "Not used when empty" },
       { key: "mqtt_port", label: "Port", type: "number", min: 1, max: 65535 },
@@ -43,11 +55,13 @@ const Settings = (() => {
   let loadError;
 
   // Card ids per desktop column, and the single-column order on phones
-  const LAYOUT = [["grill", "alarms", "display", "updates"], ["network", "browser", "mqtt", "opengrill"]];
-  const PHONE_ORDER = ["grill", "alarms", "browser", "display", "network", "mqtt", "opengrill", "updates"];
+  const LAYOUT = [["grill", "alarms", "notify", "display", "updates"], ["network", "browser", "mqtt", "opengrill"]];
+  const PHONE_ORDER = ["grill", "alarms", "notify", "browser", "display", "network", "mqtt", "opengrill", "updates"];
+  const footers = {};       // card id -> { build(), fill(settings) }, below the card's fields
 
   // card: { id, build(), fill(settings) }, id as used in LAYOUT
   function addCard(card) { extraCards.push(card); }
+  function addFooter(id, footer) { footers[id] = footer; }
   function current() { return settings; }
 
   function fill(newSettings) {
@@ -55,6 +69,7 @@ const Settings = (() => {
     // A field whose card still has unsaved changes keeps what the user entered
     controls.forEach((control) => { if (!control.saver.hasPending()) control.set(settings); });
     extraCards.forEach((card) => card.fill(settings));
+    Object.values(footers).forEach((footer) => footer.fill(settings));
   }
 
   function labelled(field, input) {
@@ -80,8 +95,23 @@ const Settings = (() => {
     return wrapper;
   }
 
+  function addHint(wrapper, text) {
+    const hint = document.createElement("p");
+    hint.className = "hint";
+    hint.textContent = text;
+    wrapper.append(hint);
+    return hint;
+  }
+
   function buildField(field, saver) {
     const send = (value, options) => saver.change({ [field.key]: value }, options);
+
+    if (field.type === "heading") {
+      const heading = document.createElement("h3");
+      heading.className = "settings-subtitle";
+      heading.textContent = field.label;
+      return heading;
+    }
 
     if (field.type === "text" || field.type === "number") {
       const input = document.createElement("input");
@@ -101,11 +131,8 @@ const Settings = (() => {
       input.addEventListener("keydown", (event) => { if (event.key === "Enter") input.blur(); });
       const wrapper = labelled(field, input);
       let hint = null;
-      if (field.key === "mqtt_topic") {
-        hint = document.createElement("p");
-        hint.className = "hint";
-        wrapper.append(hint);
-      }
+      if (field.key === "mqtt_topic") hint = addHint(wrapper, "");
+      else if (field.hint) addHint(wrapper, field.hint);
       controls.push({ set: (s) => {
         if (document.activeElement !== input) input.value = s[field.key] ?? "";
         if (hint) hint.textContent = "Topics: " + (s.mqtt_topic || "grilly-plus") + "/" + s.uuid + "/…";
@@ -121,10 +148,12 @@ const Settings = (() => {
         if (input.value !== "") send(input.value, { immediate: true });
       });
       const wrapper = labelled(field, input);
+      const saved = field.saved || "password";     // what the field holds, for the texts
+      if (field.hint) addHint(wrapper, field.hint);
       const remove = document.createElement("button");
       remove.type = "button";
       remove.className = "link-button";
-      remove.textContent = "Remove saved password";
+      remove.textContent = "Remove saved " + saved;
       remove.addEventListener("click", () => send("", { immediate: true }));
       wrapper.append(remove);
       controls.push({ set: (s) => {
@@ -197,6 +226,7 @@ const Settings = (() => {
     });
     savers.push(saver);
     def.fields.forEach((field) => card.append(buildField(field, saver)));
+    if (footers[def.id]) card.append(footers[def.id].build());
     return card;
   }
 
@@ -234,5 +264,5 @@ const Settings = (() => {
 
   App.register("settings", { mount, show, hide });
 
-  return { addCard, fill, current };
+  return { addCard, addFooter, fill, current };
 })();

@@ -413,6 +413,11 @@ details.advanced summary { display: flex; align-items: center; min-height: 44px;
 
 /* Firmware updates card */
 .settings-card [data-update] { margin-top: 12px; width: 100%; }
+.settings-subtitle { margin: 18px 0 0; font-size: 13px; font-weight: 600; color: var(--muted); }
+.settings-subtitle + .setting-row { border-top: 0; }
+.notify-footer { margin-top: 12px; }
+.notify-footer .button { width: 100%; }
+.hint.hint-error { color: var(--bad); }
 .progress { height: 6px; margin-top: 10px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
 .progress i { display: block; height: 100%; border-radius: 3px; background: var(--accent); transition: width .4s; }
 .progress.upload i { background: var(--accent); }

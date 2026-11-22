@@ -14,6 +14,7 @@
 #include <esp_random.h>
 #include "Grill.h"
 #include "JsonUtilities.h"
+#include "Notify.h"
 #include "SharedLock.h"
 #include "Updater.h"
 #include "Web.h"
@@ -48,6 +49,10 @@ void setup_api_routes()
     web::webserver.on("/api/update/check", HTTP_OPTIONS, cors_api_update_check);
     web::webserver.on("/api/update/install", HTTP_POST, post_api_update_install);
     web::webserver.on("/api/update/install", HTTP_OPTIONS, cors_api_update_install);
+
+    web::webserver.on("/api/notify", HTTP_GET, get_api_notify);
+    web::webserver.on("/api/notify/test", HTTP_POST, post_api_notify_test);
+    web::webserver.on("/api/notify/test", HTTP_OPTIONS, cors_api_notify_test);
 
     web::webserver.on("/api/admin/reset/start", HTTP_POST, post_api_admin_reset_start);
     web::webserver.on("/api/admin/reset/start", HTTP_OPTIONS, cors_api_admin_reset);
@@ -179,6 +184,39 @@ void get_api_update_latest(){
     serializeJson(jsondoc, api_json_buffer, sizeof(api_json_buffer));
     allow_cross_origin_read();
     web::webserver.send(200, "application/json", api_json_buffer);
+}
+
+void get_api_notify(){
+    JsonDocument jsondoc;
+    notify::status_json(jsondoc.to<JsonObject>());
+    serializeJson(jsondoc, api_json_buffer, sizeof(api_json_buffer));
+    allow_cross_origin_read();
+    web::webserver.send(200, "application/json", api_json_buffer);
+}
+
+// Sends a test message to the services that are set up. Like muting it needs no admin password: it
+// only goes to the chat the owner configured.
+void post_api_notify_test(){
+    if(!is_json_request()) { return; }
+
+    int status = notify::request_test();
+    if(status == 400){
+        web::webserver.send(400, "application/json", "{\"error\": \"Telegram isn't set up: save a bot token and chat ID first\"}");
+        return;
+    }
+    if(status == 409){
+        web::webserver.send(409, "application/json", "{\"error\": \"The grill isn't connected to WiFi\"}");
+        return;
+    }
+    if(status == 429){
+        web::webserver.send(429, "application/json", "{\"error\": \"Sent a test less than 10 seconds ago\"}");
+        return;
+    }
+    web::webserver.send(202, "application/json", "{\"success\": true}");
+}
+
+void cors_api_notify_test(){
+    web::webserver.send(204);
 }
 
 void post_api_update_check(){
