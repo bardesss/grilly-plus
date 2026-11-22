@@ -202,3 +202,17 @@ test("load retries once after a failure, but not a second time", (t) => {
       t.mock.timers.reset();
     });
 });
+
+test("csv has a header with the name and unit, one decimal, and empty gaps", () => {
+  const t = new Date(2026, 10, 22, 14, 5, 30).getTime();
+  const text = Trend.csv([{ t, v: 71.44 }, { t: t + 10000, v: null }, { t: t + 20000, v: 72 }], "celcius", 'Mom\'s "roast"');
+  assert.equal(text, '"Time","Mom\'s ""roast"" (°C)"\r\n2026-11-22 14:05:30,71.4\r\n2026-11-22 14:05:40,\r\n2026-11-22 14:05:50,72.0\r\n');
+  assert.match(Trend.csv([], "fahrenheit", "Grill"), /^"Time","Grill \(°F\)"\r\n$/);
+});
+
+test("csvName is a safe file name with the date and time", () => {
+  const t = new Date(2026, 10, 22, 9, 7).getTime();
+  assert.equal(Trend.csvName("Pulled pork", t), "grilly-plus-pulled-pork-2026-11-22-0907.csv");
+  assert.equal(Trend.csvName("Crème brûlée!", t), "grilly-plus-creme-brulee-2026-11-22-0907.csv");
+  assert.equal(Trend.csvName("***", t), "grilly-plus-probe-2026-11-22-0907.csv");
+});
