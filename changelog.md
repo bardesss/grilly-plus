@@ -1,16 +1,21 @@
 # Changelog (firmware only)
 
-## Unreleased
+## 2026-11-22.2
+Phone notifications (Telegram, ntfy, Pushover, a webhook), Home Assistant discovery, stall and lid-open detection, a forecast on the graph, food icons on the grill screen and your own food presets. Grills on 2026-11-22 or later find this release under Settings > Firmware updates and install it with one tap; older versions install the `-ota.bin` file there.
 
-### New
+### Cooking
 - The graph on a probe card shows where the cook is going: with a time to target, a dotted forecast runs from the current reading to the target and ends at the clock time it'll be ready ("now … 18:05"). A dot marks the current reading, and the target line has its temperature on it. The lowest-highest label under the graph only stays for probes without an alarm
 - Stall detection: when a probe in target mode stays within 1.5° for 20 minutes somewhere between 60 and 80 °C, with the target at least 5° higher, the app shows "In the stall" where the time to target goes and the grill's screen shows STALL. It ends by itself once the temperature climbs again
 - Lid open: in range mode, a drop of 8° or more within a minute (opening the lid) holds back the "too low" alarm until the temperature is back within 2° of where it was, or until the lid pause is over. Meanwhile the app says "Lid open" and the grill shows LID instead of LOW. Settings > Alarms > Lid open pause sets the minutes (default 5, 0 = off). With it on, "too low" also has to last 30 seconds before it beeps; "too high" isn't held back
+
+### Notifications and smart home
 - Telegram notifications: the grill sends a message when a probe is ready, almost ready (the early warning), too hot or too cold, or goes into the stall, and when the battery drops to 20 % and 10 %. They also go out when the beeper is off or the alarm was muted. Set it up under Settings > Notifications with a bot token from @BotFather and your chat ID, pick the events, and use Send test. A failed message is tried 3 times and the card says why it failed. HTTPS to Telegram is checked against the Mozilla root certificates
 - ntfy notifications, next to Telegram: fill in a topic URL (`https://ntfy.sh/your-topic`, or your own ntfy server, also over plain http on your home network) and subscribe to the topic in the ntfy app. An access token is optional; it is tied to the server, so changing the URL to another server without a new token removes it. The topic URL is kept secret like a password, because anyone who knows a topic on ntfy.sh can read along. Ready and outside-the-range messages come with high priority. Send test tries every service that is set up and shows a line for each
 - Pushover notifications: paste your user key and the API token of an application you create on pushover.net. Ready and outside-the-range messages come with high priority
 - Webhook: every notification also goes as a JSON POST to a URL of your choice, for Home Assistant, Node-RED and the like. The body has the event (`ready`, `almost_ready`, `too_hot`, `too_cold`, `stall`, `battery_low`, `test`), the grill, the message, the unit, the probe (id, name, temperature, target, minimum) and the battery. The URL is kept secret like a password, because a Home Assistant webhook URL is its own key
 - Home Assistant discovery: with MQTT set up, the grill shows up in Home Assistant by itself as one device, with the temperature, target, time to target, stall and alarm of every probe, the battery, charging, WiFi signal, alarm, update available and a Mute alarm button. Probes that aren't plugged in show as unavailable, and the whole device when the grill is off. Switch it off under Settings > MQTT to remove the device
+
+### Food icons and presets
 - Food icons: every probe can have an icon for what's on it (beef, lamb, pork, poultry, fish, sausage, vegetables, pit or smoker, other). Picking a food sets it, or pick one in the probe editor. The grill shows it on its screen: next to the temperature with one probe, between the probe number and the name with two to four, after the temperature with five to eight. Beef and lamb are now separate groups in the food list
 - Your own food presets: Save as preset in the probe editor, or add, edit and delete them under Settings > Food presets. They can be a target or a range, have an icon and a group, and show on top of the Food list. Built-in presets can be switched off or copied. Up to 30, kept on the grill so every phone and browser has the same list
 
