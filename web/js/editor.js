@@ -230,6 +230,22 @@ const Editor = (() => {
     drawChart(App.getStatus());
   }
 
+  // The whole cook as the graph shows it, in the display unit
+  function downloadCsv() {
+    const status = App.getStatus();
+    if (probeId === null || !status) return;
+    const name = nameInput.value.trim() || "Probe " + probeId;
+    const blob = new Blob(["\ufeff" + Trend.csv(Trend.points(probeId, status.temperature_unit), status.temperature_unit, name)],
+                          { type: "text/csv;charset=utf-8" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = Trend.csvName(name, Date.now());
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  }
+
   function resetClear() {
     clearTimeout(clearTimer);
     clearButton.textContent = "Clear history";
@@ -378,7 +394,10 @@ const Editor = (() => {
       '      <p class="hint">Saved for this socket, not for the probe. If you move the probe to another socket, set it again there.</p></div>' +
       '  </details>' +
       '</fieldset>' +
-      '<button type="button" class="link-button danger" id="editor-clear">Clear history</button>' +
+      '<div class="editor-actions">' +
+      '  <button type="button" class="link-button" id="editor-csv">Download CSV</button>' +
+      '  <button type="button" class="link-button danger" id="editor-clear">Clear history</button>' +
+      '</div>' +
       '<span class="visually-hidden" id="editor-clear-note" aria-live="polite"></span>';
     document.body.append(backdrop, sheet);
 
@@ -440,6 +459,7 @@ const Editor = (() => {
     sheet.addEventListener("keydown", trapFocus);
     rangeInputs.forEach((input) => input.addEventListener("change", onRangeChange));
     clearButton.addEventListener("click", onClear);
+    sheet.querySelector("#editor-csv").addEventListener("click", downloadCsv);
 
     // Swipe down on the grab handle or the title row to close
     sheet.addEventListener("pointerdown", (event) => {

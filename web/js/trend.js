@@ -88,6 +88,28 @@ const Trend = (() => {
     return display(series[probeId] || [], unit);
   }
 
+  // Local time as 2026-11-22 14:05:30, which spreadsheets read as a date and time
+  function stamp(ms) {
+    const d = new Date(ms);
+    const two = (n) => String(n).padStart(2, "0");
+    return d.getFullYear() + "-" + two(d.getMonth() + 1) + "-" + two(d.getDate()) + " " +
+      two(d.getHours()) + ":" + two(d.getMinutes()) + ":" + two(d.getSeconds());
+  }
+
+  // A probe's points ({t, v} in the display unit) as CSV: a time column and a temperature column.
+  // A gap (probe unplugged) is an empty temperature.
+  function csv(points, unit, name) {
+    const header = '"Time","' + String(name).replace(/"/g, '""') + " (" + (unit === "fahrenheit" ? "°F" : "°C") + ')"';
+    const rows = points.map((p) => stamp(p.t) + "," + (p.v === null ? "" : p.v.toFixed(1)));
+    return [header, ...rows].join("\r\n") + "\r\n";
+  }
+
+  // grilly-plus-pulled-pork-2026-11-22-1405.csv
+  function csvName(name, ms) {
+    const slug = String(name).toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "probe";
+    return "grilly-plus-" + slug + "-" + stamp(ms).slice(0, 16).replace(" ", "-").replace(":", "") + ".csv";
+  }
+
   // Notifies listeners so the card resets immediately, without waiting for the next status poll or
   // history reload. editor.js's own onChange handler only redraws the chart, and onClear() only calls
   // Trend.load() afterwards (not clear() again), so this can't loop back into another clear.
@@ -170,7 +192,7 @@ const Trend = (() => {
     document.addEventListener("visibilitychange", () => { if (!document.hidden) loadNow(); });
   }
 
-  return { tierPoints, fromResponse, append, thin, toCelsius, display, points, clear, onChange, load, onStatus, version };
+  return { csv, csvName, tierPoints, fromResponse, append, thin, toCelsius, display, points, clear, onChange, load, onStatus, version };
 })();
 
 if (typeof module === "object" && module.exports) module.exports = Trend;

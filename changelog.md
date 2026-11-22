@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### New
+- Download CSV in the probe editor saves the whole cook as a spreadsheet file: time and temperature in °C or °F, named after the probe, for example grilly-plus-pulled-pork-2026-11-22-1405.csv
 - When an alarm goes off, the web app opens a dialog on every page that says which probe and why ("Pulled pork is ready · 95.2°C · target 95°"), with Mute and Close. Close hides it until the next alarm and leaves the grill beeping
 - The web app beeps along with the grill's alarm, vibrates on Android and shows a bell in the tab title, while the page is open. Settings > This browser switches it off for that browser, and has a test sound. The page keeps checking every 5 seconds when it's in the background
 - Food presets in the probe editor: pick a food, such as steak medium-rare, brisket or chicken breast, and the target temperature fills in, in °C or °F. A probe that still has its default name gets the food's name
