@@ -1,6 +1,6 @@
 # Changelog (firmware only)
 
-## Unreleased
+## 2026-11-22
 Update from GitHub. Install this release from Settings > Firmware updates with the `-ota.bin` file; from then on the grill finds and installs new releases itself.
 
 ### New
@@ -9,6 +9,7 @@ Update from GitHub. Install this release from Settings > Firmware updates with t
 - Installing needs at least 30 % battery or the charger, and the admin password when one is set
 - The firmware updates card is ordered by the steps: current admin password, update from GitHub, install from a file, and the admin password settings at the bottom
 - Confirmations (installing an update, applying network settings) use the app's own dialog instead of the browser's
+- Edge no longer shows a second show/hide button in password fields
 
 ### API and MQTT
 - `GET /api/update/latest`, `POST /api/update/check` (202, 429 when asked again within a minute) and `POST /api/update/install` with `{"version": "…"}` (admin password; 409 when it isn't the offered version, 412 when the battery is too low)
