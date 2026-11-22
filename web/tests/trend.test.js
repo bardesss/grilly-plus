@@ -216,3 +216,9 @@ test("csvName is a safe file name with the date and time", () => {
   assert.equal(Trend.csvName("Crème brûlée!", t), "grilly-plus-creme-brulee-2026-11-22-0907.csv");
   assert.equal(Trend.csvName("***", t), "grilly-plus-probe-2026-11-22-0907.csv");
 });
+
+test("csv keeps a name that looks like a formula as text", () => {
+  assert.match(Trend.csv([], "celcius", '=HYPERLINK("x")'), /^"Time","'=HYPERLINK\(""x""\) \(°C\)"/);
+  assert.match(Trend.csv([], "celcius", "-5 probe"), /^"Time","'-5 probe/);
+  assert.match(Trend.csv([], "celcius", "Brisket"), /^"Time","Brisket \(/);
+});
