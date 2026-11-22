@@ -1,5 +1,22 @@
 # Changelog (firmware only)
 
+## Unreleased
+Update from GitHub. Install this release from Settings > Firmware updates with the `-ota.bin` file; from then on the grill finds and installs new releases itself.
+
+### New
+- Update from GitHub: the grill checks the Grilly+ releases once a day and when you tap "Check now". The web app shows "*version* is available" with the release notes, a dot on the Settings tab, and an Install button
+- Install restarts the grill into an update mode (WiFi only, dimmed screen, progress bar), downloads the release over HTTPS, checks its size and SHA-256 checksum and restarts into the new version in about a minute. On any failure it keeps the old version and the app shows the reason
+- Installing needs at least 30 % battery or the charger, and the admin password when one is set
+- The firmware updates card is ordered by the steps: current admin password, update from GitHub, install from a file, and the admin password settings at the bottom
+- Confirmations (installing an update, applying network settings) use the app's own dialog instead of the browser's
+
+### API and MQTT
+- `GET /api/update/latest`, `POST /api/update/check` (202, 429 when asked again within a minute) and `POST /api/update/install` with `{"version": "…"}` (admin password; 409 when it isn't the offered version, 412 when the battery is too low)
+- `update_available` in `/api/grill` and the MQTT `grill` topic; `github_update` in the `/api/info` capabilities
+
+### Other
+- Version comparison, release parsing and the battery check have unit tests that run in CI
+
 ## 2026-09-28.2
 Temperature graphs and time to target. Install it from Settings > Firmware updates with the `-ota.bin` file.
 
