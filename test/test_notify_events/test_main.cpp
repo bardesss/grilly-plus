@@ -205,6 +205,43 @@ void test_ntfy_priority_and_errors(){
     TEST_ASSERT_EQUAL_STRING("ntfy answered 500", out);
 }
 
+void test_pushover_priority_and_errors(){
+    TEST_ASSERT_EQUAL(1, pushover_priority(READY));
+    TEST_ASSERT_EQUAL(0, pushover_priority(ALMOST));
+    char out[160];
+    pushover_error(out, sizeof(out), 400, "{\"status\":0,\"errors\":[\"application token is invalid\"]}");
+    TEST_ASSERT_EQUAL_STRING("Pushover: application token is invalid", out);
+    pushover_error(out, sizeof(out), 500, "");
+    TEST_ASSERT_EQUAL_STRING("Pushover answered 500", out);
+}
+
+void test_webhook_urls(){
+    TEST_ASSERT_TRUE(webhook_url_ok("https://ha.example.com/api/webhook/grill-8f3k2"));
+    TEST_ASSERT_TRUE(webhook_url_ok("http://192.168.1.10:8123/api/webhook/grill?x=1"));
+    TEST_ASSERT_FALSE(webhook_url_ok("ftp://example.com/x"));
+    TEST_ASSERT_FALSE(webhook_url_ok("https:///x"));
+    TEST_ASSERT_FALSE(webhook_url_ok("https://me:pw@example.com/x"));
+    TEST_ASSERT_FALSE(webhook_url_ok("https://example.com/a b"));
+    TEST_ASSERT_EQUAL_STRING("http://192.168.1.10:8123", url_server_of("http://192.168.1.10:8123/api/webhook/x").c_str());
+    TEST_ASSERT_EQUAL_STRING("https://ha.example.com", url_server_of("https://HA.example.com?x").c_str());
+    TEST_ASSERT_EQUAL_STRING("", url_server_of("nonsense").c_str());
+}
+
+void test_webhook_payload(){
+    JsonDocument doc;
+    webhook_payload(doc, WebhookInput{webhook_event_name(TOO_COLD), "Grilly+", "too cold", "celcius",
+                                      3, "Pit", 94.66f, 120, 100, -1});
+    TEST_ASSERT_EQUAL_STRING("too_cold", doc["event"].as<const char*>());
+    TEST_ASSERT_EQUAL_STRING("Grilly+", doc["grill"].as<const char*>());
+    TEST_ASSERT_EQUAL(3, doc["probe"]["id"].as<int>());
+    TEST_ASSERT_EQUAL_STRING("Pit", doc["probe"]["name"].as<const char*>());
+    TEST_ASSERT_TRUE(doc["probe"]["temperature"].as<float>() > 94.69f && doc["probe"]["temperature"].as<float>() < 94.71f);
+    TEST_ASSERT_TRUE(doc["battery"].isNull());
+    webhook_payload(doc, WebhookInput{"battery_low", "Grilly+", "battery", "celcius", 0, "", 0, 0, 0, 20});
+    TEST_ASSERT_TRUE(doc["probe"].isNull());
+    TEST_ASSERT_EQUAL(20, doc["battery"].as<int>());
+}
+
 int main(int argc, char** argv){
     UNITY_BEGIN();
     RUN_TEST(test_almost_then_ready_once);
@@ -230,5 +267,8 @@ int main(int argc, char** argv){
     RUN_TEST(test_ntfy_split_refuses_what_ntfy_would_refuse);
     RUN_TEST(test_ntfy_server_of);
     RUN_TEST(test_ntfy_priority_and_errors);
+    RUN_TEST(test_pushover_priority_and_errors);
+    RUN_TEST(test_webhook_urls);
+    RUN_TEST(test_webhook_payload);
     return UNITY_END();
 }

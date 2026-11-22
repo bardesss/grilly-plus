@@ -422,7 +422,9 @@ components:
       properties:
         set_up:
           type: boolean
-          description: Telegram has a bot token and a chat ID, ntfy a topic URL
+          description: >-
+            Telegram has a bot token and a chat ID, ntfy a topic URL, Pushover a user key and an app
+            token, the webhook a URL
           example: true
         last:
           type: object
@@ -547,6 +549,48 @@ components:
           readOnly: true
           example: false
           description: Whether an ntfy access token is saved.
+        pushover_user:
+          type: string
+          writeOnly: true
+          example: "uQiRzpo4DXghDmr9QzzfQu27cmVRsG"
+          description: Pushover user or group key. Write-only, never returned. "" removes it.
+        pushover_user_set:
+          type: boolean
+          readOnly: true
+          example: true
+          description: Whether a Pushover user key is saved.
+        pushover_token:
+          type: string
+          writeOnly: true
+          example: "azGDORePK8gMaC0QOYAMyEEuzJnyUi"
+          description: Pushover application API token. Write-only, never returned. "" removes it.
+        pushover_token_set:
+          type: boolean
+          readOnly: true
+          example: true
+          description: Whether a Pushover app token is saved.
+        webhook_url:
+          type: string
+          writeOnly: true
+          example: "https://homeassistant.local:8123/api/webhook/grill-8f3k2"
+          description: >-
+            Gets a JSON POST for every notification: http(s)://host/anything without spaces or
+            user:password@, at most 400 characters. Any 2xx answer counts as delivered. "" switches the
+            webhook off. Write-only, because the URL often holds a secret id, so only webhook_url_set and
+            webhook_server are returned. The body is
+            {"event", "grill", "message", "unit", "probe": {"id", "name", "temperature", "target",
+            "minimum"}, "battery"}, with event one of ready, almost_ready, too_hot, too_cold, stall,
+            battery_low or test; probe is only there for a probe event, battery only for battery_low.
+        webhook_url_set:
+          type: boolean
+          readOnly: true
+          example: true
+          description: Whether a webhook URL is saved.
+        webhook_server:
+          type: string
+          readOnly: true
+          example: "https://homeassistant.local:8123"
+          description: The scheme and host of the saved webhook URL, "" when none is saved.
         notify_ready:
           type: boolean
           example: true
@@ -917,6 +961,10 @@ paths:
                     $ref: '#/components/schemas/NotifyService'
                   ntfy:
                     $ref: '#/components/schemas/NotifyService'
+                  pushover:
+                    $ref: '#/components/schemas/NotifyService'
+                  webhook:
+                    $ref: '#/components/schemas/NotifyService'
 
   /notify/test:
     post:
@@ -953,7 +1001,7 @@ paths:
                 properties:
                   error:
                     type: string
-                    example: "No notifications are set up yet: save Telegram or ntfy first"
+                    example: "No notifications are set up yet: save a service first"
         '409':
           description: The grill isn't connected to WiFi
           content:

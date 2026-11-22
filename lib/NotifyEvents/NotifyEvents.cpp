@@ -210,4 +210,82 @@ void ntfy_error(char* out, size_t size, int status, const char* body){
     }
 }
 
+int pushover_priority(uint8_t event){
+    return (event == READY || event == TOO_HOT || event == TOO_COLD) ? 1 : 0;
+}
+
+void pushover_error(char* out, size_t size, int status, const char* body){
+    JsonDocument doc;
+    const char* error = nullptr;
+    if(body != nullptr && deserializeJson(doc, body) == DeserializationError::Ok){
+        error = doc["errors"][0] | (const char*)nullptr;
+    }
+    if(error != nullptr){
+        snprintf(out, size, "Pushover: %s", error);
+    } else {
+        snprintf(out, size, "Pushover answered %d", status);
+    }
+}
+
+// Where the host starts and ends in an http(s) URL, false when it isn't one
+static bool url_host(const char* url, const char** host, const char** host_end){
+    if(url == nullptr){ return false; }
+    if(strncmp(url, "https://", 8) == 0){ *host = url + 8; }
+    else if(strncmp(url, "http://", 7) == 0){ *host = url + 7; }
+    else { return false; }
+    const char* end = *host;
+    while(*end && *end != '/' && *end != '?' && *end != '#'){ end++; }
+    if(end == *host){ return false; }
+    *host_end = end;
+    return true;
+}
+
+bool webhook_url_ok(const char* url){
+    const char *host, *host_end;
+    if(!url_host(url, &host, &host_end)){ return false; }
+    for(const char* p = host; p < host_end; p++){
+        if(*p == '@'){ return false; }                 // no user:password@
+    }
+    for(const char* p = url; *p; p++){
+        if((unsigned char)*p <= ' '){ return false; }   // no spaces or control characters
+    }
+    return strlen(url) <= 400;
+}
+
+std::string url_server_of(const char* url){
+    const char *host, *host_end;
+    if(!url_host(url, &host, &host_end)){ return ""; }
+    std::string server(url, (size_t)(host_end - url));
+    for(char& ch : server){ if(ch >= 'A' && ch <= 'Z'){ ch = ch - 'A' + 'a'; } }
+    return server;
+}
+
+const char* webhook_event_name(uint8_t event){
+    switch(event){
+        case READY:    return "ready";
+        case ALMOST:   return "almost_ready";
+        case TOO_HOT:  return "too_hot";
+        case TOO_COLD: return "too_cold";
+        case STALL:    return "stall";
+    }
+    return "unknown";
+}
+
+void webhook_payload(JsonDocument& doc, const WebhookInput& in){
+    doc.clear();
+    doc["event"]   = in.event;
+    doc["grill"]   = in.grill_name;
+    doc["message"] = in.message;
+    doc["unit"]    = in.unit;
+    if(in.probe_id > 0){
+        JsonObject probe = doc["probe"].to<JsonObject>();
+        probe["id"]          = in.probe_id;
+        probe["name"]        = in.probe_name;
+        probe["temperature"] = roundf(in.temperature * 10) / 10;
+        probe["target"]      = in.target;
+        probe["minimum"]     = in.minimum;
+    }
+    if(in.battery >= 0){ doc["battery"] = in.battery; }
+}
+
 }  // namespace notify

@@ -40,13 +40,23 @@ struct Item {
 };
 
 // The services, in the order they are sent to and listed in GET /api/notify
-enum Service : uint8_t { TELEGRAM, NTFY, SERVICE_COUNT };
-const char* const SERVICE_KEYS[SERVICE_COUNT] = {"telegram", "ntfy"};
+enum Service : uint8_t { TELEGRAM, NTFY, PUSHOVER, WEBHOOK, SERVICE_COUNT };
+const char* const SERVICE_KEYS[SERVICE_COUNT] = {"telegram", "ntfy", "pushover", "webhook"};
 
 // A copy of the service settings, so sending doesn't hold the lock
 struct Targets {
     String telegram_token, telegram_chat_id;
     String ntfy_url, ntfy_token;
+    String pushover_user, pushover_token;
+    String webhook_url;
+};
+
+// One notification, ready for every service
+struct Message {
+    String grill_name;
+    String probe_name;
+    bool   fahrenheit;
+    char   text[TEXT_SIZE];
 };
 
 // How the last message to a service went, under SharedLock
@@ -89,6 +99,8 @@ bool set_up(Service service){
     switch(service){
         case TELEGRAM: return config::telegram_token.length() > 0 && config::telegram_chat_id.length() > 0;
         case NTFY:     return config::ntfy_url.length() > 0;
+        case PUSHOVER: return config::pushover_user.length() > 0 && config::pushover_token.length() > 0;
+        case WEBHOOK:  return config::webhook_url.length() > 0;
         default:       return false;
     }
 }
@@ -101,13 +113,16 @@ bool any_set_up(){
 
 Targets copy_targets(){
     SharedLock lock;
-    return Targets{config::telegram_token, config::telegram_chat_id, config::ntfy_url, config::ntfy_token};
+    return Targets{config::telegram_token, config::telegram_chat_id, config::ntfy_url, config::ntfy_token,
+                   config::pushover_user, config::pushover_token, config::webhook_url};
 }
 
 bool target_set_up(const Targets& t, Service service){
     switch(service){
         case TELEGRAM: return !t.telegram_token.isEmpty() && !t.telegram_chat_id.isEmpty();
         case NTFY:     return !t.ntfy_url.isEmpty();
+        case PUSHOVER: return !t.pushover_user.isEmpty() && !t.pushover_token.isEmpty();
+        case WEBHOOK:  return !t.webhook_url.isEmpty();
         default:       return false;
     }
 }
@@ -121,24 +136,24 @@ String grill_name_now(){
     return name.isEmpty() ? String("Grilly+") : name;
 }
 
-void make_text(const Item& item, const String& grill_name, char* out, size_t size){
-    String probe_name;
-    bool fahrenheit;
+void make_message(const Item& item, Message& message){
+    message.grill_name = grill_name_now();
     {
         SharedLock lock;    // names can be changed by the web, mqtt and opengrill tasks
-        fahrenheit = config::temperature_unit == "fahrenheit";
-        if(item.kind == PROBE){ probe_name = probe_at(item.probe)->name; }
+        message.fahrenheit = config::temperature_unit == "fahrenheit";
+        if(item.kind == PROBE){ message.probe_name = probe_at(item.probe)->name; }
     }
+    const char* grill = message.grill_name.c_str();
     switch(item.kind){
         case PROBE:
-            probe_message(out, size, item.event, grill_name.c_str(), probe_name.c_str(),
-                          item.temperature, item.target, item.minimum, fahrenheit ? "°F" : "°C");
+            probe_message(message.text, TEXT_SIZE, item.event, grill, message.probe_name.c_str(),
+                          item.temperature, item.target, item.minimum, message.fahrenheit ? "\u00B0F" : "\u00B0C");
             break;
         case BATTERY:
-            battery_message(out, size, grill_name.c_str(), item.percentage);
+            battery_message(message.text, TEXT_SIZE, grill, item.percentage);
             break;
         case TEST:
-            snprintf(out, size, "\U0001F44B Test from %s: notifications work", grill_name.c_str());
+            snprintf(message.text, TEXT_SIZE, "\U0001F44B Test from %s: notifications work", grill);
             break;
     }
 }
@@ -165,7 +180,8 @@ int post_json(const String& url, const String& bearer, const String& payload, St
     if(!bearer.isEmpty()){ http.addHeader("Authorization", "Bearer " + bearer); }
 
     int status = http.POST(payload);
-    if(status >= 300){ *answer = http.getString(); }
+    // A refusal's answer, capped: a webhook can be any server
+    if(status >= 300 && http.getSize() <= 2048){ *answer = http.getString(); }
     http.end();
     return status;
 }
@@ -187,7 +203,7 @@ String send_telegram(const Targets& t, const char* text, bool* permanent){
     return why;
 }
 
-String send_ntfy(const Targets& t, const Item& item, const String& grill_name, const char* text, bool* permanent){
+String send_ntfy(const Targets& t, const Item& item, const Message& m, bool* permanent){
     char server[160], topic[65];
     if(!ntfy_split(t.ntfy_url.c_str(), server, sizeof(server), topic, sizeof(topic))){
         *permanent = true;
@@ -196,8 +212,8 @@ String send_ntfy(const Targets& t, const Item& item, const String& grill_name, c
     // JSON publishing to the server root, so the title can hold any character
     JsonDocument body;
     body["topic"]    = topic;
-    body["title"]    = grill_name;
-    body["message"]  = text;
+    body["title"]    = m.grill_name;
+    body["message"]  = m.text;
     body["priority"] = item.kind == PROBE ? ntfy_priority(item.event) : 3;
     String payload, answer;
     serializeJson(body, payload);
@@ -211,8 +227,46 @@ String send_ntfy(const Targets& t, const Item& item, const String& grill_name, c
     return why;
 }
 
+String send_pushover(const Targets& t, const Item& item, const Message& m, bool* permanent){
+    JsonDocument body;
+    body["token"]    = t.pushover_token;
+    body["user"]     = t.pushover_user;
+    body["title"]    = m.grill_name;
+    body["message"]  = m.text;
+    body["priority"] = item.kind == PROBE ? pushover_priority(item.event) : 0;
+    String payload, answer;
+    serializeJson(body, payload);
+
+    int status = post_json("https://api.pushover.net/1/messages.json", "", payload, &answer);
+    if(status < 0){ return "Couldn't reach Pushover (" + HTTPClient::errorToString(status) + ")"; }
+    if(status == 200){ return ""; }
+    char why[200];
+    pushover_error(why, sizeof(why), status, answer.c_str());
+    *permanent = status >= 400 && status < 500 && status != 429;
+    return why;
+}
+
+String send_webhook(const Targets& t, const Item& item, const Message& m, bool* permanent){
+    const char* event = item.kind == PROBE ? webhook_event_name(item.event)
+                      : item.kind == BATTERY ? "battery_low" : "test";
+    JsonDocument body;
+    webhook_payload(body, WebhookInput{event, m.grill_name.c_str(), m.text, m.fahrenheit ? "fahrenheit" : "celcius",
+                                       item.kind == PROBE ? item.probe + 1 : 0, m.probe_name.c_str(),
+                                       item.temperature, item.target, item.minimum,
+                                       item.kind == BATTERY ? item.percentage : -1});
+    String payload, answer;
+    serializeJson(body, payload);
+
+    int status = post_json(t.webhook_url, "", payload, &answer);
+    if(status < 0){ return "Couldn't reach the webhook (" + HTTPClient::errorToString(status) + ")"; }
+    if(status >= 200 && status < 300){ return ""; }
+    // Only the status: the answer comes from any server and isn't shown
+    *permanent = status >= 400 && status < 500 && status != 429;
+    return "The webhook answered " + String(status);
+}
+
 // Sends to one service with retries, returns "" or the last error
-String deliver_to(Service service, const Targets& t, const Item& item, const String& grill_name, const char* text){
+String deliver_to(Service service, const Targets& t, const Item& item, const Message& m){
     String error;
     for(int attempt = 0; attempt < TRIES; attempt++){
         if(attempt > 0){ delay(RETRY_WAIT_MS); }
@@ -220,8 +274,12 @@ String deliver_to(Service service, const Targets& t, const Item& item, const Str
         if(!grill::wifi_connected){ error = "The grill isn't connected to WiFi"; continue; }
 
         bool permanent = false;
-        error = service == TELEGRAM ? send_telegram(t, text, &permanent)
-                                    : send_ntfy(t, item, grill_name, text, &permanent);
+        switch(service){
+            case TELEGRAM: error = send_telegram(t, m.text, &permanent); break;
+            case NTFY:     error = send_ntfy(t, item, m, &permanent); break;
+            case PUSHOVER: error = send_pushover(t, item, m, &permanent); break;
+            default:       error = send_webhook(t, item, m, &permanent); break;
+        }
         if(error.isEmpty() || permanent){ break; }
     }
     return error;
@@ -229,14 +287,13 @@ String deliver_to(Service service, const Targets& t, const Item& item, const Str
 
 void deliver(const Item& item){
     Targets targets = copy_targets();     // a service switched off while it was queued is skipped
-    String grill_name = grill_name_now();
-    char text[TEXT_SIZE];
-    make_text(item, grill_name, text, sizeof(text));
+    Message message;
+    make_message(item, message);
 
     for(int s = 0; s < SERVICE_COUNT; s++){
         Service service = static_cast<Service>(s);
         if(!target_set_up(targets, service)){ continue; }
-        String error = deliver_to(service, targets, item, grill_name, text);
+        String error = deliver_to(service, targets, item, message);
         if(!error.isEmpty()){ Serial.printf("Notification not sent: %s\n", error.c_str()); }
 
         SharedLock lock;

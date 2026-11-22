@@ -25,7 +25,7 @@ Grilly+ is a fork of [Free-Grilly](https://github.com/epiecs/free-grilly) by [Ep
 |---|---|
 | 📱 **A real app, in your browser** | One card per probe with a live graph of the whole cook. Tap a card to set a name, a target temperature or a range. Works on any phone or computer, in dark or light mode. Nothing to install. |
 | ⏱️ **Know when it's done** | Grilly+ watches how fast each probe heats up and tells you when it'll reach its target: "ready in ~1h 20m" in the app, "in 1:20" on the grill's own screen. During the stall it says so instead of guessing. |
-| 🔔 **Alarms that make sense** | It beeps when food is ready or the grill leaves its range, and sends a Telegram or ntfy message when you're away from it. Mute it from your phone, and the app shows which probe went off. The probe's label blinks on the grill too. |
+| 🔔 **Alarms that make sense** | It beeps when food is ready or the grill leaves its range, and sends a Telegram, ntfy or Pushover message (or calls your webhook) when you're away from it. Mute it from your phone, and the app shows which probe went off. The probe's label blinks on the grill too. |
 | 🔄 **Updates with one tap** | The grill checks GitHub for new releases once a day. Tap **Install**, and a minute later it runs the new version. Every download is checksum-verified, and a failed update leaves the old version running. |
 | 🏠 **Plays well with your smart home** | MQTT for Home Assistant and friends, plus a documented local REST API. |
 | 🔒 **Yours, and only yours** | No cloud. An admin password protects updates, the hotspot gets its own password, and a forgotten admin password can be reset with a code from the grill's screen. |
@@ -95,9 +95,11 @@ Grilly+ is a fork of [Free-Grilly](https://github.com/epiecs/free-grilly) by [Ep
 - **Stall detection:** when brisket or pork shoulder sits flat for 20 minutes between 60 and 80 °C, the card says "In the stall" and the grill shows STALL, so you know why the time to target is gone.
 - **Lid open:** in range mode, opening the lid makes the grill temperature drop fast. Grilly+ notices and holds back the "too low" alarm for a few minutes while the grill recovers; the card says "Lid open".
 - **Alarm in the browser:** a dialog says which probe went off and why, with a big Mute button. The page beeps along with the grill, vibrates on Android and shows a bell in the tab title. Switch it off per browser under **Settings › This browser**.
-- **Phone notifications** through Telegram and/or ntfy for ready, almost ready, too hot or too cold, the stall and a low battery (20 % and 10 %), each with its own switch. They also arrive when the beeper is off. Set it up under **Settings › Notifications** and tap **Send test**:
+- **Phone notifications** through Telegram, ntfy and/or Pushover for ready, almost ready, too hot or too cold, the stall and a low battery (20 % and 10 %), each with its own switch. They also arrive when the beeper is off. Set it up under **Settings › Notifications** and tap **Send test**:
   - **Telegram:** create a bot with @BotFather, paste its token and your chat ID.
   - **ntfy:** pick a hard-to-guess topic, fill in `https://ntfy.sh/your-topic` (or your own ntfy server) and subscribe to it in the [ntfy app](https://ntfy.sh). No account needed.
+  - **Pushover:** paste your user key and the API token of an application you create on [pushover.net](https://pushover.net).
+  - **Webhook:** fill in a URL that gets a JSON POST for every notification, for example a Home Assistant webhook trigger (`http://homeassistant.local:8123/api/webhook/your-id`). The body has `event` (`ready`, `almost_ready`, `too_hot`, `too_cold`, `stall`, `battery_low` or `test`), `grill`, `message`, `unit`, `probe` (`id`, `name`, `temperature`, `target`, `minimum`) and `battery`.
 - **Mute** a sounding alarm from your phone. The card of the probe that triggered it is highlighted.
 - **Settings save themselves.** Network changes are applied together with one button, and every password field has a show/hide button.
 - **About page** with the battery voltage and why the grill last restarted or switched off (crash, watchdog, update, button, factory reset, empty battery).

@@ -83,6 +83,9 @@ namespace config{
     String telegram_chat_id             = "";
     String ntfy_url                     = "";    // topic URL, like https://ntfy.sh/my-topic
     String ntfy_token                   = "";    // optional access token, never sent out
+    String pushover_user                = "";    // user or group key, never sent out
+    String pushover_token               = "";    // application token, never sent out
+    String webhook_url                  = "";    // never sent out: it often holds a secret id
     bool notify_ready                   = true;
     bool notify_almost                  = true;
     bool notify_outside                 = true;  // range mode: too hot or too cold

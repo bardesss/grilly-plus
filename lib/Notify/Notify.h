@@ -2,7 +2,7 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 
-// Phone notifications through Telegram and ntfy. The probes and battery tasks only detect events
+// Phone notifications through Telegram, ntfy, Pushover and a webhook. The probes and battery tasks only detect events
 // (NotifyEvents) and queue them; a short-lived task turns them into text and sends them over HTTPS,
 // checked against the Mozilla root certificates in certs/x509_crt_bundle.bin. It starts when there
 // is something to send and ends when the queue is empty, so its 12 KB stack is only used while sending.

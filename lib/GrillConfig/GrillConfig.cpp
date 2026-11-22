@@ -66,6 +66,9 @@ void GrillConfig::load_settings(){
     config::telegram_chat_id          = config::settings_storage.getString("tg_chat", "");
     config::ntfy_url                  = config::settings_storage.getString("ntfy_url", "");
     config::ntfy_token                = config::settings_storage.getString("ntfy_token", "");
+    config::pushover_user             = config::settings_storage.getString("po_user", "");
+    config::pushover_token            = config::settings_storage.getString("po_token", "");
+    config::webhook_url               = config::settings_storage.getString("webhook_url", "");
     config::notify_ready              = config::settings_storage.getBool("ntf_ready", true);
     config::notify_almost             = config::settings_storage.getBool("ntf_almost", true);
     config::notify_outside            = config::settings_storage.getBool("ntf_outside", true);
@@ -134,6 +137,9 @@ void GrillConfig::save_settings(){
         config::settings_storage.putString("tg_chat", config::telegram_chat_id);
         config::settings_storage.putString("ntfy_url", config::ntfy_url);
         config::settings_storage.putString("ntfy_token", config::ntfy_token);
+        config::settings_storage.putString("po_user", config::pushover_user);
+        config::settings_storage.putString("po_token", config::pushover_token);
+        config::settings_storage.putString("webhook_url", config::webhook_url);
         config::settings_storage.putBool("ntf_ready", config::notify_ready);
         config::settings_storage.putBool("ntf_almost", config::notify_almost);
         config::settings_storage.putBool("ntf_outside", config::notify_outside);
@@ -236,6 +242,9 @@ void GrillConfig::initialize_settings(){
     config::settings_storage.putString("tg_chat", config::telegram_chat_id);
     config::settings_storage.putString("ntfy_url", config::ntfy_url);
     config::settings_storage.putString("ntfy_token", config::ntfy_token);
+    config::settings_storage.putString("po_user", config::pushover_user);
+    config::settings_storage.putString("po_token", config::pushover_token);
+    config::settings_storage.putString("webhook_url", config::webhook_url);
     config::settings_storage.putBool("ntf_ready", config::notify_ready);
     config::settings_storage.putBool("ntf_almost", config::notify_almost);
     config::settings_storage.putBool("ntf_outside", config::notify_outside);

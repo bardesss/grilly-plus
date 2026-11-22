@@ -3,6 +3,8 @@
 #include <stdint.h>
 #include <string>
 
+#include <ArduinoJson.h>
+
 // What phone notifications are about, and their text. Plain C++ without Arduino, so
 // test/test_notify_events runs on the host: pio test -e native
 //
@@ -91,5 +93,37 @@ int ntfy_priority(uint8_t event);
 
 // Why ntfy refused a message, from its HTTP status and answer ({"code":40101,"http":401,"error":"..."})
 void ntfy_error(char* out, size_t size, int status, const char* body);
+
+// Pushover's priority for an event: 1 (high, bypasses quiet hours only when set so) for ready and
+// outside the range, 0 otherwise
+int pushover_priority(uint8_t event);
+
+// Why Pushover refused a message, from its HTTP status and answer ({"status":0,"errors":["..."]})
+void pushover_error(char* out, size_t size, int status, const char* body);
+
+// Whether a webhook URL is http(s)://host/anything, without spaces or user:password@
+bool webhook_url_ok(const char* url);
+
+// The scheme and host of a URL, lower case ("https://example.com:8123"), "" when it isn't http(s)
+std::string url_server_of(const char* url);
+
+// What a webhook gets: a fixed JSON shape, so Home Assistant, Node-RED and friends can act on it.
+// event is "ready", "almost_ready", "too_hot", "too_cold", "stall", "battery_low" or "test".
+struct WebhookInput {
+    const char* event;
+    const char* grill_name;
+    const char* message;
+    const char* unit;          // "celcius" or "fahrenheit"
+    int         probe_id;      // 1-8, 0 = not about a probe
+    const char* probe_name;
+    float       temperature;
+    float       target;
+    float       minimum;
+    int         battery;       // percentage, -1 = not about the battery
+};
+void webhook_payload(JsonDocument& doc, const WebhookInput& in);
+
+// The webhook event name for a probe event
+const char* webhook_event_name(uint8_t event);
 
 }  // namespace notify
