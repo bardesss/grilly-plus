@@ -75,3 +75,12 @@ test("every preset has a food type the grill knows", () => {
   for (const preset of Presets.LIST) assert.ok(Food.find(preset.type), preset.label);
   assert.equal(Presets.LIST.find((p) => p.name === "Sausage").type, "sausage");
 });
+
+test("rest times are 0 to 180 minutes, and a range has none", () => {
+  Presets.LIST.forEach((preset) => assert.ok(Number.isInteger(preset.rest) && preset.rest >= 0 && preset.rest <= 180, preset.label));
+  assert.equal(Presets.rest(Presets.LIST.find((p) => p.label === "Brisket")), 60);
+  assert.equal(Presets.rest({ c: 121, f: 250, min_c: 107, min_f: 225, rest: 10 }), 0);
+  assert.deepEqual(Presets.make({ name: "Flat", type: "beef", target: 93, minimum: 0, rest: 45, unit: "celcius" }),
+    { name: "Flat", type: "beef", c: 93, f: 199, rest: 45 });
+  assert.equal(Presets.make({ name: "Pit", target: 121, minimum: 107, rest: 45, unit: "celcius" }).rest, undefined);
+});

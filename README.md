@@ -154,6 +154,8 @@ The [WiFi guide](docs/how_to_connect_to_wifi.md) walks through it with screensho
 
 Tap **+ Timer** on the Grill page, give it a name ("Flip the ribs") and the minutes, or tap 5, 10, 15, 30 or 60. Up to 6 timers run at once, on the grill itself, so they keep going with the app closed. The grill's top bar shows the one that ends first. When one runs out the grill beeps like a probe alarm and shows **TIME'S UP** with its name; a short press on the button stops it and goes back to the page you were on. The app shows it in the alarm popup, and **Mute** stops it too. Tap the cross on a timer to stop it early. Timers are kept in the grill's memory, so switching the grill off or restarting it clears them.
 
+Meat needs to rest before you slice it. Set a **Rest timer** in a probe's editor (in Target mode) and a timer "Rest: Brisket" starts by itself when the probe reaches its target. Picking a food fills in a usual rest time, like 60 minutes for brisket or 5 for a steak; 0 turns it off. The grill keeps the rest time per probe, like the target.
+
 ### Probes and alarms
 
 Tap a probe card in the app to set it up:
@@ -164,7 +166,7 @@ Tap a probe card in the app to set it up:
 
 Not sure what temperature to use? Pick a food under **Food** and the target fills in. A probe that still has its default name ("Probe 3") gets the food's name.
 
-Your own presets go on top of that list. Set a probe up the way you like it and tap **Save as preset** in its editor, or add, edit and delete them under **Settings › Food presets**. A preset can be a target or a range, has an icon and optionally a group of its own. That card also lets you switch off built-in presets you never use, or copy one to tweak it. Up to 30 presets, kept on the grill, so every phone and browser has the same list.
+Your own presets go on top of that list. Set a probe up the way you like it and tap **Save as preset** in its editor, or add, edit and delete them under **Settings › Food presets**. A preset can be a target or a range, has an icon, optionally a group of its own and, for a target, a rest time. That card also lets you switch off built-in presets you never use, or copy one to tweak it. Up to 30 presets, kept on the grill, so every phone and browser has the same list.
 
 Each probe can have an icon for what's on it: beef, lamb, pork, poultry, fish, sausage, vegetables, the pit or smoker, or other. Picking a food sets it, or choose one under **Icon** in the editor. It shows on the probe's card and on the grill's screen, next to the temperature with one probe, next to the probe number with two to four, and after the temperature with five or more.
 

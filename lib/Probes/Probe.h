@@ -45,6 +45,9 @@ public:
 	
 	String name = "Probe";      						// The probe name
 	String type_icon = "";								// Food type for the icon ("beef", ...), "" = none
+	int rest_minutes = 0;								// Target mode: a rest timer this long starts at the target, 0 = off
+	bool reached_target = false;						// Set by check_temperature_status when the target is reached,
+														// cleared by the probes task once it started the rest timer
 
 	float temperature;								    // The last known temperature for the chosen temperature_unit
 														// in the grill settings
@@ -122,6 +125,11 @@ public:
 	 * @brief Set the food type for the icon, a key from FoodTypes or "" for none
 	 */
 	void set_type_icon(String type_icon);
+
+	/**
+	 * @brief Set the rest time in minutes, 0-180, 0 = no rest timer
+	 */
+	void set_rest_minutes(int minutes);
 
 	/**
 	 * @brief Set the user calibration offset, added to the Celsius reading of a valid measurement

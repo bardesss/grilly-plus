@@ -19,8 +19,8 @@ std::string clean(const char* json, JsonDocument& out){
 
 void test_a_good_list_is_copied_clean(){
     JsonDocument out;
-    std::string error = clean("[{\"name\":\"Brisket flat\",\"group\":\"BBQ\",\"type\":\"beef\",\"c\":93,\"f\":200,\"extra\":1},"
-                              "{\"name\":\"Pit\",\"type\":\"pit\",\"c\":121,\"f\":250,\"min_c\":107,\"min_f\":225}]", out);
+    std::string error = clean("[{\"name\":\"Brisket flat\",\"group\":\"BBQ\",\"type\":\"beef\",\"c\":93,\"f\":200,\"extra\":1,\"rest\":60},"
+                              "{\"name\":\"Pit\",\"type\":\"pit\",\"c\":121,\"f\":250,\"min_c\":107,\"min_f\":225,\"rest\":10}]", out);
     TEST_ASSERT_EQUAL_STRING("", error.c_str());
     TEST_ASSERT_EQUAL(2, out.as<JsonArray>().size());
     TEST_ASSERT_EQUAL_STRING("Brisket flat", out[0]["name"]);
@@ -28,6 +28,8 @@ void test_a_good_list_is_copied_clean(){
     TEST_ASSERT_TRUE(out[0]["min_c"].isNull());
     TEST_ASSERT_EQUAL(107, out[1]["min_c"].as<int>());
     TEST_ASSERT_TRUE(out[1]["group"].isNull());
+    TEST_ASSERT_EQUAL(60, out[0]["rest"].as<int>());
+    TEST_ASSERT_TRUE(out[1]["rest"].isNull());     // a range has no rest
 }
 
 void test_bad_presets_are_refused(){
@@ -43,6 +45,10 @@ void test_bad_presets_are_refused(){
                              clean("[{\"name\":\"a\",\"c\":60,\"f\":140,\"min_c\":50}]", out).c_str());
     TEST_ASSERT_EQUAL_STRING("min_c and min_f should be below c and f (preset 1)",
                              clean("[{\"name\":\"a\",\"c\":60,\"f\":140,\"min_c\":60,\"min_f\":120}]", out).c_str());
+    TEST_ASSERT_EQUAL_STRING("rest should be 0 to 180 minutes (preset 1)",
+                             clean("[{\"name\":\"a\",\"c\":60,\"f\":140,\"rest\":181}]", out).c_str());
+    TEST_ASSERT_EQUAL_STRING("rest should be 0 to 180 minutes (preset 1)",
+                             clean("[{\"name\":\"a\",\"c\":60,\"f\":140,\"rest\":\"5\"}]", out).c_str());
 }
 
 void test_at_most_30(){

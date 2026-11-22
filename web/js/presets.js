@@ -1,31 +1,31 @@
 // Food presets for the probe editor: pick a food and the target temperature fills in. Each preset
 // has its own °C and °F value, so both units get round numbers instead of a converted 62.8°.
 // Safe temperatures follow the USDA; doneness levels follow common practice. The type sets the
-// probe's food icon (Food.TYPES).
+// probe's food icon (Food.TYPES). rest is the rest timer in minutes that starts at the target.
 const Presets = (() => {
   const LIST = [
-    { type: "beef", group: "Beef", name: "Steak", label: "Steak, rare", c: 52, f: 125 },
-    { type: "beef", group: "Beef", name: "Steak", label: "Steak, medium-rare", c: 57, f: 135 },
-    { type: "beef", group: "Beef", name: "Steak", label: "Steak, medium", c: 63, f: 145 },
-    { type: "beef", group: "Beef", name: "Steak", label: "Steak, medium-well", c: 68, f: 155 },
-    { type: "beef", group: "Beef", name: "Steak", label: "Steak, well done", c: 71, f: 160 },
-    { type: "beef", group: "Beef", name: "Roast beef", label: "Roast beef, medium-rare", c: 55, f: 130 },
-    { type: "beef", group: "Beef", name: "Brisket", label: "Brisket", c: 95, f: 203 },
-    { type: "beef", group: "Beef", name: "Short ribs", label: "Short ribs", c: 95, f: 203 },
-    { type: "beef", group: "Beef", name: "Burger", label: "Burger, minced meat", c: 71, f: 160 },
-    { type: "lamb", group: "Lamb", name: "Lamb", label: "Leg of lamb, medium", c: 60, f: 140 },
-    { type: "lamb", group: "Lamb", name: "Lamb shoulder", label: "Pulled lamb shoulder", c: 90, f: 195 },
-    { type: "pork", group: "Pork", name: "Pork chop", label: "Pork chop or tenderloin", c: 63, f: 145 },
-    { type: "pork", group: "Pork", name: "Pulled pork", label: "Pulled pork", c: 95, f: 203 },
-    { type: "pork", group: "Pork", name: "Ribs", label: "Spare ribs", c: 93, f: 200 },
-    { type: "sausage", group: "Pork", name: "Sausage", label: "Sausage", c: 71, f: 160 },
-    { type: "poultry", group: "Poultry", name: "Chicken", label: "Chicken breast", c: 74, f: 165 },
-    { type: "poultry", group: "Poultry", name: "Chicken", label: "Chicken thighs or wings", c: 80, f: 175 },
-    { type: "poultry", group: "Poultry", name: "Chicken", label: "Whole chicken", c: 74, f: 165 },
-    { type: "poultry", group: "Poultry", name: "Turkey", label: "Turkey", c: 74, f: 165 },
-    { type: "poultry", group: "Poultry", name: "Duck", label: "Duck breast, pink", c: 57, f: 135 },
-    { type: "fish", group: "Fish", name: "Salmon", label: "Salmon, glassy", c: 50, f: 122 },
-    { type: "fish", group: "Fish", name: "Fish", label: "Fish, cooked through", c: 63, f: 145 },
+    { type: "beef", group: "Beef", name: "Steak", label: "Steak, rare", c: 52, f: 125, rest: 5 },
+    { type: "beef", group: "Beef", name: "Steak", label: "Steak, medium-rare", c: 57, f: 135, rest: 5 },
+    { type: "beef", group: "Beef", name: "Steak", label: "Steak, medium", c: 63, f: 145, rest: 5 },
+    { type: "beef", group: "Beef", name: "Steak", label: "Steak, medium-well", c: 68, f: 155, rest: 5 },
+    { type: "beef", group: "Beef", name: "Steak", label: "Steak, well done", c: 71, f: 160, rest: 5 },
+    { type: "beef", group: "Beef", name: "Roast beef", label: "Roast beef, medium-rare", c: 55, f: 130, rest: 15 },
+    { type: "beef", group: "Beef", name: "Brisket", label: "Brisket", c: 95, f: 203, rest: 60 },
+    { type: "beef", group: "Beef", name: "Short ribs", label: "Short ribs", c: 95, f: 203, rest: 30 },
+    { type: "beef", group: "Beef", name: "Burger", label: "Burger, minced meat", c: 71, f: 160, rest: 0 },
+    { type: "lamb", group: "Lamb", name: "Lamb", label: "Leg of lamb, medium", c: 60, f: 140, rest: 15 },
+    { type: "lamb", group: "Lamb", name: "Lamb shoulder", label: "Pulled lamb shoulder", c: 90, f: 195, rest: 30 },
+    { type: "pork", group: "Pork", name: "Pork chop", label: "Pork chop or tenderloin", c: 63, f: 145, rest: 5 },
+    { type: "pork", group: "Pork", name: "Pulled pork", label: "Pulled pork", c: 95, f: 203, rest: 30 },
+    { type: "pork", group: "Pork", name: "Ribs", label: "Spare ribs", c: 93, f: 200, rest: 10 },
+    { type: "sausage", group: "Pork", name: "Sausage", label: "Sausage", c: 71, f: 160, rest: 0 },
+    { type: "poultry", group: "Poultry", name: "Chicken", label: "Chicken breast", c: 74, f: 165, rest: 5 },
+    { type: "poultry", group: "Poultry", name: "Chicken", label: "Chicken thighs or wings", c: 80, f: 175, rest: 0 },
+    { type: "poultry", group: "Poultry", name: "Chicken", label: "Whole chicken", c: 74, f: 165, rest: 15 },
+    { type: "poultry", group: "Poultry", name: "Turkey", label: "Turkey", c: 74, f: 165, rest: 30 },
+    { type: "poultry", group: "Poultry", name: "Duck", label: "Duck breast, pink", c: 57, f: 135, rest: 5 },
+    { type: "fish", group: "Fish", name: "Salmon", label: "Salmon, glassy", c: 50, f: 122, rest: 0 },
+    { type: "fish", group: "Fish", name: "Fish", label: "Fish, cooked through", c: 63, f: 145, rest: 0 },
   ];
 
   // Ids for hiding a built-in preset: its label in lower case with dashes ("steak-medium-rare")
@@ -47,6 +47,11 @@ const Presets = (() => {
   // The range minimum, 0 for a target preset
   function minimum(preset, unit) {
     return (unit === "fahrenheit" ? preset.min_f : preset.min_c) || 0;
+  }
+
+  // Minutes of rest after the target, 0 for none and for a range
+  function rest(preset) {
+    return preset.min_c ? 0 : preset.rest || 0;
   }
 
   function label(preset) {
@@ -92,7 +97,7 @@ const Presets = (() => {
   }
 
   // A preset of your own from what the editor or the form holds, temperatures in `unit`
-  function make({ name, group, type, target: max, minimum: min, unit }) {
+  function make({ name, group, type, target: max, minimum: min, rest: minutes, unit }) {
     const top = convert(max, unit);
     const preset = { name: name.trim().slice(0, 24), c: top.c, f: top.f };
     if (group && group.trim() && group.trim() !== OWN_GROUP) preset.group = group.trim().slice(0, 20);
@@ -101,6 +106,8 @@ const Presets = (() => {
       const low = convert(min, unit);
       preset.min_c = Math.min(low.c, top.c - 1);
       preset.min_f = Math.min(low.f, top.f - 1);
+    } else if (minutes > 0) {
+      preset.rest = Math.min(180, Math.round(minutes));
     }
     return preset;
   }
@@ -137,7 +144,7 @@ const Presets = (() => {
   }
 
   return {
-    LIST, OWN_GROUP, MAX_OWN, target, minimum, label, optionText, groups, byValue, convert, make,
+    LIST, OWN_GROUP, MAX_OWN, target, minimum, rest, label, optionText, groups, byValue, convert, make,
     set, get, onChange, version: getVersion, load, save, shouldRename,
   };
 })();

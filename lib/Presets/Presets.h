@@ -9,6 +9,7 @@
 namespace presets {
 
 const size_t MAX_PRESETS = 30;
+const int    MAX_REST    = 180;     // minutes
 const size_t NAME_LENGTH    = 24;     // bytes
 const size_t GROUP_LENGTH   = 20;
 const size_t MAX_HIDDEN  = 30;
