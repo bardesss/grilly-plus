@@ -17,8 +17,8 @@ struct DeviceInput {
     bool        fahrenheit;
 };
 
-// How many entities there are: 6 for the grill, 5 for each of the 8 probes
-const size_t ENTITY_COUNT = 6 + 8 * 5;
+// How many entities there are: 7 for the grill, 5 for each of the 8 probes
+const size_t ENTITY_COUNT = 7 + 8 * 5;
 
 // The retained topic that says "online", and "offline" (the last will) when the grill drops off
 std::string status_topic(const char* topic_prefix);

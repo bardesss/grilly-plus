@@ -13,6 +13,9 @@ namespace notify {
     void check_probes();
     void check_battery(bool read_ok, int percentage, bool charging);
 
+    // Called by the alarm task for a timer that just ran out (probe 1-8 for a rest timer, else 0)
+    void timer_done(const char* name, uint8_t probe);
+
     // POST /api/notify/test: 202 queued, 400 nothing set up, 409 no WiFi, 429 a test less than 10 s ago
     int  request_test();
 

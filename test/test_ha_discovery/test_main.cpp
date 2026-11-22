@@ -1,3 +1,4 @@
+#include <string.h>
 #include <string>
 
 #include <ArduinoJson.h>
@@ -39,26 +40,37 @@ void test_mute_is_a_button(){
 
 void test_probe_entities(){
     JsonDocument doc;
-    // Probe 3 starts at 6 + 2 * 5
-    TEST_ASSERT_TRUE(config_payload(DEVICE, 16, doc));
-    TEST_ASSERT_EQUAL_STRING("homeassistant/sensor/grilly_plus_abc-123/probe3_temperature/config", config_topic(DEVICE, 16).c_str());
+    // Probe 3 starts at 7 + 2 * 5
+    TEST_ASSERT_TRUE(config_payload(DEVICE, 17, doc));
+    TEST_ASSERT_EQUAL_STRING("homeassistant/sensor/grilly_plus_abc-123/probe3_temperature/config", config_topic(DEVICE, 17).c_str());
     TEST_ASSERT_EQUAL_STRING("Probe 3", doc["name"]);
     TEST_ASSERT_EQUAL_STRING("°C", doc["unit_of_measurement"]);
     TEST_ASSERT_EQUAL_STRING("{{ value_json.probes[2].temperature }}", doc["value_template"]);
     TEST_ASSERT_EQUAL_STRING("all", doc["availability_mode"]);
     TEST_ASSERT_EQUAL_STRING("{{ 'online' if value_json.probes[2].connected else 'offline' }}", doc["availability"][1]["value_template"]);
 
-    TEST_ASSERT_TRUE(config_payload(DEVICE, 17, doc));
+    TEST_ASSERT_TRUE(config_payload(DEVICE, 18, doc));
     TEST_ASSERT_EQUAL_STRING("{% set t = value_json.probes[2].target_temperature %}{{ t if t and t > 0 else None }}", doc["value_template"]);
 
-    TEST_ASSERT_TRUE(config_payload(DEVICE, 19, doc));
-    TEST_ASSERT_EQUAL_STRING("homeassistant/binary_sensor/grilly_plus_abc-123/probe3_stalled/config", config_topic(DEVICE, 19).c_str());
+    TEST_ASSERT_TRUE(config_payload(DEVICE, 20, doc));
+    TEST_ASSERT_EQUAL_STRING("homeassistant/binary_sensor/grilly_plus_abc-123/probe3_stalled/config", config_topic(DEVICE, 20).c_str());
 
     DeviceInput fahrenheit = DEVICE;
     fahrenheit.fahrenheit = true;
     TEST_ASSERT_TRUE(config_payload(fahrenheit, ENTITY_COUNT - 5, doc));
     TEST_ASSERT_EQUAL_STRING("Probe 8", doc["name"]);
     TEST_ASSERT_EQUAL_STRING("°F", doc["unit_of_measurement"]);
+}
+
+void test_next_timer_is_a_timestamp(){
+    JsonDocument doc;
+    TEST_ASSERT_TRUE(config_payload(DEVICE, 6, doc));
+    TEST_ASSERT_EQUAL_STRING("homeassistant/sensor/grilly_plus_abc-123/next_timer/config", config_topic(DEVICE, 6).c_str());
+    TEST_ASSERT_EQUAL_STRING("Next timer", doc["name"]);
+    TEST_ASSERT_EQUAL_STRING("timestamp", doc["device_class"]);
+    TEST_ASSERT_TRUE(doc["state_class"].isNull());
+    TEST_ASSERT_TRUE(doc["unit_of_measurement"].isNull());
+    TEST_ASSERT_NOT_NULL(strstr(doc["value_template"].as<const char*>(), "rejectattr('done')"));
 }
 
 void test_every_topic_is_unique_and_the_end_is_false(){
@@ -80,6 +92,7 @@ int main(int argc, char** argv){
     RUN_TEST(test_battery_is_the_first_entity);
     RUN_TEST(test_mute_is_a_button);
     RUN_TEST(test_probe_entities);
+    RUN_TEST(test_next_timer_is_a_timestamp);
     RUN_TEST(test_every_topic_is_unique_and_the_end_is_false);
     return UNITY_END();
 }

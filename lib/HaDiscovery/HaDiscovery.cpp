@@ -1,6 +1,7 @@
 #include "HaDiscovery.h"
 
 #include <stdio.h>
+#include <string.h>
 
 namespace ha {
 
@@ -27,6 +28,10 @@ const GrillEntity GRILL_ENTITIES[] = {
     {BINARY_SENSOR, "alarm",            "Alarm",            "sound",            nullptr, "{{ 'ON' if value_json.alarm_sounding else 'OFF' }}", false},
     {BINARY_SENSOR, "update_available", "Update available", "update",           nullptr, "{{ 'ON' if value_json.update_available else 'OFF' }}", true},
     {BUTTON,        "mute",             "Mute alarm",       nullptr,            nullptr, nullptr, false},
+    // When the first running timer ends, unknown without one. A moment in time, so it shows "in 12 minutes".
+    {SENSOR,        "next_timer",       "Next timer",       "timestamp",        nullptr,
+     "{% set r = value_json.timers | default([]) | rejectattr('done') | map(attribute='remaining_s') | list %}"
+     "{{ (now() + timedelta(seconds=r | min)).replace(microsecond=0).isoformat() if r else None }}", false},
 };
 const size_t GRILL_COUNT = sizeof(GRILL_ENTITIES) / sizeof(GRILL_ENTITIES[0]);
 const size_t PER_PROBE = 5;
@@ -89,7 +94,9 @@ bool config_payload(const DeviceInput& in, size_t index, JsonDocument& doc){
         doc["name"] = e.name;
         if(e.device_class){ doc["device_class"] = e.device_class; }
         if(e.unit){ doc["unit_of_measurement"] = e.unit; }
-        if(e.component == SENSOR){ doc["state_class"] = "measurement"; }
+        bool timestamp = e.device_class != nullptr && strcmp(e.device_class, "timestamp") == 0;
+        if(e.component == SENSOR && !timestamp){ doc["state_class"] = "measurement"; }   // a timestamp can't have one
+        if(timestamp){ doc["icon"] = "mdi:timer-outline"; }
         if(e.diagnostic){ doc["entity_category"] = "diagnostic"; }
         if(e.component == BUTTON){
             doc["command_topic"] = prefix + "/config/mute";

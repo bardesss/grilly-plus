@@ -92,6 +92,7 @@ namespace config{
     bool notify_outside                 = true;  // range mode: too hot or too cold
     bool notify_stall                   = true;
     bool notify_battery                 = true;
+    bool notify_timer                   = true;
 
     // ***********************************
     // * Buffers

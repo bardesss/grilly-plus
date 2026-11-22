@@ -26,7 +26,7 @@ constexpr uint32_t WIFI_WAIT_MS    = 60000;   // how long a message waits for th
 constexpr size_t   TEXT_SIZE       = 220;
 constexpr uint32_t TEST_GAP_MS     = 10000;   // the test needs no password, so it can't flood the chat
 
-enum Kind : uint8_t { PROBE, BATTERY, TEST };
+enum Kind : uint8_t { PROBE, BATTERY, TEST, TIMER };
 
 // Small, so the probes task only copies numbers. The text is made by the send task.
 struct Item {
@@ -37,6 +37,7 @@ struct Item {
     float   target;
     float   minimum;
     int     percentage;
+    char    timer[timers::NAME_LENGTH + 1];   // TIMER: its name
 };
 
 // The services, in the order they are sent to and listed in GET /api/notify
@@ -155,6 +156,9 @@ void make_message(const Item& item, Message& message){
         case TEST:
             snprintf(message.text, TEXT_SIZE, "\U0001F44B Test from %s: notifications work", grill);
             break;
+        case TIMER:
+            timer_message(message.text, TEXT_SIZE, grill, item.timer, item.probe);
+            break;
     }
 }
 
@@ -227,7 +231,7 @@ String send_ntfy(const Targets& t, const Item& item, const Message& m, bool* per
     body["topic"]    = topic;
     body["title"]    = m.grill_name;
     body["message"]  = m.text;
-    body["priority"] = item.kind == PROBE ? ntfy_priority(item.event) : 3;
+    body["priority"] = item.kind == PROBE ? ntfy_priority(item.event) : item.kind == TIMER ? TIMER_NTFY_PRIORITY : 3;
     String payload, answer;
     serializeJson(body, payload);
 
@@ -246,7 +250,7 @@ String send_pushover(const Targets& t, const Item& item, const Message& m, bool*
     body["user"]     = t.pushover_user;
     body["title"]    = m.grill_name;
     body["message"]  = m.text;
-    body["priority"] = item.kind == PROBE ? pushover_priority(item.event) : 0;
+    body["priority"] = item.kind == PROBE ? pushover_priority(item.event) : item.kind == TIMER ? TIMER_PUSHOVER_PRIORITY : 0;
     String payload, answer;
     serializeJson(body, payload);
 
@@ -261,12 +265,13 @@ String send_pushover(const Targets& t, const Item& item, const Message& m, bool*
 
 String send_webhook(const Targets& t, const Item& item, const Message& m, bool* permanent){
     const char* event = item.kind == PROBE ? webhook_event_name(item.event)
-                      : item.kind == BATTERY ? "battery_low" : "test";
+                      : item.kind == BATTERY ? "battery_low" : item.kind == TIMER ? "timer_done" : "test";
     JsonDocument body;
     webhook_payload(body, WebhookInput{event, m.grill_name.c_str(), m.text, m.fahrenheit ? "fahrenheit" : "celcius",
                                        item.kind == PROBE ? item.probe + 1 : 0, m.probe_name.c_str(),
                                        item.temperature, item.target, item.minimum,
-                                       item.kind == BATTERY ? item.percentage : -1});
+                                       item.kind == BATTERY ? item.percentage : -1,
+                                       item.kind == TIMER ? item.timer : nullptr, item.kind == TIMER ? item.probe : 0});
     String payload, answer;
     serializeJson(body, payload);
 
@@ -387,6 +392,16 @@ void check_battery(bool read_ok, int percentage, bool charging){
         if(!any_set_up() || !config::notify_battery){ return; }
     }
     enqueue(Item{BATTERY, 0, READY, 0, 0, 0, percentage});
+}
+
+void timer_done(const char* name, uint8_t probe){
+    {
+        SharedLock lock;
+        if(!any_set_up() || !config::notify_timer){ return; }
+    }
+    Item item{TIMER, probe, READY, 0, 0, 0, 0, {}};
+    strncpy(item.timer, name, sizeof(item.timer) - 1);
+    enqueue(item);
 }
 
 int request_test(){

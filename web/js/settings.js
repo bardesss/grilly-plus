@@ -55,6 +55,7 @@ const Settings = (() => {
       { key: "notify_outside", label: "Too hot or too cold", type: "toggle" },
       { key: "notify_stall", label: "In the stall", type: "toggle" },
       { key: "notify_battery", label: "Battery at 20 % and 10 %", type: "toggle" },
+      { key: "notify_timer", label: "A timer runs out", type: "toggle" },
     ] },
     { id: "mqtt", title: "MQTT", fields: [
       { key: "mqtt_broker", label: "Broker", type: "text", placeholder: "Not used when empty" },
