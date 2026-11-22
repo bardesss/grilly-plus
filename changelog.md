@@ -11,6 +11,7 @@
 - `stalled` and `lid_open` for every probe in `/api/grill`, `/api/probes` and the MQTT `grill` and `probes` topics; `lid_pause_minutes` in the settings (0 to 30)
 
 ### Fixes
+- With the lid pause on, "too low" could beep right away instead of after 30 seconds below the minimum (about half the time)
 - Install from GitHub with an admin password set but not filled in: the confirmation closed and only a small line said why. The app now asks for the password before the confirmation, and scrolls to the field
 - When the browser closed the confirmation by itself (Android's back gesture, Escape twice), Install and Apply did nothing until the page was reloaded
 
