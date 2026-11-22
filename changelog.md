@@ -1,14 +1,24 @@
 # Changelog (firmware only)
 
-## Unreleased
+## 2026-11-22.1
+Alarm dialog, food presets, CSV export and a reset for a forgotten admin password. Grills on 2026-11-22 find this release under Settings > Firmware updates and install it with one tap; older versions install the `-ota.bin` file there.
 
-### New
-- Download CSV in the probe editor saves the whole cook as a spreadsheet file: time and temperature in °C or °F, named after the probe, for example grilly-plus-pulled-pork-2026-11-22-1405.csv
-- When an alarm goes off, the web app opens a dialog on every page that says which probe and why ("Pulled pork is ready · 95.2°C · target 95°"), with Mute and Close. Close hides it until the next alarm and leaves the grill beeping
-- The web app beeps along with the grill's alarm, vibrates on Android and shows a bell in the tab title, while the page is open. Settings > This browser switches it off for that browser, and has a test sound. The page keeps checking every 5 seconds when it's in the background
+### Web app
+- When an alarm goes off, the app opens a dialog on every page that says which probe and why ("Pulled pork is ready · 95.2°C · target 95°"), with Mute and Close. Close hides it until the next alarm and leaves the grill beeping
+- While the page is open it beeps along with the grill, vibrates on Android and shows a bell in the tab title. Settings > This browser switches the sound off for that browser and has a test sound. With the sound on, the page keeps checking every 5 seconds when it's in the background
 - Food presets in the probe editor: pick a food, such as steak medium-rare, brisket or chicken breast, and the target temperature fills in, in °C or °F. A probe that still has its default name gets the food's name
+- Download CSV in the probe editor saves the whole cook as a spreadsheet file: time and temperature, named after the probe, for example grilly-plus-pulled-pork-2026-11-22-1405.csv
+
+### Updates and security
 - Forgot the admin password? Settings > Firmware updates has a link that makes the grill show a 6-digit code on its screen for 5 minutes. Entering it in the app sets a new admin password, or removes it, and keeps every other setting
 - A code works once and ends after 5 wrong tries; after 15 wrong tries in total no new code is given until the grill restarts; Cancel in the app or a short press on the button takes the code off the screen
+
+### Grill screen
+- Probe names are cut to their space with a ".": the 1-probe screen stops before the target bar, the 2-probe screen before the timer, the 4-probe screen inside its cell
+- The 2-probe screen shows the time to target ("in 1:23") right of the temperature
+- The 5-8 probe screen shows one decimal like the other screens
+- An update error wraps over three lines instead of being cut at 25 characters
+- The Info screen cuts long grill names, WiFi names and hotspot passwords at the edge
 
 ### API
 - `POST /api/admin/reset/start` (shows the code; 409 without an admin password, 429 within a minute of the last code, 423 after too many wrong codes) and `POST /api/admin/reset` with `{"code": "…", "admin_password": "…"}` (403 wrong code with `attempts_left`, 410 no valid code), `POST /api/admin/reset/cancel`; `admin_reset` in the `/api/info` capabilities. Not over MQTT
