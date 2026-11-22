@@ -595,7 +595,9 @@ void task_powerbutton(void* pvParameters) {
 // * Probes
 // ***********************************
 
-// Adds a history sample for every probe and refreshes its time-to-target estimate
+history::LidWatch lid_watch[8];   // only used by record_history(), in the probes task
+
+// Adds a history sample for every probe and refreshes its time-to-target estimate, the stall and the lid
 void record_history(){
     Probe* probes[] = {&grill::probe_1, &grill::probe_2, &grill::probe_3, &grill::probe_4,
                        &grill::probe_5, &grill::probe_6, &grill::probe_7, &grill::probe_8};
@@ -612,6 +614,10 @@ void record_history(){
                                                      probe.target_temperature, probe.minimum_temperature, fahrenheit);
         probe.stalled = history::stalled_for_probe(grill::probe_history[i], probe.connected,
                                                    probe.target_temperature, probe.minimum_temperature, fahrenheit);
+        bool range_mode = probe.connected && probe.target_temperature > 0 && probe.minimum_temperature > 0;
+        lid_watch[i].update(now_s, range_mode, (uint32_t)std::max(config::lid_pause_minutes, 0) * 60,
+                            grill::probe_history[i].sharp_drop_from(), grill::probe_history[i].newest());
+        probe.lid_open = lid_watch[i].open();
     }
 }
 

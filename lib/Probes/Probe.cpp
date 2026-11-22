@@ -212,8 +212,16 @@ void Probe::check_temperature_status(){
         } else {
             //* Temperature range mode
 
+            //* Too low only counts once it lasted LOW_CONFIRM_MS and the lid isn't open: an opened lid
+            //* drops the temperature within seconds, the history needs up to 20 s to notice the drop.
+            bool too_low = Probe::temperature < Probe::minimum_temperature;
+            if(!too_low){ Probe::low_since_ms = 0; }
+            else if(Probe::low_since_ms == 0){ Probe::low_since_ms = millis() | 1; }
+            bool low_confirmed = too_low && !Probe::lid_open &&
+                (config::lid_pause_minutes <= 0 || millis() - Probe::low_since_ms >= Probe::LOW_CONFIRM_MS);
+
             //* Alarm and Beep if outside
-            if((Probe::temperature < Probe::minimum_temperature || Probe::temperature > Probe::target_temperature ) && Probe::has_beeped_outside == false){
+            if((low_confirmed || Probe::temperature > Probe::target_temperature ) && Probe::has_beeped_outside == false){
                 Probe::has_beeped_outside = true;
                 Probe::alarm              = config::beep_outside_target;
             }

@@ -104,6 +104,7 @@ private:
     *   @param connectedProbe probe number
     */
     bool get_stalled(int connectedProbe);
+    bool get_lid_open(int connectedProbe);
     int32_t get_eta(int connectedProbe);
     /**
     *	@brief Inverts a box over a probe label every other screen update while that probe's alarm sounds

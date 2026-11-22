@@ -17,6 +17,7 @@ private:
 
 	const int   TEMP_HYSTERISIS_OFFSET		   =     2; // The amount of degrees a probe should be seperated from a temp to be eligible again to beep
 	const int   READINGS_TO_CHANGE_STATE	   =     3; // Readings in a row needed to switch between connected and disconnected
+	const uint32_t LOW_CONFIRM_MS			   = 30000; // With the lid pause on: below the minimum this long before "too low" counts
 
 	int  state_change_readings				   =     0; // Readings in a row that disagree with the connected state
 
@@ -59,6 +60,8 @@ public:
 	volatile bool warn_before 				   = false;	// Set by the probes task, played and cleared by the alarm task
 	volatile int32_t eta_seconds 			   = -1;	// Seconds until the target temperature, -1 = unknown. Set by the probes task from the history.
 	volatile bool stalled 					   = false;	// In the stall: flat for 20 minutes between 60 and 80 C. Set by the probes task.
+	volatile bool lid_open 					   = false;	// Range mode: a sharp drop, the "too low" alarm waits. Set by the probes task.
+	uint32_t low_since_ms 					   = 0;		// When the reading went below the minimum, 0 = it isn't
 
 	/**
 	 * @brief Construct a new Probe object

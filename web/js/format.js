@@ -81,6 +81,7 @@ const Format = (() => {
 
     if (mode === "off") return { kind: "none", text: "", progress: null };
     if (mode === "range") {
+      if (t < probe.minimum_temperature && probe.lid_open) return { kind: "lid", text: "Lid open", progress: clamp(t / target) };
       if (t < probe.minimum_temperature) return { kind: "low", text: "Too low", progress: clamp(t / target) };
       if (t > target) return { kind: "high", text: "Too high", progress: 1 };
       return { kind: "in-range", text: "In range", progress: 1 };

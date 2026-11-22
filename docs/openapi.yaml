@@ -208,6 +208,13 @@ components:
                 description: >-
                   In target mode, true while the probe is in the stall: the last 20 minutes stayed
                   within 1.5 °C, between 60 and 80 °C, with the target at least 5 °C higher.
+              lid_open:
+                type: boolean
+                readOnly: true
+                description: >-
+                  In range mode, true after a sharp drop (8 °C within a minute, like opening the lid)
+                  until the temperature is back within 2 °C or lid_pause_minutes are over. The "too
+                  low" alarm waits meanwhile.
             example:
               probe_id: 1
               name: Ambient Probe
@@ -217,6 +224,7 @@ components:
               connected: true
               eta_seconds: -1
               stalled: false
+              lid_open: false
 
     Probe:
       type: object
@@ -455,6 +463,13 @@ components:
           type: integer
           example: 5
           description: Beep when the probe reaches this amount of degrees before the target temperature
+        lid_pause_minutes:
+          type: integer
+          example: 5
+          description: >-
+            Range mode: after a sharp drop (lid opened) the "too low" alarm waits this many minutes for
+            the temperature to come back. 0 to 30, 0 turns it off. With it on, "too low" also needs to
+            last 30 seconds before it beeps.
         screen_timeout_minutes:
           type: integer
           example: 0

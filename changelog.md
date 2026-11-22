@@ -5,9 +5,10 @@
 ### New
 - The graph on a probe card shows where the cook is going: with a time to target, a dotted forecast runs from the current reading to the target and ends at the clock time it'll be ready ("now … 18:05"). A dot marks the current reading, and the target line has its temperature on it. The lowest-highest label under the graph only stays for probes without an alarm
 - Stall detection: when a probe in target mode stays within 1.5° for 20 minutes somewhere between 60 and 80 °C, with the target at least 5° higher, the app shows "In the stall" where the time to target goes and the grill's screen shows STALL. It ends by itself once the temperature climbs again
+- Lid open: in range mode, a drop of 8° or more within a minute (opening the lid) holds back the "too low" alarm until the temperature is back within 2° of where it was, or until the lid pause is over. Meanwhile the app says "Lid open" and the grill shows LID instead of LOW. Settings > Alarms > Lid open pause sets the minutes (default 5, 0 = off). With it on, "too low" also has to last 30 seconds before it beeps; "too high" isn't held back
 
 ### API and MQTT
-- `stalled` for every probe in `/api/grill`, `/api/probes` and the MQTT `grill` and `probes` topics
+- `stalled` and `lid_open` for every probe in `/api/grill`, `/api/probes` and the MQTT `grill` and `probes` topics; `lid_pause_minutes` in the settings (0 to 30)
 
 ### Fixes
 - Install from GitHub with an admin password set but not filled in: the confirmation closed and only a small line said why. The app now asks for the password before the confirmation, and scrolls to the field

@@ -44,6 +44,11 @@ public:
     // (where brisket and pork shoulder stall), and the target is at least 5 degrees higher.
     bool stalled(float target_celcius) const;
 
+    // A sharp drop, like opening the lid: the highest reading of the last minute is at least 8 degrees
+    // above the newest. Returns that high in tenths, NO_VALUE when there is no such drop.
+    int16_t sharp_drop_from() const;
+    int16_t newest() const;            // the newest reading in tenths, NO_VALUE when none
+
 private:
     int16_t  fine_[FINE_SIZE];
     int      fine_head_         = 0;     // next write position in the ring
@@ -69,6 +74,19 @@ private:
 // Time to target for a probe in target mode (target > 0, minimum <= 0), ETA_UNKNOWN otherwise.
 // target and minimum are in the display unit; fahrenheit converts the target to Celsius first.
 int32_t eta_for_probe(const ProbeHistory& history, bool connected, float target, float minimum, bool fahrenheit);
+
+// Lid open: after a sharp drop in range mode, the "too low" alarm waits up to pause_s seconds for the
+// temperature to come back. It ends when the reading is back within 2 degrees of where it dropped
+// from, when the pause is over, or when the probe leaves range mode.
+class LidWatch {
+public:
+    void update(uint32_t now_s, bool range_mode, uint32_t pause_s, int16_t drop_from, int16_t newest);
+    bool open() const { return open_; }
+private:
+    bool     open_    = false;
+    uint32_t until_s_ = 0;
+    int16_t  before_  = NO_VALUE;
+};
 
 // Whether a probe in target mode is in the stall, false in any other mode. Units as eta_for_probe.
 bool stalled_for_probe(const ProbeHistory& history, bool connected, float target, float minimum, bool fahrenheit);

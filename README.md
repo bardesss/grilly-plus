@@ -93,6 +93,7 @@ Grilly+ is a fork of [Free-Grilly](https://github.com/epiecs/free-grilly) by [Ep
 - **Temperature history** on the grill: the last 30 minutes at 10 seconds per reading plus the whole cook at a coarser step, in a fixed ~5 KB, so even a 24-hour cook fits. It's kept until a restart, until a probe has been unplugged for more than 10 minutes, or until you clear it.
 - **Time to target**, worked out from the last 10 minutes of readings in target mode. After a sudden drop, such as opening the lid, it picks up again after about 3 minutes of climbing.
 - **Stall detection:** when brisket or pork shoulder sits flat for 20 minutes between 60 and 80 °C, the card says "In the stall" and the grill shows STALL, so you know why the time to target is gone.
+- **Lid open:** in range mode, opening the lid makes the grill temperature drop fast. Grilly+ notices and holds back the "too low" alarm for a few minutes while the grill recovers; the card says "Lid open".
 - **Alarm in the browser:** a dialog says which probe went off and why, with a big Mute button. The page beeps along with the grill, vibrates on Android and shows a bell in the tab title. Switch it off per browser under **Settings › This browser**.
 - **Mute** a sounding alarm from your phone. The card of the probe that triggered it is highlighted.
 - **Settings save themselves.** Network changes are applied together with one button, and every password field has a show/hide button.
@@ -149,6 +150,7 @@ Tap a probe card in the app to set it up:
 - **Off:** just show the temperature.
 - **Target:** beep when the probe reaches the target (and optionally a few degrees before). This mode also shows the time to target.
 - **Range:** beep when the temperature leaves the min-max range. Ideal for the grill or smoker temperature.
+  Opening the lid drops the temperature fast. Grilly+ sees that and waits up to 5 minutes before calling it too low (**Settings › Alarms › Lid open pause**, 0 turns it off).
 
 Not sure what temperature to use? Pick a food under **Food** and the target fills in. A probe that still has its default name ("Probe 3") gets the food's name.
 
