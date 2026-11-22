@@ -98,6 +98,19 @@ void disp::draw_update(const char* version, int percent, const char* status){
     screen.sendBuffer();
 }
 
+void disp::draw_screen_reset_code(const char* code, uint32_t seconds_left){
+    screen.setFont(u8g2_font_4x6_tr);
+    screen.drawStr(2, 6, "Password reset");
+    screen.setFont(u8g2_font_profont22_tr);
+    screen.drawStr((128 - screen.getStrWidth(code)) / 2, 34, code);
+    screen.setFont(u8g2_font_profont10_tr);
+    const char* hint = "Enter this code in the app";
+    screen.drawStr((128 - screen.getStrWidth(hint)) / 2, 48, hint);
+    char valid[24];
+    snprintf(valid, sizeof(valid), "Valid for %u:%02u", (unsigned)(seconds_left / 60), (unsigned)(seconds_left % 60));
+    screen.drawStr((128 - screen.getStrWidth(valid)) / 2, 60, valid);
+}
+
 bool disp::screen_background_pwr(status_type type){
     switch (type) {
 	case ENABLE:
@@ -131,6 +144,16 @@ bool disp::display_update(void) {
     blink_phase = !blink_phase;
     if (config::backlight_timeout_minutes > 0 and millis_backlight_timeout + (config::backlight_timeout_minutes * 60000) < millis()) {
         screen_background_pwr(DISABLE);
+    }
+    // Keep the screen on while a password reset code is showing
+    bool showing_reset_code;
+    {
+        SharedLock lock;
+        showing_reset_code = config::admin_reset.active(millis());
+    }
+    if (showing_reset_code) {
+        millis_backlight_timeout = millis();
+        millis_screen_timeout = millis();
     }
     if (config::screen_timeout_minutes > 0 and millis_screen_timeout + (config::screen_timeout_minutes * 60000) < millis()) {
         screen_pwr(DISABLE);
@@ -208,7 +231,9 @@ bool disp::display_update(void) {
         // The pages read probe names, the temperature unit and the grill/wifi/ap Strings. Only drawing
         // into the buffer is locked, sending it to the screen is slow.
         SharedLock lock;
-        if(current_screen_page == 0) {draw_screen_temp();}
+        const char* reset_code = config::admin_reset.code(millis());
+        if(reset_code[0] != '\0') {draw_screen_reset_code(reset_code, config::admin_reset.seconds_left(millis()));}
+        else if(current_screen_page == 0) {draw_screen_temp();}
         else if (current_screen_page > 0 and current_screen_page < 9) {
             screen.setFont(u8g2_font_4x6_tr);
             screen.drawStr(2, 6, "Details");

@@ -138,6 +138,7 @@ namespace config{
     String local_ap_ssid                = "";
     String local_ap_password            = "";
     String admin_password               = "";   // Protects ota updates, open when empty
+    AdminReset admin_reset;
 
     String local_ap_ip                  = "";
     String local_ap_subnet              = "";

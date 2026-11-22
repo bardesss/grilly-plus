@@ -561,7 +561,16 @@ void task_powerbutton(void* pvParameters) {
                 config::alarm_mute = true;
                 grill::buzzer.beep(1, 100);
 
-                display.switch_page();
+                // A short press while a password reset code shows cancels it, so a code asked for by
+                // someone else on the network doesn't cover the temperatures for 5 minutes
+                bool cancelled_reset;
+                {
+                    SharedLock lock;
+                    cancelled_reset = config::admin_reset.active(millis());
+                    if(cancelled_reset){ config::admin_reset.cancel(); }
+                }
+                if(cancelled_reset){ display.wake(); display.display_update(); }
+                else { display.switch_page(); }
             }
             else if (millis_pressed < medium_press_time) {
                 Serial.println("Button pressed 1-3 seconds");
