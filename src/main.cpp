@@ -610,6 +610,8 @@ void record_history(){
         grill::probe_history[i].add(now_s, probe.connected, probe.celcius);
         probe.eta_seconds = history::eta_for_probe(grill::probe_history[i], probe.connected,
                                                      probe.target_temperature, probe.minimum_temperature, fahrenheit);
+        probe.stalled = history::stalled_for_probe(grill::probe_history[i], probe.connected,
+                                                   probe.target_temperature, probe.minimum_temperature, fahrenheit);
     }
 }
 

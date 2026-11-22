@@ -202,6 +202,12 @@ components:
                   Seconds until the target temperature at the current rate. -1 when unknown: not in
                   target mode, not rising by at least 0.05 °C per minute, less than 3 minutes of
                   readings, target reached, or more than 24 hours away.
+              stalled:
+                type: boolean
+                readOnly: true
+                description: >-
+                  In target mode, true while the probe is in the stall: the last 20 minutes stayed
+                  within 1.5 °C, between 60 and 80 °C, with the target at least 5 °C higher.
             example:
               probe_id: 1
               name: Ambient Probe
@@ -210,6 +216,7 @@ components:
               target_temperature: 23.71832
               connected: true
               eta_seconds: -1
+              stalled: false
 
     Probe:
       type: object

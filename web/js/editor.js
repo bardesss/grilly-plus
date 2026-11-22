@@ -170,7 +170,7 @@ const Editor = (() => {
     if (probeId === null || !status) return;
     const probe = status.probes.find((p) => p.probe_id === probeId);
     if (probe && probe.connected) {
-      const eta = Format.eta(probe.eta_seconds);
+      const eta = Format.progressNote(probe);
       live.textContent = "Now " + Format.temperature(probe.temperature, status.temperature_unit) + (eta ? " · " + eta : "");
     } else {
       live.textContent = "Not connected";

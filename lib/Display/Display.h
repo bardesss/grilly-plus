@@ -103,6 +103,7 @@ private:
     *	@brief Seconds until the probe reaches its target, -1 when unknown
     *   @param connectedProbe probe number
     */
+    bool get_stalled(int connectedProbe);
     int32_t get_eta(int connectedProbe);
     /**
     *	@brief Inverts a box over a probe label every other screen update while that probe's alarm sounds

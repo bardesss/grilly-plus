@@ -204,6 +204,7 @@ void JsonUtilities::load_json_status(char *buffer){
     probeData_0["connected_seconds"] = connected_seconds(grill::probe_1);
     probeData_0["alarm"] = (grill::alarm_probes & (1 << 0)) != 0;
     probeData_0["eta_seconds"] = grill::probe_1.eta_seconds;
+    probeData_0["stalled"] = grill::probe_1.stalled;
 
     JsonObject probeData_1 = probeData.add<JsonObject>();
     probeData_1["probe_id"] = 2;
@@ -215,6 +216,7 @@ void JsonUtilities::load_json_status(char *buffer){
     probeData_1["connected_seconds"] = connected_seconds(grill::probe_2);
     probeData_1["alarm"] = (grill::alarm_probes & (1 << 1)) != 0;
     probeData_1["eta_seconds"] = grill::probe_2.eta_seconds;
+    probeData_1["stalled"] = grill::probe_2.stalled;
 
     JsonObject probeData_2 = probeData.add<JsonObject>();
     probeData_2["probe_id"] = 3;
@@ -226,6 +228,7 @@ void JsonUtilities::load_json_status(char *buffer){
     probeData_2["connected_seconds"] = connected_seconds(grill::probe_3);
     probeData_2["alarm"] = (grill::alarm_probes & (1 << 2)) != 0;
     probeData_2["eta_seconds"] = grill::probe_3.eta_seconds;
+    probeData_2["stalled"] = grill::probe_3.stalled;
 
     JsonObject probeData_3 = probeData.add<JsonObject>();
     probeData_3["probe_id"] = 4;
@@ -237,6 +240,7 @@ void JsonUtilities::load_json_status(char *buffer){
     probeData_3["connected_seconds"] = connected_seconds(grill::probe_4);
     probeData_3["alarm"] = (grill::alarm_probes & (1 << 3)) != 0;
     probeData_3["eta_seconds"] = grill::probe_4.eta_seconds;
+    probeData_3["stalled"] = grill::probe_4.stalled;
 
     JsonObject probeData_4 = probeData.add<JsonObject>();
     probeData_4["probe_id"] = 5;
@@ -248,6 +252,7 @@ void JsonUtilities::load_json_status(char *buffer){
     probeData_4["connected_seconds"] = connected_seconds(grill::probe_5);
     probeData_4["alarm"] = (grill::alarm_probes & (1 << 4)) != 0;
     probeData_4["eta_seconds"] = grill::probe_5.eta_seconds;
+    probeData_4["stalled"] = grill::probe_5.stalled;
 
     JsonObject probeData_5 = probeData.add<JsonObject>();
     probeData_5["probe_id"] = 6;
@@ -259,6 +264,7 @@ void JsonUtilities::load_json_status(char *buffer){
     probeData_5["connected_seconds"] = connected_seconds(grill::probe_6);
     probeData_5["alarm"] = (grill::alarm_probes & (1 << 5)) != 0;
     probeData_5["eta_seconds"] = grill::probe_6.eta_seconds;
+    probeData_5["stalled"] = grill::probe_6.stalled;
 
     JsonObject probeData_6 = probeData.add<JsonObject>();
     probeData_6["probe_id"] = 7;
@@ -270,6 +276,7 @@ void JsonUtilities::load_json_status(char *buffer){
     probeData_6["connected_seconds"] = connected_seconds(grill::probe_7);
     probeData_6["alarm"] = (grill::alarm_probes & (1 << 6)) != 0;
     probeData_6["eta_seconds"] = grill::probe_7.eta_seconds;
+    probeData_6["stalled"] = grill::probe_7.stalled;
 
     JsonObject probeData_7 = probeData.add<JsonObject>();
     probeData_7["probe_id"] = 8;
@@ -281,6 +288,7 @@ void JsonUtilities::load_json_status(char *buffer){
     probeData_7["connected_seconds"] = connected_seconds(grill::probe_8);
     probeData_7["alarm"] = (grill::alarm_probes & (1 << 7)) != 0;
     probeData_7["eta_seconds"] = grill::probe_8.eta_seconds;
+    probeData_7["stalled"] = grill::probe_8.stalled;
 
     jsondoc.shrinkToFit();
     serializeJson(jsondoc, buffer, config::json_buffer_size);
@@ -449,6 +457,7 @@ void JsonUtilities::load_json_probes(char* buffer){
     doc_0["reference_beta"] = grill::probe_1.reference_beta;
     doc_0["offset_celcius"] = grill::probe_1.offset_celcius;
     doc_0["eta_seconds"] = grill::probe_1.eta_seconds;
+    doc_0["stalled"] = grill::probe_1.stalled;
 
     JsonObject doc_1 = jsondoc.add<JsonObject>();
     doc_1["probe_id"] = 2;
@@ -463,6 +472,7 @@ void JsonUtilities::load_json_probes(char* buffer){
     doc_1["reference_beta"] = grill::probe_2.reference_beta;
     doc_1["offset_celcius"] = grill::probe_2.offset_celcius;
     doc_1["eta_seconds"] = grill::probe_2.eta_seconds;
+    doc_1["stalled"] = grill::probe_2.stalled;
 
     JsonObject doc_2 = jsondoc.add<JsonObject>();
     doc_2["probe_id"] = 3;
@@ -477,6 +487,7 @@ void JsonUtilities::load_json_probes(char* buffer){
     doc_2["reference_beta"] = grill::probe_3.reference_beta;
     doc_2["offset_celcius"] = grill::probe_3.offset_celcius;
     doc_2["eta_seconds"] = grill::probe_3.eta_seconds;
+    doc_2["stalled"] = grill::probe_3.stalled;
 
     JsonObject doc_3 = jsondoc.add<JsonObject>();
     doc_3["probe_id"] = 4;
@@ -491,6 +502,7 @@ void JsonUtilities::load_json_probes(char* buffer){
     doc_3["reference_beta"] = grill::probe_4.reference_beta;
     doc_3["offset_celcius"] = grill::probe_4.offset_celcius;
     doc_3["eta_seconds"] = grill::probe_4.eta_seconds;
+    doc_3["stalled"] = grill::probe_4.stalled;
 
     JsonObject doc_4 = jsondoc.add<JsonObject>();
     doc_4["probe_id"] = 5;
@@ -505,6 +517,7 @@ void JsonUtilities::load_json_probes(char* buffer){
     doc_4["reference_beta"] = grill::probe_5.reference_beta;
     doc_4["offset_celcius"] = grill::probe_5.offset_celcius;
     doc_4["eta_seconds"] = grill::probe_5.eta_seconds;
+    doc_4["stalled"] = grill::probe_5.stalled;
 
     JsonObject doc_5 = jsondoc.add<JsonObject>();
     doc_5["probe_id"] = 6;
@@ -519,6 +532,7 @@ void JsonUtilities::load_json_probes(char* buffer){
     doc_5["reference_beta"] = grill::probe_6.reference_beta;
     doc_5["offset_celcius"] = grill::probe_6.offset_celcius;
     doc_5["eta_seconds"] = grill::probe_6.eta_seconds;
+    doc_5["stalled"] = grill::probe_6.stalled;
 
     JsonObject doc_6 = jsondoc.add<JsonObject>();
     doc_6["probe_id"] = 7;
@@ -533,6 +547,7 @@ void JsonUtilities::load_json_probes(char* buffer){
     doc_6["reference_beta"] = grill::probe_7.reference_beta;
     doc_6["offset_celcius"] = grill::probe_7.offset_celcius;
     doc_6["eta_seconds"] = grill::probe_7.eta_seconds;
+    doc_6["stalled"] = grill::probe_7.stalled;
 
     JsonObject doc_7 = jsondoc.add<JsonObject>();
     doc_7["probe_id"] = 8;
@@ -547,6 +562,7 @@ void JsonUtilities::load_json_probes(char* buffer){
     doc_7["reference_beta"] = grill::probe_8.reference_beta;
     doc_7["offset_celcius"] = grill::probe_8.offset_celcius;
     doc_7["eta_seconds"] = grill::probe_8.eta_seconds;
+    doc_7["stalled"] = grill::probe_8.stalled;
 
     jsondoc.shrinkToFit();
     serializeJson(jsondoc, buffer, config::json_buffer_size);
@@ -592,6 +608,7 @@ jsonResult JsonUtilities::clear_json_history(char* jsondata){
     SharedLock lock;    // the probes task writes the history
     grill::probe_history[probe_id - 1].clear();
     probe->eta_seconds = history::ETA_UNKNOWN;
+    probe->stalled = false;
     return {true, ""};
 }
 

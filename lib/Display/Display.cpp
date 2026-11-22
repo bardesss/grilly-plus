@@ -342,7 +342,9 @@ bool disp::draw_screen_temp(void){
             bool status_shown = (current_target_temp > 0 and current_active_temp > current_target_temp)
                              or current_active_temp < current_minimum_temp;
             int32_t eta = get_eta(connectedProbeInfo.second[i]);
-            if (!status_shown and eta >= 0) {
+            if (!status_shown and get_stalled(connectedProbeInfo.second[i])) {
+                screen.drawStr(125 - screen.getStrWidth("STALL"), y_offset + 17, "STALL");
+            } else if (!status_shown and eta >= 0) {
                 int minutes = (eta + 59) / 60;
                 char eta_text[16];
                 snprintf(eta_text, sizeof(eta_text), "in %d:%02d", minutes / 60, minutes % 60);
@@ -501,7 +503,9 @@ bool disp::draw_screen_details(int connectedProbe){
     screen.setCursor(3, 53); screen.printf(current_elapsed_time.c_str());
     // Time until the target, rounded up to whole minutes
     int32_t eta = get_eta(connectedProbe);
-    if (eta >= 0) {
+    if (get_stalled(connectedProbe)) {
+        screen.drawStr(3, 62, "STALL");
+    } else if (eta >= 0) {
         int minutes = (eta + 59) / 60;
         screen.setCursor(3, 62); screen.printf("in %d:%02d", minutes / 60, minutes % 60);
     }
@@ -690,6 +694,20 @@ std::string disp::get_connection_time(int connectedProbe) {
     return oss.str();
 }
 
+
+bool disp::get_stalled(int connectedProbe) {
+    switch (connectedProbe) {
+        case 1: return grill::probe_1.stalled;
+        case 2: return grill::probe_2.stalled;
+        case 3: return grill::probe_3.stalled;
+        case 4: return grill::probe_4.stalled;
+        case 5: return grill::probe_5.stalled;
+        case 6: return grill::probe_6.stalled;
+        case 7: return grill::probe_7.stalled;
+        case 8: return grill::probe_8.stalled;
+        default: return false;
+    }
+}
 
 int32_t disp::get_eta(int connectedProbe) {
     switch (connectedProbe) {

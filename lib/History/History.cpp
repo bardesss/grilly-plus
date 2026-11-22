@@ -9,6 +9,13 @@ namespace {
     constexpr float ETA_MIN_SLOPE_PER_MIN = 0.05f;
     constexpr int32_t ETA_MAX_S           = 24 * 3600;
 
+    constexpr int     STALL_WINDOW_SAMPLES = 120;        // 20 minutes of fine samples
+    constexpr int     STALL_MIN_VALID      = 108;        // 90 % of them, a short unplug is fine
+    constexpr int16_t STALL_MAX_SPREAD     = 15;         // tenths: 1.5 degrees
+    constexpr int16_t STALL_LOW            = 600;        // tenths: 60 degrees
+    constexpr int16_t STALL_HIGH           = 800;        // tenths: 80 degrees
+    constexpr float   STALL_TARGET_ABOVE   = 5.0f;       // degrees between the reading and the target
+
     int16_t average(int16_t a, int16_t b){
         if(a == NO_VALUE){ return b; }
         if(b == NO_VALUE){ return a; }
@@ -128,6 +135,31 @@ int32_t ProbeHistory::eta_seconds(float target_celcius) const {
     double eta = remaining / slope_per_s;
     if(eta > ETA_MAX_S){ return ETA_UNKNOWN; }
     return (int32_t)(eta + 0.5);
+}
+
+bool ProbeHistory::stalled(float target_celcius) const {
+    if(fine_count_ < STALL_WINDOW_SAMPLES){ return false; }
+    int16_t low = NO_VALUE, high = NO_VALUE, newest = NO_VALUE;
+    int valid = 0;
+    for(int i = fine_count_ - STALL_WINDOW_SAMPLES; i < fine_count_; i++){
+        int16_t value = fine_at(i);
+        if(value == NO_VALUE){ continue; }
+        valid++;
+        if(low == NO_VALUE || value < low){ low = value; }
+        if(high == NO_VALUE || value > high){ high = value; }
+        newest = value;
+    }
+    if(valid < STALL_MIN_VALID){ return false; }
+    if(high - low > STALL_MAX_SPREAD){ return false; }
+    if(newest < STALL_LOW || newest > STALL_HIGH){ return false; }
+    return target_celcius - newest / 10.0f >= STALL_TARGET_ABOVE;
+}
+
+bool stalled_for_probe(const ProbeHistory& history, bool connected, float target, float minimum, bool fahrenheit){
+    bool target_mode = connected && target > 0 && minimum <= 0;
+    if(!target_mode){ return false; }
+    float target_celcius = fahrenheit ? (target - 32) / 1.8f : target;
+    return history.stalled(target_celcius);
 }
 
 int32_t eta_for_probe(const ProbeHistory& history, bool connected, float target, float minimum, bool fahrenheit){

@@ -40,6 +40,10 @@ public:
     // per minute, the target is already reached, or it would take more than 24 hours.
     int32_t eta_seconds(float target_celcius) const;
 
+    // The stall: the last 20 minutes stayed within 1.5 degrees, somewhere between 60 and 80 degrees
+    // (where brisket and pork shoulder stall), and the target is at least 5 degrees higher.
+    bool stalled(float target_celcius) const;
+
 private:
     int16_t  fine_[FINE_SIZE];
     int      fine_head_         = 0;     // next write position in the ring
@@ -65,5 +69,8 @@ private:
 // Time to target for a probe in target mode (target > 0, minimum <= 0), ETA_UNKNOWN otherwise.
 // target and minimum are in the display unit; fahrenheit converts the target to Celsius first.
 int32_t eta_for_probe(const ProbeHistory& history, bool connected, float target, float minimum, bool fahrenheit);
+
+// Whether a probe in target mode is in the stall, false in any other mode. Units as eta_for_probe.
+bool stalled_for_probe(const ProbeHistory& history, bool connected, float target, float minimum, bool fahrenheit);
 
 }
