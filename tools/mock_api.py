@@ -23,7 +23,7 @@ SETTINGS = {
     "beep_outside_target": True, "beep_on_ready": True, "cucaracha_enabled": False,
     "screen_timeout_minutes": 0, "backlight_timeout_minutes": 5, "backlight_brightness": 4,
     "opengrill_server": "", "mqtt_broker": "192.168.1.10", "mqtt_port": 1883, "mqtt_topic": "grilly-plus",
-    "mqtt_user": "grill", "mqtt_password_set": True,
+    "mqtt_user": "grill", "mqtt_password_set": True, "mqtt_ha_discovery": True,
     "wifi_ssid": "HomeNet", "wifi_ip": "0.0.0.0", "wifi_subnet": "0.0.0.0", "wifi_gateway": "0.0.0.0",
     "wifi_dns": "0.0.0.0", "wifi_password_set": True,
     "local_ap_ssid": "GrillyPlus_A1B2C3", "local_ap_ip": "192.168.200.10", "local_ap_subnet": "255.255.255.0",

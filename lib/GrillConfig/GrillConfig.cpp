@@ -87,6 +87,7 @@ void GrillConfig::load_settings(){
     config::mqtt_topic                = config::settings_storage.getString("mqtt_topic", "grilly-plus");
     config::mqtt_user                 = config::settings_storage.getString("mqtt_user");
     config::mqtt_password             = config::settings_storage.getString("mqtt_password");
+    config::mqtt_ha_discovery         = config::settings_storage.getBool("mqtt_ha", true);
 
     // Wifi
     config::wifi_ssid                 = config::settings_storage.getString("wifi_ssid", "");
@@ -156,6 +157,7 @@ void GrillConfig::save_settings(){
         config::settings_storage.putString("mqtt_topic", config::mqtt_topic);
         config::settings_storage.putString("mqtt_user", config::mqtt_user);
         config::settings_storage.putString("mqtt_password", config::mqtt_password);
+        config::settings_storage.putBool("mqtt_ha", config::mqtt_ha_discovery);
 
         config::settings_storage.putString("wifi_ssid", config::wifi_ssid);
         config::settings_storage.putString("wifi_password", config::wifi_password);
@@ -261,6 +263,7 @@ void GrillConfig::initialize_settings(){
     config::settings_storage.putString("mqtt_topic", config::mqtt_topic);
     config::settings_storage.putString("mqtt_user", config::mqtt_user);
     config::settings_storage.putString("mqtt_password", config::mqtt_password);
+    config::settings_storage.putBool("mqtt_ha", config::mqtt_ha_discovery);
 
     config::settings_storage.putString("wifi_ssid", "");
     config::settings_storage.putString("wifi_password", "");

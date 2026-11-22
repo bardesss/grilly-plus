@@ -17,6 +17,8 @@ The default prefix is `grilly-plus` and the uuid is in the format of a UUIDv4 ge
     - `<prefix>/<uuid>/probes`
     - `<prefix>/<uuid>/settings`
     - `<prefix>/<uuid>/error`
+    - `<prefix>/<uuid>/status`
+    - `homeassistant/<component>/grilly_plus_<uuid>/<entity>/config` (Home Assistant discovery)
 - Subscribing
     - `<prefix>/<uuid>/config/probes`
     - `<prefix>/<uuid>/config/settings`
@@ -41,6 +43,18 @@ Passwords and the Telegram bot token are never published on the `settings` topic
 
 For the topics that Grilly+ is subscribed to (`/config/probes`, `/config/settings`, `/config/mute` and `/config/clear_history`), Grilly+ takes into account that there might be a message with the retain flag set. So after reading the message Grilly+ will also publish a new message with retain set to true and a 0 byte payload to clear the existing message.
 
+
+`<prefix>/<uuid>/status` is `online` (retained) while the grill is connected. The grill sets `offline` as its last will, so the broker publishes that when the grill drops off.
+
+## Home Assistant discovery
+
+With `mqtt_ha_discovery` on (the default), the grill publishes a retained [discovery](https://www.home-assistant.io/integrations/mqtt/#mqtt-discovery) config for each of its entities to `homeassistant/<component>/grilly_plus_<uuid>/<entity>/config` every time it connects, and again when the grill name, the temperature unit or the switch changes. Home Assistant then shows one device, named after the grill, with:
+
+- `battery`, `battery_charging`, `wifi_signal`, `alarm` and `update_available`
+- `probe1_temperature` to `probe8_temperature`, and for every probe `_target`, `_time_to_target` (seconds), `_stalled` and `_alarm`
+- the `mute` button, which sends `mute` to `/config/mute`
+
+All entities read the `grill` topic. They are unavailable while `status` is `offline`, and a probe's entities also while that probe isn't connected. Turning `mqtt_ha_discovery` off publishes empty retained configs, which removes the device from Home Assistant.
 
 ## Testing your MQTT connection
 

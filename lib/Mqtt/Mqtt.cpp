@@ -8,6 +8,7 @@
 
 #include "Config.h"
 #include "Grill.h"
+#include "HaDiscovery.h"
 #include "JsonUtilities.h"
 #include "Mqtt.h"
 #include "SharedLock.h"
@@ -28,6 +29,7 @@ void Mqtt::setup(String mqtt_broker, int mqtt_port){
     Mqtt::pub_topic_settings     = topic_prefix + "/settings";
     Mqtt::pub_topic_probes       = topic_prefix + "/probes";
     Mqtt::pub_topic_error        = topic_prefix + "/error";
+    Mqtt::pub_topic_status       = ha::status_topic(topic_prefix.c_str()).c_str();
 
     Mqtt::sub_topic_settings     = topic_prefix + "/config/settings";
     Mqtt::sub_topic_probes       = topic_prefix + "/config/probes";
@@ -58,6 +60,38 @@ void Mqtt::publish_settings(){
     Mqtt::publish(Mqtt::pub_topic_settings.c_str(), mqtt_json_buffer, true);
 }
 
+void Mqtt::publish_discovery(){
+    String topic_prefix, uuid, grill_name, firmware;
+    bool enabled, fahrenheit;
+    {
+        SharedLock lock;    // the name, unit and switch can be changed by the web task
+        topic_prefix = config::mqtt_topic + "/" + config::grill_uuid;
+        uuid         = config::grill_uuid;
+        grill_name   = config::grill_name;
+        firmware     = config::grill_firmware_version;
+        enabled      = config::mqtt_ha_discovery;
+        fahrenheit   = config::temperature_unit == "fahrenheit";
+    }
+    const ha::DeviceInput device{topic_prefix.c_str(), uuid.c_str(), grill_name.c_str(), firmware.c_str(), fahrenheit};
+
+    JsonDocument doc;
+    for(size_t i = 0; i < ha::ENTITY_COUNT; i++){
+        std::string topic = ha::config_topic(device, i);
+        if(!enabled){
+            // An empty retained config removes the entity from Home Assistant
+            Mqtt::publish(topic.c_str(), nullptr, 0, true);
+            continue;
+        }
+        ha::config_payload(device, i, doc);
+        size_t length = serializeJson(doc, mqtt_json_buffer, sizeof(mqtt_json_buffer));
+        Mqtt::publish(topic.c_str(), (const uint8_t*)mqtt_json_buffer, length, true);
+    }
+}
+
+void Mqtt::request_publish_discovery(){
+    Mqtt::discovery_publish_requested = true;
+}
+
 void Mqtt::request_publish_settings(){
     Mqtt::settings_publish_requested = true;
 }
@@ -69,6 +103,7 @@ void Mqtt::request_publish_probes(){
 void Mqtt::publish_requested(){
     if(Mqtt::settings_publish_requested.exchange(false)){ Mqtt::publish_settings(); }
     if(Mqtt::probes_publish_requested.exchange(false))  { Mqtt::publish_probes(); }
+    if(Mqtt::discovery_publish_requested.exchange(false)){ Mqtt::publish_discovery(); }
 }
 
 // Rejected config messages are reported on <prefix>/<uuid>/error, otherwise there is no way to see
@@ -146,13 +181,15 @@ bool Mqtt::connect_once(){
         topic_prefix  = config::mqtt_topic + "/" + config::grill_uuid;
     }
 
+    // The broker publishes "offline" (retained) when the grill drops off without saying goodbye
+    const char* will = Mqtt::pub_topic_status.c_str();
     bool connected;
     if(mqtt_user != "" && mqtt_password != ""){
         Serial.println("Trying to connect to MQTT using user/pass");
-        connected = Mqtt::connect(Mqtt::client_name.c_str(), mqtt_user.c_str(), mqtt_password.c_str());
+        connected = Mqtt::connect(Mqtt::client_name.c_str(), mqtt_user.c_str(), mqtt_password.c_str(), will, 0, true, "offline");
     } else {
         Serial.println("Trying to connect to MQTT without authentication");
-        connected = Mqtt::connect(Mqtt::client_name.c_str());
+        connected = Mqtt::connect(Mqtt::client_name.c_str(), will, 0, true, "offline");
     }
 
     if(!connected){
@@ -171,13 +208,16 @@ bool Mqtt::connect_once(){
     Mqtt::subscribe(Mqtt::sub_topic_mute.c_str());
     Mqtt::subscribe(Mqtt::sub_topic_clear_history.c_str());
 
+    Mqtt::publish(Mqtt::pub_topic_status.c_str(), "online", true);
+    Mqtt::publish_discovery();
     Mqtt::publish_grill();
     Mqtt::publish_probes();
     Mqtt::publish_settings();
 
     // Everything was just published
-    Mqtt::settings_publish_requested = false;
-    Mqtt::probes_publish_requested   = false;
+    Mqtt::settings_publish_requested  = false;
+    Mqtt::probes_publish_requested    = false;
+    Mqtt::discovery_publish_requested = false;
 
     return true;
 }

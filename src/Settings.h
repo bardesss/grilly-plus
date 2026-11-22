@@ -112,6 +112,7 @@ namespace config{
     String mqtt_topic                   = "grilly-plus";
     String mqtt_user                    = "";
     String mqtt_password                = "";
+    bool   mqtt_ha_discovery            = true;  // announce the grill to Home Assistant
 
     // ***********************************
     // * Opengrill

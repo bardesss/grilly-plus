@@ -352,6 +352,7 @@ void JsonUtilities::load_json_settings(char* buffer){
     jsondoc["mqtt_topic"]                = config::mqtt_topic;
     jsondoc["mqtt_user"]                 = config::mqtt_user;
     jsondoc["mqtt_password_set"]         = config::mqtt_password.length() > 0;
+    jsondoc["mqtt_ha_discovery"]         = config::mqtt_ha_discovery;
 
     jsondoc["wifi_ssid"]                 = config::wifi_ssid;
     jsondoc["wifi_ip"]                   = config::wifi_ip;
@@ -431,6 +432,7 @@ jsonResult JsonUtilities::save_json_settings(char* raw_json, bool admin_authoriz
             fields.text("mqtt_topic",                   config::mqtt_topic);
             fields.text("mqtt_user",                    config::mqtt_user);
             fields.text("mqtt_password",                config::mqtt_password);
+            fields.boolean("mqtt_ha_discovery",         config::mqtt_ha_discovery);
 
             fields.text("wifi_ssid",                    config::wifi_ssid);
             fields.text("wifi_password",                config::wifi_password);

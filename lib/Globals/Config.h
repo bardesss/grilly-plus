@@ -68,6 +68,7 @@ namespace config{
     extern String mqtt_topic;
     extern String mqtt_user;
     extern String mqtt_password;
+    extern bool   mqtt_ha_discovery;
 
     // Json Utilities
     extern JsonUtilities json_handler;

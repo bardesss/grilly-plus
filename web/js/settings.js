@@ -56,6 +56,7 @@ const Settings = (() => {
       { key: "mqtt_topic", label: "Topic", type: "text" },
       { key: "mqtt_user", label: "User", type: "text" },
       { key: "mqtt_password", label: "Password", type: "password" },
+      { key: "mqtt_ha_discovery", label: "Home Assistant discovery", type: "toggle" },
     ] },
     { id: "opengrill", title: "Opengrill", fields: [
       { key: "opengrill_server", label: "Server", type: "text", placeholder: "Not used when empty" },
