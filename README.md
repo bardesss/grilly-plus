@@ -30,6 +30,7 @@ Grilly+ is the same firmware Free-Grilly users already know, with a new web app 
 * **Blinking alarm label** on the grill's screen, so you can see which probe is beeping.
 * **Low-battery protection:** the grill switches itself off cleanly before an empty battery causes brownouts.
 * **Update from GitHub:** the grill finds new Grilly+ releases by itself; one tap on **Install** in the app downloads and installs it, no file juggling.
+* **Forgot the admin password?** Reset it with a code from the grill's own screen, without a factory reset.
 
 See the [Features](#features) list below for the full picture, and [changelog.md](changelog.md) for the detailed history.
 
@@ -87,7 +88,7 @@ Grilly+ is developed with the help of AI coding agents (Anthropic's Claude). Eve
     * **Calibration offset:** Fine-tune a probe that reads a little high or low with a per-probe offset (-10..10 °C), applied to every reading before it's shown, alarmed on or sent out.
     * Empty probe sockets no longer flicker between connected and disconnected.
 * **Update from GitHub:** the grill checks the Grilly+ releases on GitHub once a day (and when you tap **Check now**), and the app shows a dot on the Settings tab when a newer version is out. Tap **Install** and the grill restarts into a lean update mode with a dimmed screen and a progress bar, downloads the release over HTTPS, checks its size and SHA-256 checksum, and restarts into the new version after about a minute. If anything goes wrong (no WiFi, a cut-off download, a wrong checksum) it keeps the old version and the app tells you why. It only starts with at least 30 % battery or on the charger, and it needs the admin password when one is set.
-* **Firmware updates from a file:** install a new `-ota.bin` from the Settings view. An optional admin password can protect updates; changing or removing it requires the current one, and it can't be changed over MQTT.
+* **Firmware updates from a file:** install a new `-ota.bin` from the Settings view. An optional admin password can protect updates; changing or removing it requires the current one, and it can't be changed over MQTT. A forgotten password can be reset with a code that the grill shows on its screen (see [Forgot the admin password?](#forgot-the-admin-password)).
 * **Local REST API:** Provides a RESTful API endpoint on the device for integration with custom scripts, home automation systems, or other applications. Passwords are never returned by the API, and cross-site pages can't change your settings or push a firmware update.
 * **MQTT support:** All data (grill status/probes/settings/`connected_seconds`) is sent to an mqtt topic. You can also configure probes and settings via mqtt, including partial updates that only change the keys you send.
   * [Mqtt documentation](docs/mqtt.md)
@@ -119,6 +120,7 @@ Open the grill's address in a browser on your phone or computer. The dashboard s
 - You can also view this [online](https://editor-next.swagger.io/?url=https://raw.githubusercontent.com/bardesss/grilly-plus/refs/heads/master/docs/openapi.yaml)
 - `GET /api/info` tells an app or integration which firmware runs and which Grilly+ features (`capabilities`) it has.
 - `GET /api/history` returns the temperature history of the connected probes, `POST /api/history/clear` clears one.
+- `POST /api/admin/reset/start` shows a code on the grill's screen, `POST /api/admin/reset` with that code sets a new admin password.
 - `GET /api/update/latest`, `POST /api/update/check` and `POST /api/update/install` check GitHub for a newer release and install it; `/api/grill` and MQTT carry `update_available`.
 
 ## Installation
@@ -173,7 +175,19 @@ The grill only downloads from this repository's releases, and only installs a fi
 
 ### Admin password
 
-Set an admin password at the bottom of the same card so only you can install firmware, from GitHub or from a file. Once it is set, changing or removing it needs the current one (the web app asks for it, the API takes it as Basic auth with user `admin`). It can't be changed over MQTT. If you forget it, the only way back is a factory reset (hold the button for 10 seconds), which also clears your other settings.
+Set an admin password at the bottom of the same card so only you can install firmware, from GitHub or from a file. Once it is set, changing or removing it needs the current one (the web app asks for it, the API takes it as Basic auth with user `admin`). It can't be changed over MQTT.
+
+### Forgot the admin password?
+
+You can reset it from the web app, as long as you can see the grill's screen. All your other settings (WiFi, probes, alarms, calibration) stay as they are.
+
+  1. Open the web interface and go to **Settings**, then **Firmware updates**.
+  2. Under **Current admin password**, tap **Forgot the admin password?**
+  3. The grill beeps once and its screen shows a 6-digit code, valid for 5 minutes.
+  4. Type that code in the app. Enter a new admin password, or leave the field empty to remove the password.
+  5. Tap **Reset password**. The new password works right away.
+
+A code works once. After 5 wrong tries it ends and you can ask for a new one a minute later. After 15 wrong tries in total the grill stops giving out codes until you restart it. A short press on the grill's button cancels a code on the screen, for example one you didn't ask for. If you can't get it to work, a factory reset (hold the button for 10 seconds) also clears the admin password, together with all other settings.
 
 ## Supported probes
 

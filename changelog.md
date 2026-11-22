@@ -1,5 +1,14 @@
 # Changelog (firmware only)
 
+## Unreleased
+
+### New
+- Forgot the admin password? Settings > Firmware updates has a link that makes the grill show a 6-digit code on its screen for 5 minutes. Entering it in the app sets a new admin password, or removes it, and keeps every other setting
+- A code works once and ends after 5 wrong tries; after 15 wrong tries in total no new code is given until the grill restarts; a short press on the button cancels a code on the screen
+
+### API
+- `POST /api/admin/reset/start` (shows the code; 409 without an admin password, 429 within a minute of the last code, 423 after too many wrong codes) and `POST /api/admin/reset` with `{"code": "…", "admin_password": "…"}` (403 wrong code with `attempts_left`, 410 no valid code); `admin_reset` in the `/api/info` capabilities. Not over MQTT
+
 ## 2026-11-22
 Update from GitHub. Install this release from Settings > Firmware updates with the `-ota.bin` file; from then on the grill finds and installs new releases itself.
 
