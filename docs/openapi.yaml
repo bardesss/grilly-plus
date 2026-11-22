@@ -711,13 +711,14 @@ paths:
                     type: array
                     items:
                       type: string
-                      enum: [history, eta, clear_history, alarm_mute, alarm_probes, calibration_offset, diagnostics, ota_upload, github_update]
+                      enum: [history, eta, clear_history, alarm_mute, alarm_probes, calibration_offset, diagnostics, ota_upload, github_update, admin_reset]
                     description: >
                       history = GET /history; eta = eta_seconds per probe; clear_history = POST /history/clear and
                       MQTT config/clear_history; alarm_mute = POST /alarm/mute and MQTT config/mute; alarm_probes =
                       alarm per probe in /grill; calibration_offset = offset_celcius per probe; diagnostics = reset,
                       off reason and battery millivolts in /grill; ota_upload = POST /update; github_update = update_available
-                      in /grill and the /update/latest, /update/check and /update/install endpoints.
+                      in /grill and the /update/latest, /update/check and /update/install endpoints;
+                      admin_reset = POST /admin/reset/start, /admin/reset/cancel and /admin/reset.
 
   /wifiscan:
     get:
@@ -970,6 +971,171 @@ paths:
                   error:
                     type: string
                     example: "Content-Type should be application/json"
+
+  /admin/reset/start:
+    post:
+      tags:
+        - utility
+      summary: Show a code for resetting a forgotten admin password
+      description: >
+        Shows a 6-digit code on the grill's own screen for 5 minutes (and beeps once), so only someone
+        at the grill can reset the admin password with POST /admin/reset. Asking again while a code is
+        valid keeps the same code; a new code can be asked for a minute after the previous one. After 15
+        wrong codes in total, no new code is given until the grill restarts. Needs the json
+        content type (no admin password). Not available over MQTT.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '202':
+          description: The code is on the grill's screen
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  seconds_left:
+                    type: integer
+                    example: 300
+        '409':
+          description: No admin password is set
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "No admin password is set"
+        '415':
+          description: Not sent as application/json
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Content-Type should be application/json"
+        '423':
+          description: 15 wrong codes since the grill started; restart it to try again
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Too many wrong codes. Restart the grill to try again"
+        '429':
+          description: A new code was asked for within a minute of the previous one
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Wait a minute before asking for a new code"
+
+  /admin/reset/cancel:
+    post:
+      tags:
+        - utility
+      summary: Take the password reset code off the grill's screen
+      description: >
+        Ends the current code, like a short press on the grill's button. Always answers 200, also when
+        no code was showing. Needs the json content type.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: No code is showing anymore
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+
+  /admin/reset:
+    post:
+      tags:
+        - utility
+      summary: Reset the admin password with the code from the grill's screen
+      description: >
+        Replaces the admin password with admin_password, or removes it when admin_password is empty or
+        left out. Every other setting stays. A code works once; 5 wrong codes end it and a new one is
+        needed.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code:
+                  type: string
+                  example: "042917"
+                admin_password:
+                  type: string
+                  maxLength: 64
+                  description: The new admin password; empty or left out removes it
+      responses:
+        '200':
+          description: The admin password was replaced or removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '400':
+          description: Body was not json, has no code, or the password is too long
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Body should be json with the code"
+        '403':
+          description: Wrong code
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Wrong code"
+                  attempts_left:
+                    type: integer
+                    description: Tries left for this code; 0 means it has ended
+                    example: 4
+        '410':
+          description: No valid code: never asked for, expired, used, or ended after 5 wrong tries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "The code is no longer valid, ask for a new one"
 
   /history:
     get:

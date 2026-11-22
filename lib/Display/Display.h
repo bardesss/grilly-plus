@@ -137,6 +137,10 @@ private:
     */
     bool draw_screen_info(void);
     /**
+    *	@brief The code for resetting the admin password, shown instead of every page while it is valid
+    */
+    void draw_screen_reset_code(const char* code, uint32_t seconds_left);
+    /**
     *	@brief enables / disables the screen background LED
     *	@return true 
     */

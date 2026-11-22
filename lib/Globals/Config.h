@@ -1,4 +1,5 @@
 #pragma once
+#include "AdminReset.h"
 
 // Forward declarations
 class GrillConfig;
@@ -70,6 +71,7 @@ namespace config{
     extern String local_ap_ssid;
     extern String local_ap_password;
     extern String admin_password;
+    extern AdminReset admin_reset;   // forgotten admin password: code on the screen, see AdminReset.h
 
     extern String local_ap_ip;
     extern String local_ap_subnet;

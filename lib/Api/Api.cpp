@@ -10,6 +10,8 @@
 
 #include "Api.h"
 #include "Config.h"
+#include "Display.h"
+#include <esp_random.h>
 #include "Grill.h"
 #include "JsonUtilities.h"
 #include "SharedLock.h"
@@ -46,6 +48,13 @@ void setup_api_routes()
     web::webserver.on("/api/update/check", HTTP_OPTIONS, cors_api_update_check);
     web::webserver.on("/api/update/install", HTTP_POST, post_api_update_install);
     web::webserver.on("/api/update/install", HTTP_OPTIONS, cors_api_update_install);
+
+    web::webserver.on("/api/admin/reset/start", HTTP_POST, post_api_admin_reset_start);
+    web::webserver.on("/api/admin/reset/start", HTTP_OPTIONS, cors_api_admin_reset);
+    web::webserver.on("/api/admin/reset/cancel", HTTP_POST, post_api_admin_reset_cancel);
+    web::webserver.on("/api/admin/reset/cancel", HTTP_OPTIONS, cors_api_admin_reset);
+    web::webserver.on("/api/admin/reset", HTTP_POST, post_api_admin_reset);
+    web::webserver.on("/api/admin/reset", HTTP_OPTIONS, cors_api_admin_reset);
 
     web::webserver.on("/api/update", HTTP_POST, post_api_update, upload_api_update);
 }
@@ -228,6 +237,97 @@ void post_api_update_install(){
 }
 
 void cors_api_update_install(){
+    web::webserver.send(204);
+}
+
+// Resetting a forgotten admin password. Starting shows a code on the grill's screen for 5 minutes;
+// sending that code with a new password (or none) replaces the admin password and keeps every other
+// setting. Reading the code needs someone at the grill, so neither call needs the old password.
+// Not available over MQTT.
+void post_api_admin_reset_start(){
+    if(!is_json_request()) { return; }
+
+    AdminReset::Start result;
+    uint32_t seconds_left = 0;
+    {
+        SharedLock lock;
+        if(config::admin_password.isEmpty()){
+            web::webserver.send(409, "application/json", "{\"error\": \"No admin password is set\"}");
+            return;
+        }
+        result = config::admin_reset.start(millis(), esp_random());
+        seconds_left = config::admin_reset.seconds_left(millis());
+    }
+    if(result == AdminReset::Start::LOCKED){
+        web::webserver.send(423, "application/json", "{\"error\": \"Too many wrong codes. Restart the grill to try again\"}");
+        return;
+    }
+    if(result == AdminReset::Start::TOO_SOON){
+        web::webserver.send(429, "application/json", "{\"error\": \"Wait a minute before asking for a new code\"}");
+        return;
+    }
+
+    display.wake();
+    if(result == AdminReset::Start::STARTED){ grill::buzzer.beep(1, 100); }
+    web::webserver.send(202, "application/json", "{\"seconds_left\": " + String(seconds_left) + "}");
+}
+
+void post_api_admin_reset(){
+    if(!is_json_request()) { return; }
+
+    JsonDocument jsondoc;
+    DeserializationError parse_error = deserializeJson(jsondoc, web::webserver.arg("plain"));
+    if(parse_error || !jsondoc["code"].is<const char*>()){
+        web::webserver.send(400, "application/json", "{\"error\": \"Body should be json with the code\"}");
+        return;
+    }
+    if(!jsondoc["admin_password"].isNull() && !jsondoc["admin_password"].is<const char*>()){
+        web::webserver.send(400, "application/json", "{\"error\": \"admin_password should be text\"}");
+        return;
+    }
+    String new_password = jsondoc["admin_password"] | "";
+    if(new_password.length() > 64){
+        web::webserver.send(400, "application/json", "{\"error\": \"admin_password can be at most 64 characters\"}");
+        return;
+    }
+
+    AdminReset::Check result;
+    int attempts_left;
+    {
+        SharedLock lock;
+        result = config::admin_reset.check(jsondoc["code"].as<const char*>(), millis());
+        attempts_left = config::admin_reset.active(millis()) ? config::admin_reset.attempts_left() : 0;
+        if(result == AdminReset::Check::OK){ config::admin_password = new_password; }
+    }
+
+    if(result == AdminReset::Check::NOT_ACTIVE){
+        web::webserver.send(410, "application/json", "{\"error\": \"The code is no longer valid, ask for a new one\"}");
+        return;
+    }
+    if(result == AdminReset::Check::WRONG){
+        String error = attempts_left > 0 ? "Wrong code" : "Wrong code. That was the last try, ask for a new one";
+        web::webserver.send(403, "application/json",
+                            "{\"error\": \"" + error + "\", \"attempts_left\": " + String(attempts_left) + "}");
+        return;
+    }
+
+    // Not under the lock, it takes the lock itself for the NVS writes
+    config::config_helper.save_settings();
+    Serial.println(new_password.isEmpty() ? "Admin password removed with a reset code" : "Admin password reset with a code");
+    web::webserver.send(200, "application/json", "{\"success\": true}");
+}
+
+// Takes the code off the screen, like a short press on the button. Harmless, so no password needed.
+void post_api_admin_reset_cancel(){
+    if(!is_json_request()) { return; }
+    {
+        SharedLock lock;
+        config::admin_reset.cancel();
+    }
+    web::webserver.send(200, "application/json", "{\"success\": true}");
+}
+
+void cors_api_admin_reset(){
     web::webserver.send(204);
 }
 

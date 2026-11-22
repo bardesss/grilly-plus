@@ -774,7 +774,7 @@ void JsonUtilities::load_json_info(char* buffer){
     // Features added on top of Free-Grilly. A client checks for a name before using the feature.
     JsonArray capabilities = jsondoc["capabilities"].to<JsonArray>();
     for (const char* capability : {"history", "eta", "clear_history", "alarm_mute", "alarm_probes",
-                                   "calibration_offset", "diagnostics", "ota_upload", "github_update"}) {
+                                   "calibration_offset", "diagnostics", "ota_upload", "github_update", "admin_reset"}) {
         capabilities.add(capability);
     }
 
