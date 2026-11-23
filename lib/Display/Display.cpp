@@ -135,6 +135,57 @@ void disp::draw_update(const char* version, int percent, const char* status){
     screen.sendBuffer();
 }
 
+// 5x6 hourglass for the top bar
+static const unsigned char hourglass_icon[] = { 0x1f, 0x0a, 0x04, 0x04, 0x0e, 0x1f };
+
+void disp::draw_timer_bar(void){
+    int slot = grill::timer_list.first_running(millis());
+    if (slot < 0) { return; }
+    uint32_t seconds = (grill::timer_list.remaining_ms(slot, millis()) + 999) / 1000;
+    char text[8];
+    if (seconds < 3600) { snprintf(text, sizeof(text), "%u:%02u", (unsigned)(seconds / 60), (unsigned)(seconds % 60)); }
+    else { snprintf(text, sizeof(text), "%u:%02u", (unsigned)(seconds / 3600), (unsigned)(seconds / 60 % 60)); }
+    // In the free space between the unit on the left and the volume icon (x 79 with the charging icon)
+    screen.setFont(u8g2_font_4x6_tr);
+    int width = 5 + 2 + screen.getStrWidth(text);
+    int x = 48 - width / 2;
+    screen.drawXBM(x, 0, 5, 6, hourglass_icon);
+    screen.drawStr(x + 7, 6, text);
+}
+
+void disp::draw_timer_done(int slot, int more){
+    const timers::Timer& timer = grill::timer_list.at(slot);
+    // The screen stays on while a timer waits to be stopped
+    millis_backlight_timeout = millis();
+    millis_screen_timeout = millis();
+
+    screen.setFont(u8g2_font_4x6_tr);
+    screen.drawStr(2, 6, timer.probe ? "Rest timer" : "Timer");
+    screen.setFont(u8g2_font_profont12_tr);
+    String name = fit(String(timer.name), 124);
+    screen.drawStr((128 - screen.getStrWidth(name.c_str())) / 2, 21, name.c_str());
+
+    screen.setFont(u8g2_font_profont22_tr);
+    const char* title = "TIME'S UP";
+    int title_x = (128 - screen.getStrWidth(title)) / 2;
+    screen.drawStr(title_x, 44, title);
+    // Blinks while the alarm sounds for it
+    if (grill::alarm_timers != 0 && blink_phase) {
+        screen.setDrawColor(2);
+        screen.drawBox(title_x - 3, 27, screen.getStrWidth(title) + 6, 20);
+        screen.setDrawColor(1);
+    }
+
+    screen.setFont(u8g2_font_profont10_tr);
+    const char* hint = "Press to stop";
+    screen.drawStr((128 - screen.getStrWidth(hint)) / 2, 61, hint);
+    if (more > 0) {
+        char extra[6];
+        snprintf(extra, sizeof(extra), "+%d", more);
+        screen.drawStr(125 - screen.getStrWidth(extra), 61, extra);
+    }
+}
+
 void disp::draw_screen_reset_code(const char* code, uint32_t seconds_left){
     screen.setFont(u8g2_font_4x6_tr);
     screen.drawStr(2, 6, "Password reset");
@@ -269,7 +320,16 @@ bool disp::display_update(void) {
         // into the buffer is locked, sending it to the screen is slow.
         SharedLock lock;
         const char* reset_code = config::admin_reset.code(millis());
+        uint8_t done = grill::timer_list.done_mask();
+        if(reset_code[0] == '\0' && done == 0) {draw_timer_bar();}
         if(reset_code[0] != '\0') {draw_screen_reset_code(reset_code, config::admin_reset.seconds_left(millis()));}
+        else if(done != 0) {
+            int first = -1, count = 0;
+            for(int i = 0; i < (int)timers::MAX_TIMERS; i++){
+                if(done & (1 << i)){ if(first < 0){ first = i; } count++; }
+            }
+            draw_timer_done(first, count - 1);
+        }
         else if(current_screen_page == 0) {draw_screen_temp();}
         else if (current_screen_page > 0 and current_screen_page < 9) {
             screen.setFont(u8g2_font_4x6_tr);

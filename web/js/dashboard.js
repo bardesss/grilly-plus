@@ -154,12 +154,14 @@
 
   function mount(el) {
     el.innerHTML =
+      '<div class="timer-row"></div>' +
       '<div class="probe-list"></div>' +
       '<p class="empty-sockets"></p>' +
       '<div class="card no-probes" hidden><p>Plug in a probe</p></div>';
     list = el.querySelector(".probe-list");
     emptyLine = el.querySelector(".empty-sockets");
     noProbes = el.querySelector(".no-probes");
+    if (typeof Timers !== "undefined") Timers.mount(el.querySelector(".timer-row"));
     App.onStatus(render);
     Trend.onChange(() => { const status = App.getStatus(); if (status) render(status); });
   }

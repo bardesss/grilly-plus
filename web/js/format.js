@@ -122,6 +122,20 @@ const Format = (() => {
     return { title: name, detail: now };
   }
 
+  // Time left on a timer: m:ss under an hour, h:mm:ss from an hour up
+  function timerLeft(seconds) {
+    const s = Math.max(0, Math.round(seconds));
+    const two = (n) => String(n).padStart(2, "0");
+    if (s < 3600) return Math.floor(s / 60) + ":" + two(s % 60);
+    return Math.floor(s / 3600) + ":" + two(Math.floor(s / 60) % 60) + ":" + two(s % 60);
+  }
+
+  // The alarm popup's line for a finished timer; a rest timer is named "Rest: <probe>"
+  function timerMessage(timer) {
+    if (timer.probe > 0 && timer.name.startsWith("Rest: ")) return { title: timer.name.slice(6) + ": time to slice", detail: "Rest timer" };
+    return { title: timer.name + ": time's up", detail: "Timer" };
+  }
+
   function duration(seconds) {
     if (!(seconds > 0)) return "";
     if (seconds < 60) return "<1m";
@@ -191,7 +205,7 @@ const Format = (() => {
     return Math.floor(left / 60) + ":" + String(left % 60).padStart(2, "0");
   }
 
-  return { readyAt, progressNote, alarmMessage, countdown, checkedAgo, updateStatus, unitSymbol, number, temperature, signal, battery, batteryDiagnostics, resetReasonText,
+  return { readyAt, progressNote, alarmMessage, timerLeft, timerMessage, countdown, checkedAgo, updateStatus, unitSymbol, number, temperature, signal, battery, batteryDiagnostics, resetReasonText,
            offReasonText, alarmMode, probeStatus, alarmLabel, duration, ago, eta, emptySockets, changedFields };
 })();
 

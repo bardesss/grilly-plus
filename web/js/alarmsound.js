@@ -97,7 +97,8 @@ const AlarmSound = (() => {
   function showDialog(status) {
     if (!dialog) buildDialog();
     const alarming = status.probes.filter((probe) => probe.alarm && probe.connected);
-    const messages = alarming.map((probe) => Format.alarmMessage(probe, status.temperature_unit));
+    const messages = alarming.map((probe) => Format.alarmMessage(probe, status.temperature_unit))
+      .concat((status.timers || []).filter((timer) => timer.done).map(Format.timerMessage));
     dialog.querySelector("h2 span").textContent =
       messages.length === 1 ? messages[0].title : messages.length > 1 ? messages.length + " alarms" : "Alarm";
     const list = dialog.querySelector(".alarm-dialog-list");

@@ -145,3 +145,18 @@ test("probeStatus says Lid open instead of Too low while the lid watch waits", (
   assert.equal(Format.probeStatus({ ...pit, lid_open: false }).text, "Too low");
   assert.equal(Format.probeStatus({ ...pit, temperature: 115, lid_open: true }).text, "In range");
 });
+
+test("timerLeft counts down in m:ss, and h:mm:ss from an hour", () => {
+  assert.equal(Format.timerLeft(0), "0:00");
+  assert.equal(Format.timerLeft(-5), "0:00");
+  assert.equal(Format.timerLeft(59), "0:59");
+  assert.equal(Format.timerLeft(20 * 60), "20:00");
+  assert.equal(Format.timerLeft(3599), "59:59");
+  assert.equal(Format.timerLeft(3600), "1:00:00");
+  assert.equal(Format.timerLeft(24 * 3600 - 1), "23:59:59");
+});
+
+test("timerMessage says time's up, or time to slice for a rest timer", () => {
+  assert.deepEqual(Format.timerMessage({ name: "Flip the ribs", probe: 0 }), { title: "Flip the ribs: time's up", detail: "Timer" });
+  assert.deepEqual(Format.timerMessage({ name: "Rest: Brisket", probe: 2 }), { title: "Brisket: time to slice", detail: "Rest timer" });
+});

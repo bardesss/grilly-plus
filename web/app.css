@@ -471,3 +471,29 @@ details.advanced summary { display: flex; align-items: center; min-height: 44px;
   border: 0; border-radius: 0 12px 12px 0; background: none; color: var(--muted); cursor: pointer;
 }
 .reveal-button[aria-pressed="true"] { color: var(--accent-text); }
+
+/* Timers on the grill page */
+.timer-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
+.timer-chips { display: contents; }
+.timer-chip {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 4px 0 12px;
+  border-radius: 20px; background: var(--surface); font-size: 14px;
+}
+.timer-chip .icon { width: 16px; height: 16px; color: var(--muted); }
+.timer-name { max-width: 14ch; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.timer-left { font-weight: 600; font-variant-numeric: tabular-nums; color: var(--accent-text); }
+.timer-chip.done { background: var(--bad); color: #fff; }
+.timer-chip.done .icon, .timer-chip.done .timer-left { color: #fff; }
+.timer-chip.stopping { opacity: .5; }
+.timer-stop { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 16px; background: none; color: inherit; cursor: pointer; }
+.timer-stop .icon { width: 16px; height: 16px; color: inherit; }
+.chip-button {
+  display: inline-flex; align-items: center; gap: 4px; min-height: 40px; padding: 0 14px; border: 1px solid var(--border);
+  border-radius: 20px; background: none; font-size: 14px; font-weight: 600; color: var(--accent-text); cursor: pointer;
+}
+.chip-button .icon { width: 16px; height: 16px; }
+.chip-button:disabled { opacity: .5; cursor: default; }
+.timer-quick { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 4px; }
+.timer-quick .chip-button { min-width: 48px; justify-content: center; color: var(--text); }
+.timer-dialog form { margin: 0; }
+.timer-dialog .confirm-dialog-buttons { margin-top: 16px; }

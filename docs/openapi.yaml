@@ -162,6 +162,15 @@ components:
           type: string
           example: ""
           description: Version of a newer GitHub release found by the last update check, empty when there is none. See GET /update/latest.
+        timers:
+          type: array
+          description: The running and finished timers, at most 6. They live in the grill's memory, a restart clears them.
+          items:
+            $ref: '#/components/schemas/Timer'
+        alarm_timers:
+          type: integer
+          example: 0
+          description: Bitmask of the timers (by their position in `timers`) that caused the sounding alarm, like `alarm` per probe.
         probes:
           type: array
           minItems: 8
@@ -242,6 +251,32 @@ components:
               stalled: false
               lid_open: false
 
+    Timer:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 3
+          description: 1 to 255, to stop it with POST /timers/cancel
+        name:
+          type: string
+          example: Flip the ribs
+          maxLength: 24
+        remaining_s:
+          type: integer
+          example: 754
+          description: Seconds left, 0 once it ran out
+        length_s:
+          type: integer
+          example: 1200
+        done:
+          type: boolean
+          example: false
+          description: It ran out. It stays until the alarm is muted, the button is pressed, it is stopped, or 10 minutes passed.
+        probe:
+          type: integer
+          example: 0
+          description: 0 for a timer of its own, 1-8 for the rest timer of that probe
     Probe:
       type: object
       properties:
@@ -998,14 +1033,15 @@ paths:
                     type: array
                     items:
                       type: string
-                      enum: [history, eta, clear_history, alarm_mute, alarm_probes, calibration_offset, diagnostics, ota_upload, github_update, admin_reset]
+                      enum: [history, eta, clear_history, alarm_mute, alarm_probes, calibration_offset, diagnostics, ota_upload, github_update, admin_reset, timers]
                     description: >
                       history = GET /history; eta = eta_seconds per probe; clear_history = POST /history/clear and
                       MQTT config/clear_history; alarm_mute = POST /alarm/mute and MQTT config/mute; alarm_probes =
                       alarm per probe in /grill; calibration_offset = offset_celcius per probe; diagnostics = reset,
                       off reason and battery millivolts in /grill; ota_upload = POST /update; github_update = update_available
                       in /grill and the /update/latest, /update/check and /update/install endpoints;
-                      admin_reset = POST /admin/reset/start, /admin/reset/cancel and /admin/reset.
+                      admin_reset = POST /admin/reset/start, /admin/reset/cancel and /admin/reset;
+                      timers = timers and alarm_timers in /grill, POST /timers and /timers/cancel.
 
   /wifiscan:
     get:
@@ -1025,14 +1061,74 @@ paths:
                 items:
                   $ref: '#/components/schemas/Wifinetwork'
 
+  /timers:
+    post:
+      tags:
+        - grill
+      summary: Start a timer
+      description: >
+        Starts a countdown on the grill. When it runs out the grill beeps like a probe alarm and shows
+        TIME'S UP until it is muted. No admin auth is needed, like setting up probes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [minutes]
+              properties:
+                name:
+                  type: string
+                  maxLength: 24
+                  example: Flip the ribs
+                  description: Empty or left out becomes "Timer"
+                minutes:
+                  type: integer
+                  minimum: 1
+                  maximum: 1440
+                  example: 20
+      responses:
+        '201':
+          description: Started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Timer'
+        '400':
+          description: Bad name or length
+        '409':
+          description: At most 6 timers
+
+  /timers/cancel:
+    post:
+      tags:
+        - grill
+      summary: Stop a timer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id:
+                  type: integer
+                  example: 3
+      responses:
+        '200':
+          description: Stopped
+        '404':
+          description: No timer with that id
+
   /alarm/mute:
     post:
       tags:
         - grill
       summary: Mute a sounding alarm
       description: >
-        Mutes a currently sounding alarm, the same as pressing the grill's button. Harmless, so no
-        admin auth is needed. It can take up to about 2 seconds for `alarm_sounding` to turn false.
+        Mutes a currently sounding alarm, the same as pressing the grill's button, and clears the
+        timers that ran out. Harmless, so no admin auth is needed. It can take up to about 2 seconds for `alarm_sounding` to turn false.
       requestBody:
         required: false
         description: Body is ignored

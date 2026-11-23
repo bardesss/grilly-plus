@@ -51,6 +51,11 @@ void setup_api_routes()
     web::webserver.on("/api/update/install", HTTP_POST, post_api_update_install);
     web::webserver.on("/api/update/install", HTTP_OPTIONS, cors_api_update_install);
 
+    web::webserver.on("/api/timers", HTTP_POST, post_api_timers);
+    web::webserver.on("/api/timers", HTTP_OPTIONS, cors_api_timers);
+    web::webserver.on("/api/timers/cancel", HTTP_POST, post_api_timers_cancel);
+    web::webserver.on("/api/timers/cancel", HTTP_OPTIONS, cors_api_timers);
+
     web::webserver.on("/api/presets", HTTP_GET, get_api_presets);
     web::webserver.on("/api/presets", HTTP_POST, post_api_presets);
     web::webserver.on("/api/presets", HTTP_OPTIONS, cors_api_presets);
@@ -180,6 +185,58 @@ void post_api_alarm_mute(){
 void cors_api_alarm_mute(){
     web::webserver.send(204);
     return;
+}
+
+// Timers need no admin auth either, like setting up probes: {"name": "Flip the ribs", "minutes": 20}
+void post_api_timers(){
+    if(!is_json_request()) { return; }
+    JsonDocument in;
+    if(deserializeJson(in, web::webserver.arg("plain")) != DeserializationError::Ok || !in.is<JsonObject>()
+       || !in["minutes"].is<long>() || (!in["name"].isNull() && !in["name"].is<const char*>())){
+        web::webserver.send(400, "application/json", "{\"error\": \"Send a name and whole minutes\"}");
+        return;
+    }
+    const char* name = in["name"] | "";
+    long minutes = in["minutes"].as<long>();
+    const char* error = timers::check_start(name, minutes);
+    if(error){ web::webserver.send(400, "application/json", String("{\"error\": \"") + error + "\"}"); return; }
+
+    JsonDocument out;
+    {
+        SharedLock lock;    // the timers
+        uint32_t now_ms = millis();
+        int slot = grill::timer_list.start(name, (uint32_t)minutes * 60000UL, 0, now_ms);
+        if(slot < 0){
+            web::webserver.send(409, "application/json", "{\"error\": \"At most 6 timers\"}");
+            return;
+        }
+        add_timer_json(out.to<JsonObject>(), slot, now_ms);
+    }
+    serializeJson(out, api_json_buffer, sizeof(api_json_buffer));
+    web::webserver.send(201, "application/json", api_json_buffer);
+}
+
+// {"id": 3}
+void post_api_timers_cancel(){
+    if(!is_json_request()) { return; }
+    JsonDocument in;
+    if(deserializeJson(in, web::webserver.arg("plain")) != DeserializationError::Ok || !in["id"].is<int>()){
+        web::webserver.send(400, "application/json", "{\"error\": \"Send the id of a timer\"}");
+        return;
+    }
+    int id = in["id"].as<int>();
+    bool cancelled;
+    {
+        SharedLock lock;    // the timers
+        cancelled = id > 0 && id < 256 && grill::timer_list.cancel((uint8_t)id);
+    }
+    if(!cancelled){ web::webserver.send(404, "application/json", "{\"error\": \"No timer with that id\"}"); return; }
+    web::webserver.send(200, "application/json", "{\"success\": true}");
+}
+
+// Preflight for a cross-origin write. Answered without CORS headers, so the browser blocks it.
+void cors_api_timers(){
+    web::webserver.send(204);
 }
 
 // Updating from GitHub releases. The check runs in the background, installing restarts into an update mode.

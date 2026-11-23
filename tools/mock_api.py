@@ -13,6 +13,49 @@ ALARM_SOUNDING = False
 # Mock-only: probe_id that /api/grill reports as the cause of the sounding alarm, cleared with it.
 ALARM_PROBE_ID = None
 
+# Timers like the grill keeps them: {"id", "name", "length_s", "started", "probe", "done_at"}.
+# POST /api/timers starts one (a length in seconds is allowed with "seconds", mock-only, for testing).
+TIMERS = []
+TIMER_IDS = [0]
+
+
+def timers_status():
+    """Runs out the timers that are due (and sounds the alarm for them), drops ones done for 10 minutes."""
+    global ALARM_SOUNDING
+    now = time.time()
+    for timer in list(TIMERS):
+        if timer["done_at"] is None and now - timer["started"] >= timer["length_s"]:
+            timer["done_at"] = now
+            ALARM_SOUNDING = True
+        elif timer["done_at"] is not None and now - timer["done_at"] >= 600:
+            TIMERS.remove(timer)
+    return [{"id": t["id"], "name": t["name"], "probe": t["probe"], "length_s": t["length_s"],
+             "remaining_s": 0 if t["done_at"] is not None else int(t["length_s"] - (now - t["started"]) + 0.999),
+             "done": t["done_at"] is not None} for t in TIMERS]
+
+
+def start_timer(body):
+    try:
+        parsed = json.loads(body or "")
+    except ValueError:
+        parsed = None
+    if not isinstance(parsed, dict) or not (isinstance(parsed.get("minutes"), int) or isinstance(parsed.get("seconds"), int)):
+        return 400, {"error": "Send a name and whole minutes"}
+    name = parsed.get("name") or ""
+    if not isinstance(name, str) or len(name.encode("utf-8")) > 24:
+        return 400, {"error": "name should be at most 24 characters"}
+    seconds = parsed["seconds"] if isinstance(parsed.get("seconds"), int) else parsed["minutes"] * 60
+    if "seconds" not in parsed and not 1 <= parsed["minutes"] <= 1440:
+        return 400, {"error": "minutes should be 1 to 1440"}
+    timers_status()
+    if len(TIMERS) >= 6:
+        return 409, {"error": "At most 6 timers"}
+    TIMER_IDS[0] = TIMER_IDS[0] % 255 + 1
+    TIMERS.append({"id": TIMER_IDS[0], "name": name or "Timer", "length_s": seconds, "started": time.time(),
+                   "probe": 0, "done_at": None})
+    return 201, next(t for t in timers_status() if t["id"] == TIMER_IDS[0])
+
+
 SETTINGS = {
     "name": "Big Green Egg", "uuid": "43c62ed2-4dc0-41a5-8f71-16db60155739", "firmware_version": "26.09.27",
     "temperature_unit": "celcius", "beep_enabled": True, "beep_volume": 4, "beep_degrees_before": 5, "lid_pause_minutes": 5,
@@ -241,7 +284,9 @@ def grill():
         "wifi_connected": True, "wifi_ssid": SETTINGS["wifi_ssid"],
         "wifi_ip": "192.168.1.50", "wifi_signal": -58,
         "local_ap_ssid": SETTINGS["local_ap_ssid"], "local_ap_ip": SETTINGS["local_ap_ip"], "temperature_unit": SETTINGS["temperature_unit"],
+        "timers": timers_status(),
         "alarm_sounding": ALARM_SOUNDING,
+        "alarm_timers": sum(1 << i for i, t in enumerate(TIMERS) if t["done_at"] is not None) if ALARM_SOUNDING else 0,
         "probes": [
             {"probe_id": p["probe_id"], "name": p["name"], "temperature": temperature(p),
              "minimum_temperature": p["minimum_temperature"], "target_temperature": p["target_temperature"],
@@ -391,7 +436,26 @@ def handle(method, path, body, headers=None, query=""):
             return 415, {"error": "Content-Type should be application/json"}
         ALARM_SOUNDING = False
         ALARM_PROBE_ID = None
+        TIMERS[:] = [t for t in TIMERS if t["done_at"] is None]
         return 200, {"success": True}
+    if method == "POST" and path == "/api/timers":
+        if not headers.get("Content-Type", "").startswith("application/json"):
+            return 415, {"error": "Content-Type should be application/json"}
+        return start_timer(body)
+    if method == "POST" and path == "/api/timers/cancel":
+        if not headers.get("Content-Type", "").startswith("application/json"):
+            return 415, {"error": "Content-Type should be application/json"}
+        try:
+            timer_id = json.loads(body or "{}").get("id")
+        except (ValueError, AttributeError):
+            timer_id = None
+        if not isinstance(timer_id, int):
+            return 400, {"error": "Send the id of a timer"}
+        for timer in TIMERS:
+            if timer["id"] == timer_id:
+                TIMERS.remove(timer)
+                return 200, {"success": True}
+        return 404, {"error": "No timer with that id"}
     if method == "POST" and path == "/api/_mock/stall":
         # Mock-only helper: switches the stall on or off for a probe
         try:
@@ -493,7 +557,7 @@ def handle(method, path, body, headers=None, query=""):
             "unique_id": SETTINGS["uuid"],
             "hostname": "grilly-plus-%s.local" % SETTINGS["uuid"].replace("-", "")[:8].lower(),
             "probe_count": 8,
-            "capabilities": ["history", "eta", "clear_history", "alarm_mute", "alarm_probes",
+            "capabilities": ["history", "eta", "clear_history", "alarm_mute", "alarm_probes", "timers",
                              "calibration_offset", "diagnostics", "ota_upload"],
         }
     if method == "GET" and path == "/api/wifiscan":

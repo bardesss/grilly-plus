@@ -448,6 +448,21 @@ void task_alarm(void* pvParameters) {
             }
         }
 
+        //* Timers that ran out just now sound like a probe that reached its target
+        uint8_t finished;
+        {
+            SharedLock lock;    // the timers
+            finished = grill::timer_list.update(millis());
+            for(size_t i = 0; i < timers::MAX_TIMERS; i++){
+                if(finished & (1 << i)){ Serial.printf("Timer done: %s\n", grill::timer_list.at(i).name); }
+            }
+        }
+        if(finished){
+            alarm++;
+            grill::alarm_timers |= finished;
+            display.wake();     // the TIME'S UP page should be seen
+        }
+
         //* Trigger alarms if needed
         if(alarm > 0 && alarm_beep_todo == 0){
             alarm_beep_todo = config::alarm_beep_amount;
@@ -462,6 +477,10 @@ void task_alarm(void* pvParameters) {
             alarm_beep_todo = 0;
             warn_before = false;
             config::alarm_mute = false;
+            {
+                SharedLock lock;    // the timers
+                grill::timer_list.clear_done();
+            }
         }
 
         //* Early warning, skipped while an alarm is sounding
@@ -478,7 +497,7 @@ void task_alarm(void* pvParameters) {
         }
 
         grill::alarm_sounding = alarm_beep_todo > 0;
-        if(!grill::alarm_sounding){ grill::alarm_probes = 0; }
+        if(!grill::alarm_sounding){ grill::alarm_probes = 0; grill::alarm_timers = 0; }
 
         delay(100);
     }
@@ -571,13 +590,17 @@ void task_powerbutton(void* pvParameters) {
 
                 // A short press while a password reset code shows cancels it, so a code asked for by
                 // someone else on the network doesn't cover the temperatures for 5 minutes
-                bool cancelled_reset;
+                // A short press on the TIME'S UP page stops the finished timers and goes back to the page
+                // that was showing, instead of also moving on to the next page
+                bool cancelled_reset, stopped_timers;
                 {
                     SharedLock lock;
                     cancelled_reset = config::admin_reset.active(millis());
                     if(cancelled_reset){ config::admin_reset.cancel(); }
+                    stopped_timers = !cancelled_reset && grill::timer_list.done_mask() != 0;
+                    if(stopped_timers){ grill::timer_list.clear_done(); }
                 }
-                if(cancelled_reset){ display.wake(); display.display_update(); }
+                if(cancelled_reset || stopped_timers){ display.wake(); display.display_update(); }
                 else { display.switch_page(); }
             }
             else if (millis_pressed < medium_press_time) {

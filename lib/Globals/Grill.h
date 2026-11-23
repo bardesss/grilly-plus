@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include "History.h"
+#include "Timers.h"
 
 class Probe;
 class Buzzer;
@@ -21,6 +22,12 @@ namespace grill {
     // Bitmask of probes that caused the current alarm, bit (n-1) for probe n. Written only by
     // task_alarm, cleared with alarm_sounding once the alarm is finished or muted.
     extern volatile uint8_t alarm_probes;
+    // Bitmask of timer slots that caused the current alarm, bit n for slot n. Like alarm_probes.
+    extern volatile uint8_t alarm_timers;
+
+    // Countdown timers. Started from the API, run out in task_alarm, read by the screen, the API and
+    // mqtt: only touch them under the SharedLock.
+    extern timers::TimerList timer_list;
 
     // Wifi
     extern bool wifi_connected;
