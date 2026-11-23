@@ -612,6 +612,30 @@ components:
                 maximum: 180
                 example: 60
                 description: Minutes of rest after the target, sets the probe's rest_minutes. Left out for 0 and for a range.
+              steps:
+                type: array
+                maxItems: 3
+                description: >-
+                  Moments before the target, set as the probe's steps when the preset is picked. Sorted by c;
+                  left out when empty and dropped for a range.
+                items:
+                  type: object
+                  required: [action, c, f]
+                  properties:
+                    action:
+                      type: string
+                      minLength: 1
+                      maxLength: 16
+                      example: Wrap
+                      description: 1 to 16 bytes, no control characters, "|" or ":".
+                    c:
+                      type: integer
+                      example: 74
+                      description: Whole degrees, 1 to below the preset's c.
+                    f:
+                      type: integer
+                      example: 165
+                      description: Whole degrees, 1 to below the preset's f.
         hidden:
           type: array
           maxItems: 30
