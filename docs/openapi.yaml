@@ -174,7 +174,7 @@ components:
           description: Version of a newer GitHub release found by the last update check, empty when there is none. See GET /update/latest.
         timers:
           type: array
-          description: The running and finished timers, at most 6. They live in the grill's memory, a restart clears them.
+          description: The running and finished timers, at most 6. They run on the grill and carry on after a restart.
           items:
             $ref: '#/components/schemas/Timer'
         alarm_timers:

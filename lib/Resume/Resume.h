@@ -5,6 +5,7 @@
 #include "History.h"
 #include "NotifyEvents.h"
 #include "ProbeSteps.h"
+#include "Timers.h"
 
 // What the grill saves so a cook carries on after a restart: per probe the graph history and what
 // it already beeped and notified about. Plain C++ without Arduino, so test/test_resume runs on the
@@ -12,7 +13,7 @@
 namespace resume {
 
 constexpr uint32_t MAGIC     = 0x31535247;      // "GRS1"
-constexpr uint16_t VERSION   = 1;
+constexpr uint16_t VERSION   = 2;                 // 2: the running timers
 constexpr uint32_t MAX_AGE_S = 12 * 3600;       // an older snapshot is another cook
 
 // No default member initializers: the snapshot is copied byte for byte
@@ -31,6 +32,8 @@ struct Snapshot {
     uint32_t   saved_epoch;                      // seconds since 1970, 0 = the clock wasn't known
     uint32_t   history_clock_s;                  // the history clock when it was saved
     ProbeState probes[8];
+    uint8_t    timer_count;
+    timers::TimerState timers[timers::MAX_TIMERS];   // the running ones, TimerList::export_running()
 };
 
 // The size encode() writes: header, the snapshot and a CRC-32
