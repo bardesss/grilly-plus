@@ -139,6 +139,19 @@ void timer_message(char* out, size_t size, const char* grill_name, const char* t
     trim_utf8(out);
 }
 
+void step_message(char* out, size_t size, const char* grill_name, const char* probe_name, const char* action,
+                  int temperature, const char* unit){
+    char lower[32];
+    size_t i = 0;
+    for(; action[i] && i < sizeof(lower) - 1; i++){
+        char ch = action[i];
+        lower[i] = (ch >= 'A' && ch <= 'Z') ? (char)(ch - 'A' + 'a') : ch;
+    }
+    lower[i] = 0;
+    snprintf(out, size, "\U0001F514 %s: time to %s (%d %s) (%s)", probe_name, lower, temperature, unit, grill_name);
+    trim_utf8(out);
+}
+
 void telegram_error(char* out, size_t size, int status, const char* body){
     JsonDocument doc;
     const char* description = nullptr;
@@ -305,6 +318,11 @@ void webhook_payload(JsonDocument& doc, const WebhookInput& in){
         JsonObject timer = doc["timer"].to<JsonObject>();
         timer["name"]  = in.timer_name;
         timer["probe"] = in.timer_probe;
+    }
+    if(in.step_action != nullptr){
+        JsonObject step = doc["step"].to<JsonObject>();
+        step["action"]      = in.step_action;
+        step["temperature"] = in.step_temperature;
     }
 }
 

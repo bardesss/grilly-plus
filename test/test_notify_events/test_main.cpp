@@ -149,6 +149,12 @@ void test_messages(){
     TEST_ASSERT_EQUAL_STRING("\u23F0 Brisket: time to slice (Grilly+)", out);
     timer_message(out, sizeof(out), "Grilly+", "Rest: Brisket", 0);     // named like it, but your own
     TEST_ASSERT_EQUAL_STRING("\u23F0 Rest: Brisket: time's up (Grilly+)", out);
+    step_message(out, sizeof(out), "Grilly+", "Brisket", "Wrap", 74, "°C");
+    TEST_ASSERT_EQUAL_STRING("\U0001F514 Brisket: time to wrap (74 °C) (Grilly+)", out);
+    step_message(out, sizeof(out), "Grilly+", "Ribs", "Spritz", 180, "°F");
+    TEST_ASSERT_EQUAL_STRING("\U0001F514 Ribs: time to spritz (180 °F) (Grilly+)", out);
+    step_message(out, sizeof(out), "Grilly+", "Ribs", "Glacé BBQ", 82, "°C");     // only ASCII letters lower-cased
+    TEST_ASSERT_EQUAL_STRING("\U0001F514 Ribs: time to glacé bbq (82 °C) (Grilly+)", out);
 }
 
 void test_message_is_cut_not_overflowed(){
@@ -241,28 +247,41 @@ void test_webhook_urls(){
 void test_webhook_payload(){
     JsonDocument doc;
     webhook_payload(doc, WebhookInput{webhook_event_name(TOO_COLD), "Grilly+", "too cold", "celcius",
-                                      3, "Pit", 94.66f, 120, 100, -1, nullptr, 0});
+                                      3, "Pit", 94.66f, 120, 100, -1, nullptr, 0, nullptr, 0});
     TEST_ASSERT_EQUAL_STRING("too_cold", doc["event"].as<const char*>());
     TEST_ASSERT_EQUAL_STRING("Grilly+", doc["grill"].as<const char*>());
     TEST_ASSERT_EQUAL(3, doc["probe"]["id"].as<int>());
     TEST_ASSERT_EQUAL_STRING("Pit", doc["probe"]["name"].as<const char*>());
     TEST_ASSERT_TRUE(doc["probe"]["temperature"].as<float>() > 94.69f && doc["probe"]["temperature"].as<float>() < 94.71f);
     TEST_ASSERT_TRUE(doc["battery"].isNull());
-    webhook_payload(doc, WebhookInput{"battery_low", "Grilly+", "battery", "celcius", 0, "", 0, 0, 0, 20, nullptr, 0});
+    webhook_payload(doc, WebhookInput{"battery_low", "Grilly+", "battery", "celcius", 0, "", 0, 0, 0, 20, nullptr, 0, nullptr, 0});
     TEST_ASSERT_TRUE(doc["probe"].isNull());
     TEST_ASSERT_EQUAL(20, doc["battery"].as<int>());
     TEST_ASSERT_TRUE(doc["timer"].isNull());
-    webhook_payload(doc, WebhookInput{"timer_done", "Grilly+", "time to slice", "celcius", 0, "", 0, 0, 0, -1, "Rest: Brisket", 2});
+    webhook_payload(doc, WebhookInput{"timer_done", "Grilly+", "time to slice", "celcius", 0, "", 0, 0, 0, -1, "Rest: Brisket", 2, nullptr, 0});
     TEST_ASSERT_EQUAL_STRING("timer_done", doc["event"].as<const char*>());
     TEST_ASSERT_EQUAL_STRING("Rest: Brisket", doc["timer"]["name"].as<const char*>());
     TEST_ASSERT_EQUAL(2, doc["timer"]["probe"].as<int>());
     TEST_ASSERT_TRUE(doc["probe"].isNull());
     TEST_ASSERT_TRUE(doc["battery"].isNull());
+    TEST_ASSERT_TRUE(doc["step"].isNull());
+    webhook_payload(doc, WebhookInput{"step", "Grilly+", "time to wrap", "celcius", 1, "Brisket", 74.2f, 95, 0, -1, nullptr, 0, "Wrap", 74});
+    TEST_ASSERT_EQUAL_STRING("step", doc["event"].as<const char*>());
+    TEST_ASSERT_EQUAL_STRING("Wrap", doc["step"]["action"].as<const char*>());
+    TEST_ASSERT_EQUAL(74, doc["step"]["temperature"].as<int>());
+    TEST_ASSERT_EQUAL(1, doc["probe"]["id"].as<int>());
+    TEST_ASSERT_TRUE(doc["timer"].isNull());
+}
+
+void test_step_priorities(){
+    TEST_ASSERT_EQUAL(4, STEP_NTFY_PRIORITY);
+    TEST_ASSERT_EQUAL(0, STEP_PUSHOVER_PRIORITY);
 }
 
 int main(int argc, char** argv){
     UNITY_BEGIN();
     RUN_TEST(test_almost_then_ready_once);
+    RUN_TEST(test_step_priorities);
     RUN_TEST(test_straight_past_almost_only_says_ready);
     RUN_TEST(test_ready_again_only_after_dropping_by_the_hysteresis);
     RUN_TEST(test_no_almost_when_switched_off);

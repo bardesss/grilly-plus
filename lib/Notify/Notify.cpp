@@ -271,7 +271,8 @@ String send_webhook(const Targets& t, const Item& item, const Message& m, bool* 
                                        item.kind == PROBE ? item.probe + 1 : 0, m.probe_name.c_str(),
                                        item.temperature, item.target, item.minimum,
                                        item.kind == BATTERY ? item.percentage : -1,
-                                       item.kind == TIMER ? item.timer : nullptr, item.kind == TIMER ? item.probe : 0});
+                                       item.kind == TIMER ? item.timer : nullptr, item.kind == TIMER ? item.probe : 0,
+                                       nullptr, 0});
     String payload, answer;
     serializeJson(body, payload);
 
