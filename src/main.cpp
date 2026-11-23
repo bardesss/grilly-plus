@@ -664,6 +664,7 @@ Probe* resume_probe(int i){
 constexpr uint32_t SAVE_EVERY_S   = 300;   // while a probe is connected: at most 5 minutes lost after a crash
 constexpr uint32_t SAVE_MIN_GAP_S = 10;    // a change of alarm state is saved, but not more often than this
 constexpr uint32_t CLOCK_WAIT_S   = 120;   // how long a saved cook waits for the clock before it carries on
+constexpr uint32_t TIMER_WAIT_S   = 600;   // saved timers wait longer: their time left depends on the time off
 
 // The snapshot read at start-up, kept until decide_resume(); after that the copy each save takes.
 // Too big for a stack. resume_mutex guards it and the file: the button, battery, web and probes
@@ -674,6 +675,10 @@ volatile bool     resume_decided  = true;   // false while a loaded snapshot wai
 uint32_t          last_save_s     = 0;      // probes task only, uptime seconds
 uint32_t          saved_signature = 0;      // probes task only
 uint32_t          recheck_epoch   = 0;      // probes task only: saved_epoch of a cook carried on before the clock was known
+// Saved timers waiting for the clock (probes task only), with the time they were saved
+timers::TimerState pending_timers[timers::MAX_TIMERS];
+uint8_t           pending_timer_count = 0;
+uint32_t          pending_timer_epoch = 0;
 
 uint32_t uptime_s(){ return (uint32_t)(esp_timer_get_time() / 1000000ULL); }
 
@@ -710,6 +715,34 @@ void forget_resume(){
         probe->stalled     = false;
     }
     grill::resumed_off_s = -1;
+    pending_timer_count  = 0;
+}
+
+// Starts saved timers again, gap_s after they were saved. One that ran out in the meantime sounds
+// TIME'S UP (and notifies) once, through the alarm task.
+void restore_timers(const timers::TimerState* saved, uint8_t count, uint32_t gap_s){
+    SharedLock lock;
+    for(uint8_t t = 0; t < count; t++){
+        if(grill::timer_list.restore(saved[t], millis(), gap_s * 1000UL) < 0){
+            Serial.printf("Resume: no room for timer %s, 6 timers run\n", saved[t].name);
+        }
+    }
+    Serial.printf("Resume: %u timer(s) carried on, %u s later\n", count, gap_s);
+}
+
+// Probes task: timers carried on without knowing the time wait for the clock, up to TIMER_WAIT_S
+void restore_pending_timers(){
+    if(pending_timer_count == 0){ return; }
+    if(grill::clock_known()){
+        uint32_t gap;
+        if(resume::decide(pending_timer_epoch, (uint32_t)time(nullptr), &gap) == resume::RESTORE_KNOWN_GAP){
+            restore_timers(pending_timers, pending_timer_count, gap);
+        }
+        pending_timer_count = 0;
+    } else if(uptime_s() >= TIMER_WAIT_S){
+        Serial.println("Resume: the time is still unknown, the saved timers are dropped");
+        pending_timer_count = 0;
+    }
 }
 
 // Probes task: a cook carried on without knowing the time is checked again once the clock is known
@@ -750,6 +783,17 @@ void decide_resume(){
         }
         grill::resumed_off_s = decision == resume::RESTORE_KNOWN_GAP ? (int32_t)gap : -2;
         if(decision == resume::RESTORE_UNKNOWN_GAP){ recheck_epoch = resume_snapshot.saved_epoch; }
+    }
+    // Timers need the real time off. Saved without a clock, it can't be known.
+    uint8_t timer_count = resume_snapshot.timer_count <= timers::MAX_TIMERS ? resume_snapshot.timer_count : 0;
+    if(decision == resume::RESTORE_KNOWN_GAP){
+        restore_timers(resume_snapshot.timers, timer_count, gap);
+    } else if(decision == resume::RESTORE_UNKNOWN_GAP && resume_snapshot.saved_epoch != 0){
+        memcpy(pending_timers, resume_snapshot.timers, sizeof(pending_timers));
+        pending_timer_count = timer_count;
+        pending_timer_epoch = resume_snapshot.saved_epoch;
+    }
+    if(decision != resume::DISCARD){
         Serial.printf("Resume: carried on the cook, off for %d s\n", (int)grill::resumed_off_s);
     }
     last_save_s    = uptime;
@@ -775,6 +819,8 @@ void capture_resume(){
         }
         state.step_done  = probe->steps.done_mask();
     }
+    memset(resume_snapshot.timers, 0, sizeof(resume_snapshot.timers));
+    resume_snapshot.timer_count = (uint8_t)grill::timer_list.export_running(resume_snapshot.timers, millis());
 }
 
 void save_resume_now(){
@@ -787,9 +833,10 @@ void save_resume_now(){
     if(!saved){ Serial.println("Resume: saving the cook failed"); }
 }
 
-// Changes when something worth saving soon changes: the alarm flags, step done flags and notify state
+// Changes when something worth saving soon changes: the alarm flags, step done flags, notify state
+// and which timers run
 uint32_t resume_signature(){
-    uint8_t bytes[8 * (2 + sizeof(notify::ProbeWatch))];
+    uint8_t bytes[8 * (2 + sizeof(notify::ProbeWatch)) + timers::MAX_TIMERS];
     size_t n = 0;
     SharedLock lock;    // the steps
     for(int i = 0; i < 8; i++){
@@ -800,16 +847,24 @@ uint32_t resume_signature(){
         memcpy(bytes + n, &watch, sizeof(watch));
         n += sizeof(watch);
     }
+    for(size_t t = 0; t < timers::MAX_TIMERS; t++){
+        const timers::Timer& timer = grill::timer_list.at((int)t);
+        bytes[n++] = timer.done ? 0 : timer.id;
+    }
     return resume::crc32(bytes, n);
 }
 
-// Probes task, after each history sample: every SAVE_EVERY_S while a probe is connected, and soon
-// after the alarm state changed or the history was cleared
+// Probes task, after each history sample: every SAVE_EVERY_S while a probe is connected or a timer
+// runs, and soon after the alarm state or the timers changed or the history was cleared
 void save_resume_when_due(){
     uint32_t now = uptime_s();
     uint32_t signature = resume_signature();
     bool connected = false;
     for(int i = 0; i < 8; i++){ connected = connected || resume_probe(i)->connected; }
+    {
+        SharedLock lock;    // the timers
+        connected = connected || grill::timer_list.first_running(millis()) >= 0;
+    }
 
     bool periodic = connected && now - last_save_s >= SAVE_EVERY_S;
     bool changed  = (signature != saved_signature || grill::resume_save_requested) && now - last_save_s >= SAVE_MIN_GAP_S;
@@ -923,7 +978,7 @@ void task_probes(void* pvParameters) {
         notify::check_probes();
 
         if(!resume_decided){ decide_resume(); }
-        else { recheck_resume(); }
+        else { recheck_resume(); restore_pending_timers(); }
 
         // No samples until a saved cook is back in, or they would land before its history
         if(resume_decided && (long)(millis() - next_history_ms) >= 0){

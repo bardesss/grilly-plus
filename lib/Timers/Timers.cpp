@@ -113,4 +113,28 @@ size_t TimerList::count() const {
     return n;
 }
 
+size_t TimerList::export_running(TimerState* out, uint32_t now_ms) const {
+    size_t n = 0;
+    for(size_t i = 0; i < MAX_TIMERS; i++){
+        const Timer& timer = slots_[i];
+        if(timer.id == 0 || timer.done){ continue; }
+        TimerState& state = out[n++];
+        memset(&state, 0, sizeof(state));
+        memcpy(state.name, timer.name, sizeof(state.name));
+        state.length_ms    = timer.length_ms;
+        state.remaining_ms = remaining_ms((int)i, now_ms);
+        state.probe        = timer.probe;
+    }
+    return n;
+}
+
+int TimerList::restore(const TimerState& state, uint32_t now_ms, uint32_t gap_ms){
+    uint32_t remaining = state.remaining_ms < state.length_ms ? state.remaining_ms : state.length_ms;
+    char name[NAME_LENGTH + 1];
+    memcpy(name, state.name, NAME_LENGTH);
+    name[NAME_LENGTH] = '\0';
+    // Started as long ago as it had run, plus the time the grill was off
+    return start(name, state.length_ms, state.probe, now_ms - (state.length_ms - remaining) - gap_ms);
+}
+
 }  // namespace timers

@@ -6,7 +6,8 @@
 // Arduino, so test/test_timers runs on the host: pio test -e native
 //
 // Times are millis() values; only differences are used, so the 49.7-day wrap of millis() is harmless.
-// The list lives in RAM: a restart or switching the grill off clears it.
+// The list lives in RAM; main.cpp saves the running timers with the cook (lib/Resume) so they
+// carry on after a restart.
 namespace timers {
 
 constexpr size_t   MAX_TIMERS      = 6;
@@ -23,6 +24,14 @@ struct Timer {
     uint8_t  probe      = 0;       // 0 = a timer of its own, 1-8 = the rest timer of that probe
     bool     done       = false;
     uint32_t done_ms    = 0;
+};
+
+// A running timer as saved with the cook. No default member initializers: copied byte for byte.
+struct TimerState {
+    char     name[NAME_LENGTH + 1];
+    uint32_t length_ms;
+    uint32_t remaining_ms;
+    uint8_t  probe;
 };
 
 // Why a timer can't be started, or nullptr when it can. An empty name is fine (it becomes "Timer").
@@ -50,6 +59,13 @@ public:
     bool has_rest_for(uint8_t probe) const;
     const Timer& at(int slot) const { return slots_[slot]; }
     size_t count() const;
+
+    // Copies the running timers (not the finished ones, they already sounded) into out, which has
+    // room for MAX_TIMERS. Returns how many.
+    size_t export_running(TimerState* out, uint32_t now_ms) const;
+    // Starts a saved timer again, gap_ms after it was saved. One that ran out in the meantime fires
+    // on the next update(). Returns its slot, -1 when all slots are in use.
+    int restore(const TimerState& state, uint32_t now_ms, uint32_t gap_ms);
 
 private:
     Timer   slots_[MAX_TIMERS];

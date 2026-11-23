@@ -30,6 +30,14 @@ static void fill(Snapshot& s){
         state.step_temperatures[1] = 82;
         state.step_done  = 0b01;
     }
+    s.timer_count = 2;
+    strcpy(s.timers[0].name, "Flip the ribs");
+    s.timers[0].length_ms    = 20 * 60000UL;
+    s.timers[0].remaining_ms = 15 * 60000UL;
+    strcpy(s.timers[1].name, "Rest: Brisket");
+    s.timers[1].length_ms    = 60 * 60000UL;
+    s.timers[1].remaining_ms = 60 * 60000UL;
+    s.timers[1].probe        = 1;
 }
 
 void test_round_trip(){
@@ -40,6 +48,29 @@ void test_round_trip(){
     TEST_ASSERT_TRUE(decode(buffer, size, decoded));
     TEST_ASSERT_EQUAL_MEMORY(&snapshot, &decoded, sizeof(Snapshot));
     TEST_ASSERT_EQUAL(0, encode(snapshot, buffer, encoded_size() - 1));   // doesn't fit
+}
+
+void test_round_trip_with_timers(){
+    fill(snapshot);
+    size_t size = encode(snapshot, buffer, sizeof(buffer));
+    TEST_ASSERT_TRUE(decode(buffer, size, decoded));
+    TEST_ASSERT_EQUAL_UINT8(2, decoded.timer_count);
+    TEST_ASSERT_EQUAL_STRING("Rest: Brisket", decoded.timers[1].name);
+    TEST_ASSERT_EQUAL_UINT32(15 * 60000UL, decoded.timers[0].remaining_ms);
+    TEST_ASSERT_EQUAL_UINT8(1, decoded.timers[1].probe);
+}
+
+static void reseal(size_t size);
+
+// A grill updated from the first version finds a snapshot without timers: it is ignored
+void test_version_1_is_ignored(){
+    TEST_ASSERT_EQUAL(2, VERSION);
+    fill(snapshot);
+    size_t size = encode(snapshot, buffer, sizeof(buffer));
+    uint16_t version = 1;
+    memcpy(buffer + 4, &version, 2);
+    reseal(size);
+    TEST_ASSERT_FALSE(decode(buffer, size, decoded));
 }
 
 void test_decode_rejects_truncated_and_bad_crc(){
@@ -136,5 +167,7 @@ int main(int argc, char** argv){
     RUN_TEST(test_decide);
     RUN_TEST(test_flags_apply_only_to_same_target);
     RUN_TEST(test_steps_done_for);
+    RUN_TEST(test_round_trip_with_timers);
+    RUN_TEST(test_version_1_is_ignored);
     return UNITY_END();
 }
