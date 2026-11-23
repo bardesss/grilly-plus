@@ -7,13 +7,16 @@
 - Rest timer: give a probe a rest time in its editor (Target mode) and a timer "Rest: Brisket" starts by itself when it reaches the target. Picking a food fills in a usual rest time (brisket 60 minutes, steak 5, whole chicken 15); your own presets can have one too
 - Phone notifications for timers: "⏰ Flip the ribs: time's up", and for a rest timer "⏰ Brisket: time to slice", with its own switch (**A timer runs out**, on by default). ntfy and Pushover send it with the priority of a probe that is ready
 - Home Assistant: a **Next timer** sensor, the time the first running timer ends
+- Steps: up to 3 moments before the target per probe, like "Wrap at 74 °C". Add them under the target in the probe editor. When the probe climbs through a step the grill beeps once (switch: **Beep at a step**) and shows it on its screen; the card says "Wrap now". Each step fires once, also when the temperature dips while you wrap
 
 ### API and MQTT
 - `timers` (`id`, `name`, `remaining_s`, `length_s`, `done`, `probe`) and `alarm_timers` in `/api/grill` and the MQTT `grill` topic; `POST /api/timers` and `POST /api/timers/cancel`; a mute also clears the timers that ran out; `timers` in the capabilities
 - `rest_minutes` (0 to 180) on each probe in `/api/grill`, `/api/probes` and the MQTT topics, settable through `POST /api/probes` and `/config/probes`; presets can have `rest`
+- `steps` (`action`, `temperature`, `done`, `ignored`) and `step_alert` per probe in `/api/probes` and the MQTT `probes` topic, settable through `POST /api/probes` and `/config/probes`; `next_step`, `step_alert` and `step_alert_action` per probe in `/api/grill` and the MQTT `grill` topic; `beep_at_step` in the settings; `steps` in the capabilities
 - `notify_timer` in the settings; the webhook gets `timer_done` with a `timer` object (`name`, `probe`); Home Assistant discovery adds `next_timer`
 
 ### Changes
+- The API and MQTT buffers for the grill status, probes and settings grew from 4 to 6 KB, so 8 probes with steps and 6 timers fit
 - Settings > Notifications is a lot shorter: each service (Telegram, ntfy, Pushover, Webhook) is one row that folds open, with "Set up", "Not finished" or "Not set up" on it. Opening one closes the others
 
 ## 2026-11-22.3
