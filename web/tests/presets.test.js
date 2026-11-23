@@ -116,3 +116,18 @@ test("steps() gives the preset's steps in the unit", () => {
   assert.deepEqual(Presets.steps({ c: 121, f: 250, min_c: 107, min_f: 225, steps: [{ action: "Wrap", c: 74, f: 165 }] }, "celcius"), []);
   assert.deepEqual(Presets.steps({ c: 60, f: 140 }, "celcius"), []);
 });
+
+test("make leaves out a step the target is already at or below (it was skipped)", () => {
+  const preset = Presets.make({ name: "a", target: 70, unit: "celcius",
+    steps: [{ action: "Wrap", temperature: 80 }, { action: "Spritz", temperature: 60 }] });
+  assert.deepEqual(preset.steps, [{ action: "Spritz", c: 60, f: 140 }]);
+});
+
+test("stepsFor gives what a pick puts on the probe: [] for a range, only steps below the target", () => {
+  const pit = { c: 121, f: 250, min_c: 107, min_f: 225 };
+  assert.deepEqual(Presets.stepsFor(pit, "celcius", 121), []);
+  const odd = { c: 74.4, f: 166, steps: [{ action: "Wrap", c: 74, f: 165 }, { action: "Check", c: 60, f: 140 }] };
+  assert.deepEqual(Presets.stepsFor(odd, "celcius", 74), [{ action: "Check", temperature: 60 }]);
+  const brisket = Presets.LIST.find((p) => p.label === "Brisket");
+  assert.deepEqual(Presets.stepsFor(brisket, "fahrenheit", 203), [{ action: "Wrap", temperature: 165 }]);
+});

@@ -91,3 +91,9 @@ test("a step the target dropped below shows as skipped, and can still be removed
   w.rows.setTarget(95);
   assert.ok(!w.row("Spritz").classList.contains("ignored"));
 });
+
+test("+ Add a step without a target yet starts at the usual 75 (167 °F), not at 1", () => {
+  const w = widget([], 0);
+  w.container.querySelector(".step-add").dispatch("click");
+  assert.deepEqual(w.saved.at(-1), [{ action: "Wrap", temperature: 75 }]);
+});

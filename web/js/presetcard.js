@@ -126,7 +126,14 @@
     form.querySelectorAll(".unit-symbol").forEach((el) => { el.textContent = Format.unitSymbol(u); });
   }
 
+  // Ends typing in the form: a tap on a button doesn't always move the focus (iPhone), so the
+  // field's change, which the step rows wait for, would never come
+  function endTyping() {
+    if (form.contains(document.activeElement)) document.activeElement.blur();
+  }
+
   function openForm(index) {
+    endTyping();
     editing = index;
     formTitle.textContent = index >= 0 ? "Edit preset" : "New preset";
     fillForm(index >= 0 ? Presets.get().presets[index] : null);
@@ -150,6 +157,7 @@
 
   async function onSubmit(event) {
     event.preventDefault();
+    endTyping();
     const u = unit();
     const max = u === "fahrenheit" ? 572 : 300;
     const target = Number(inputs.target.value);

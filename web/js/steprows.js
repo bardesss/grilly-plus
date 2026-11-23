@@ -127,11 +127,13 @@ const StepRows = (() => {
       // Moving a row can drop the focus; put it back where it was
       if (active && active !== document.activeElement && rows.contains(active)) active.focus();
       add.hidden = list.length >= MAX;
-      add.textContent = list.length ? "+ Add a step" : "+ Add a step (like Wrap at " + defaultTemperature([], target || 95, options.unit()) + "°)";
+      add.textContent = list.length ? "+ Add a step" : "+ Add a step (like Wrap at " + defaultTemperature([], target || (options.unit() === "fahrenheit" ? 203 : 95), options.unit()) + "°)";
     }
 
     add.addEventListener("click", () => {
-      list.push({ action: "Wrap", temperature: defaultTemperature(list, target, options.unit()) });
+      // Without a target yet (a new preset) start from the same 95 °C (203 °F) as the link's text
+      const top = target || (options.unit() === "fahrenheit" ? 203 : 95);
+      list.push({ action: "Wrap", temperature: defaultTemperature(list, top, options.unit()) });
       changed();
     });
 

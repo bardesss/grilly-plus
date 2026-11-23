@@ -62,6 +62,12 @@ const Presets = (() => {
     return preset.steps.map((step) => ({ action: step.action, temperature: unit === "fahrenheit" ? step.f : step.c }));
   }
 
+  // What picking the preset puts on a probe whose target is now `target`: its steps below that
+  // target ([] for a range or none), so the pick always replaces the probe's steps
+  function stepsFor(preset, unit, target) {
+    return steps(preset, unit).filter((step) => step.temperature < target);
+  }
+
   function label(preset) {
     return preset.label || preset.name;
   }
@@ -118,8 +124,10 @@ const Presets = (() => {
       preset.rest = Math.min(180, Math.round(minutes));
     }
     // Steps in both units, kept below the target in each (rounding may land one on it)
-    if (!(min > 0) && Array.isArray(list) && list.length) {
-      preset.steps = list.map((step) => {
+    // A step at or above the target was skipped on the probe; it isn't saved as one just below it
+    const below = Array.isArray(list) ? list.filter((step) => step.temperature < max) : [];
+    if (!(min > 0) && below.length) {
+      preset.steps = below.map((step) => {
         const both = convert(step.temperature, unit);
         return { action: step.action, c: Math.max(1, Math.min(both.c, top.c - 1)), f: Math.max(1, Math.min(both.f, top.f - 1)) };
       }).sort((a, b) => a.c - b.c).slice(0, 3);
@@ -159,7 +167,7 @@ const Presets = (() => {
   }
 
   return {
-    LIST, OWN_GROUP, MAX_OWN, target, minimum, rest, steps, label, optionText, groups, byValue, convert, make,
+    LIST, OWN_GROUP, MAX_OWN, target, minimum, rest, steps, stepsFor, label, optionText, groups, byValue, convert, make,
     set, get, onChange, version: getVersion, load, save, shouldRename,
   };
 })();
