@@ -1,7 +1,7 @@
 openapi: '3.1.1'
 info:
   title: Grilly+
-  version: '25.3.27'
+  version: '26.11.22.3'
   description: The local Grilly+ api
 
 externalDocs:
@@ -33,7 +33,9 @@ components:
       description: Username "admin" with the configured admin_password. Only checked when an admin password is set.
   responses:
     '400':
-      description: Malformatted body
+      description: >-
+        The body is missing, isn't valid json, or a field is invalid. Nothing was changed: the whole
+        body is checked before anything is applied. The error names the field.
       content:
         application/json:
           schema:
@@ -41,10 +43,22 @@ components:
             properties:
               error:
                 type: string
-                default: "malformatted body"
-                enum:
-                  - malformatted body
+                examples:
                   - empty body
+                  - Could not deserialize json
+                  - Probes should be a json array
+                  - "Probe 2: reference_kohm and reference_beta should be > 0 for a custom probe"
+                  - beep_volume should be a number
+    '415':
+      description: Content-Type was not application/json
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Content-Type should be application/json"
   schemas:
     Grill:
       type: object
@@ -290,10 +304,12 @@ components:
           description: >
             The probe type connected to the grilleye. There are several built-in probe types. If
             you have the spec sheet of your probe you can try and setup a custom probe and provide
-            the values. Not all probes will work so YMMV.
+            the values. Not all probes will work so YMMV. Built-in types are grilleye_iris,
+            ikea_fantast, maverick_et733 and weber_igrill; any other value (for example custom) is a
+            custom probe and needs reference_kohm and reference_beta above 0.
           example: grilleye_iris
           default: grilleye_iris
-          enum:
+          examples:
             - custom
             - grilleye_iris
             - ikea_fantast
@@ -301,25 +317,28 @@ components:
             - weber_igrill
         reference_kohm:
           type:
-            - "number"
+            - "integer"
             - "null"
-          format: float
+          minimum: 0
+          maximum: 100000
           example: 100
           default: 100
           description: The reference resistance value from the spec sheet in kOhm - only used with type CUSTOM
         reference_celcius:
           type:
-            - "number"
+            - "integer"
             - "null"
-          format: float
+          minimum: -100
+          maximum: 500
           example: 25
           default: 25
           description: The reference celcius value from the spec sheet - only used with type CUSTOM
         reference_beta:
           type:
-            - "number"
+            - "integer"
             - "null"
-          format: float
+          minimum: 0
+          maximum: 100000
           examples:
             - 4250
             - null
@@ -344,6 +363,19 @@ components:
             Seconds until the target temperature at the current rate. -1 when unknown: not in
             target mode, not rising by at least 0.05 °C per minute, less than 3 minutes of
             readings, target reached, or more than 24 hours away.
+        stalled:
+          type: boolean
+          readOnly: true
+          description: >-
+            In target mode, true while the probe is in the stall: the last 20 minutes stayed
+            within 1.5 °C, between 60 and 80 °C, with the target at least 5 °C higher.
+        lid_open:
+          type: boolean
+          readOnly: true
+          description: >-
+            In range mode, true after a sharp drop (8 °C within a minute, like opening the lid)
+            until the temperature is back within 2 °C or lid_pause_minutes are over. The "too
+            low" alarm waits meanwhile.
 
     History:
       type: object
@@ -458,11 +490,11 @@ components:
               min_c:
                 type: number
                 example: 107
-                description: With min_f, makes it a range preset. Below c.
+                description: With min_f, makes it a range preset. 1 to c - 0.5; 0 or left out means no range.
               min_f:
                 type: number
                 example: 225
-                description: With min_c, makes it a range preset. Below f.
+                description: With min_c, makes it a range preset. 33 to f - 0.5; 0 or left out means no range.
         hidden:
           type: array
           maxItems: 30
@@ -518,11 +550,11 @@ components:
           type: string
           example: Grilly+
           description: The chosen grill name
-        unique_id:
+        uuid:
           type: string
           format: uuid
           example: 12abc3de-4567-89f0-a123-456b789012c3
-          description: The unique id in UUIDv4 format
+          description: The unique id in UUIDv4 format (the same value as unique_id in GET /grill)
           readOnly: true
         firmware_version:
           type: string
@@ -549,13 +581,21 @@ components:
           type: boolean
           example: true
           description: Beep when a probe is outside of a temperature range
+        cucaracha_enabled:
+          type: boolean
+          example: false
+          description: Play La Cucaracha instead of plain beeps when a probe reaches its target
         beep_volume:
           type: integer
           example: 5
-          description: The beeper volume from 1-5
+          minimum: 0
+          maximum: 5
+          description: The beeper volume from 0-5
         beep_degrees_before:
           type: integer
           example: 5
+          minimum: 0
+          maximum: 100
           description: Beep when the probe reaches this amount of degrees before the target temperature
         lid_pause_minutes:
           type: integer
@@ -682,10 +722,14 @@ components:
         screen_timeout_minutes:
           type: integer
           example: 0
+          minimum: 0
+          maximum: 10000
           description: How many minutes before the screen turns off automatically. 0 disables the timeout.
         backlight_timeout_minutes:
           type: integer
           example: 0
+          minimum: 0
+          maximum: 10000
           description: How many minutes before the backlight turns off automatically. 0 disables the timeout.
         backlight_brightness:
           type: integer
@@ -703,6 +747,8 @@ components:
         mqtt_port:
           type: integer
           example: 1883
+          minimum: 1
+          maximum: 65535
         mqtt_topic:
           type: string
           example: "grilly-plus"
@@ -763,7 +809,7 @@ components:
           type: string
           writeOnly: true
           example: "********"
-          description: The local wifi password. Write-only, never returned. Leave it out to keep the saved password, send "" to remove it.
+          description: The local wifi password, empty or at least 8 characters. Write-only, never returned. Leave it out to keep the saved password, send "" to remove it.
         local_ap_password_set:
           type: boolean
           readOnly: true
@@ -857,6 +903,8 @@ paths:
                   $ref: '#/components/schemas/Probe'
         '400':
           $ref: '#/components/responses/400'
+        '415':
+          $ref: '#/components/responses/415'
 
   /settings:
     get:
@@ -908,6 +956,8 @@ paths:
                   error:
                     type: string
                     example: "The current admin password is needed to change it"
+        '415':
+          $ref: '#/components/responses/415'
 
   /info:
     get:
@@ -1059,6 +1109,26 @@ paths:
                     example: "c should be 1 to 300 and f 34 to 572 (preset 2)"
         '413':
           description: More than fits in the grill's storage (about 3000 bytes of presets)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Too much to store, remove a few presets"
+        '415':
+          $ref: '#/components/responses/415'
+        '500':
+          description: The grill couldn't write the presets to its storage
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Couldn't store the presets"
 
   /notify:
     get:
@@ -1267,7 +1337,8 @@ paths:
         Downloads and installs the given release. The grill answers 202 and restarts into an update mode,
         which keeps its web server and MQTT off until the update is done or has failed, so expect it to
         be unreachable for a few minutes. Needs the admin password as basic auth (user admin) when one
-        is set.
+        is set. The password is checked before the body, so a wrong password answers 401 even when the
+        body is invalid too.
       security:
         - {}
         - basicAuth: []
@@ -1440,6 +1511,8 @@ paths:
                   success:
                     type: boolean
                     example: true
+        '415':
+          $ref: '#/components/responses/415'
 
   /admin/reset:
     post:
@@ -1501,7 +1574,7 @@ paths:
                     description: Tries left for this code; 0 means it has ended
                     example: 4
         '410':
-          description: No valid code: never asked for, expired, used, or ended after 5 wrong tries
+          description: "No valid code: never asked for, expired, used, or ended after 5 wrong tries"
           content:
             application/json:
               schema:
@@ -1510,6 +1583,8 @@ paths:
                   error:
                     type: string
                     example: "The code is no longer valid, ask for a new one"
+        '415':
+          $ref: '#/components/responses/415'
 
   /history:
     get:
@@ -1579,7 +1654,7 @@ paths:
                     type: boolean
                     example: true
         '400':
-          description: Malformatted body or probe_id outside 1-8
+          description: Empty or malformatted body, or probe_id outside 1-8
           content:
             application/json:
               schema:
@@ -1618,10 +1693,11 @@ paths:
             enum: ["1"]
           description: Must be "1". Without it the request is rejected before any auth check.
       security:
+        - {}
         - basicAuth: []
       requestBody:
         required: true
-        description: The firmware file
+        description: The firmware file, in any form field (the web app uses `firmware`)
         content:
           multipart/form-data:
             schema:
