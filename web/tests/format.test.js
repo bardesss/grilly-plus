@@ -160,3 +160,12 @@ test("timerMessage says time's up, or time to slice for a rest timer", () => {
   assert.deepEqual(Format.timerMessage({ name: "Flip the ribs", probe: 0 }), { title: "Flip the ribs: time's up", detail: "Timer" });
   assert.deepEqual(Format.timerMessage({ name: "Rest: Brisket", probe: 2 }), { title: "Brisket: time to slice", detail: "Rest timer" });
 });
+
+test("stepNote shows the next step, or the step to do now", () => {
+  assert.equal(Format.stepNote({ next_step: { action: "Wrap", temperature: 74 }, step_alert: -1 }), "Next: wrap at 74°");
+  assert.equal(Format.stepNote({ next_step: null, step_alert: 0, step_alert_action: "Wrap" }), "Wrap now");
+  assert.equal(Format.stepNote({ next_step: null, step_alert: 1, step_alert_action: "spritz" }), "Spritz now");
+  assert.equal(Format.stepNote({ next_step: { action: "Sauce", temperature: 88 }, step_alert: 0, step_alert_action: "Wrap" }), "Wrap now");
+  assert.equal(Format.stepNote({ next_step: null, step_alert: -1, step_alert_action: "" }), "");
+  assert.equal(Format.stepNote({}), "");     // an older grill without steps
+});

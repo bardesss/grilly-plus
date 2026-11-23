@@ -27,7 +27,8 @@
       '<div class="graph-labels" hidden><span class="graph-start"></span><span class="graph-range"></span>' +
       '<span class="graph-now">now</span><span class="graph-ready" hidden></span></div>' +
       '<div class="graph-empty">Collecting readings…</div>' +
-      '<div class="card-meta"><span class="probe-status"></span><span class="probe-time"></span></div>';
+      '<div class="card-meta"><span class="probe-status"></span><span class="probe-time"></span></div>' +
+      '<p class="probe-step" hidden></p>';
     card.addEventListener("click", () => {
       if (typeof Editor !== "undefined") Editor.open(id, card);
     });
@@ -123,9 +124,14 @@
     const time = card.querySelector(".probe-time");
     time.textContent = eta || Format.duration(probe.connected_seconds);
     time.classList.toggle("eta", eta !== "");
+    const stepText = Format.stepNote(probe);
+    const stepEl = card.querySelector(".probe-step");
+    stepEl.textContent = stepText;
+    stepEl.hidden = stepText === "";
+    stepEl.classList.toggle("now", probe.step_alert >= 0);
     drawGraph(card, probe, unit);
     card.setAttribute("aria-label",
-      probe.name + ", " + Format.temperature(probe.temperature, unit) + (statusText ? ", " + statusText : "") + (eta ? ", " + eta : "") + ". Edit probe");
+      probe.name + ", " + Format.temperature(probe.temperature, unit) + (statusText ? ", " + statusText : "") + (eta ? ", " + eta : "") + (stepText ? ", " + stepText : "") + ". Edit probe");
   }
 
   function render(status) {
