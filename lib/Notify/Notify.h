@@ -16,6 +16,10 @@ namespace notify {
     // Called by the alarm task for a timer that just ran out (probe 1-8 for a rest timer, else 0)
     void timer_done(const char* name, uint8_t probe);
 
+    // Called by the probes task for every step that fires (probe index 0-7), outside the lock.
+    // temperature and target are the probe's reading and target, for the webhook.
+    void step_reached(uint8_t probe, const char* action, int step_temperature, float temperature, float target);
+
     // POST /api/notify/test: 202 queued, 400 nothing set up, 409 no WiFi, 429 a test less than 10 s ago
     int  request_test();
 

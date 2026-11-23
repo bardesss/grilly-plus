@@ -95,6 +95,7 @@ namespace config{
     bool notify_stall                   = true;
     bool notify_battery                 = true;
     bool notify_timer                   = true;
+    bool notify_step                    = true;
 
     // ***********************************
     // * Buffers
