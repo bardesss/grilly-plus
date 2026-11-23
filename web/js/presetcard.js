@@ -1,7 +1,7 @@
 // Settings > Food presets: your own presets (add, edit, delete) and which built-in ones show in the
 // probe editor's Food list. Kept on the grill, so every phone and browser sees the same list.
 (() => {
-  let note, ownList, builtinList, form, addButton, formTitle;
+  let note, ownList, builtinList, form, addButton, formTitle, stepsGroup, stepRows;
   let inputs = {};
   let editing = -1;          // index of the preset in the form, -1 for a new one
   let deleteArmed = -1;
@@ -14,6 +14,12 @@
   }
 
   function symbol() { return Format.unitSymbol(unit()); }
+
+  // ", wrap at 74°" for the first step, "" without steps
+  function stepText(preset) {
+    const first = Presets.steps(preset, unit())[0];
+    return first ? ", " + first.action.toLowerCase() + " at " + first.temperature + "°" : "";
+  }
 
   async function save(change) {
     Controls.showNote(note, "saving");
@@ -51,7 +57,7 @@
     ownList.replaceChildren(...own.map((preset, index) => {
       const remove = button(deleteArmed === index ? "Tap again" : "Delete", "link-button danger", () => onDelete(index));
       const rest = Presets.rest(preset);
-      return row(Presets.optionText(preset, unit(), symbol()) + (rest ? ", rest " + rest + " min" : "") + (preset.group ? " (" + preset.group + ")" : ""),
+      return row(Presets.optionText(preset, unit(), symbol()) + (rest ? ", rest " + rest + " min" : "") + stepText(preset) + (preset.group ? " (" + preset.group + ")" : ""),
                  button("Edit", "link-button", () => openForm(index)), remove);
     }));
     if (!own.length) {
@@ -74,7 +80,7 @@
       show.setAttribute("aria-label", "Show " + preset.label);
       show.checked = !hidden.includes(preset.id);
       show.addEventListener("change", () => onShowChange(preset.id, show.checked));
-      return row(Presets.optionText(preset, unit(), symbol()), button("Copy", "link-button", () => copy(preset)), show);
+      return row(Presets.optionText(preset, unit(), symbol()) + stepText(preset), button("Copy", "link-button", () => copy(preset)), show);
     }));
   }
 
@@ -115,10 +121,19 @@
     const min = preset ? Presets.minimum(preset, u) : 0;
     inputs.minimum.value = min > 0 ? min : "";
     inputs.rest.value = preset && Presets.rest(preset) ? Presets.rest(preset) : "";
+    stepRows.set(preset ? Presets.steps(preset, u) : [], Number(inputs.target.value) || 0);
+    stepsGroup.hidden = min > 0;
     form.querySelectorAll(".unit-symbol").forEach((el) => { el.textContent = Format.unitSymbol(u); });
   }
 
+  // Ends typing in the form: a tap on a button doesn't always move the focus (iPhone), so the
+  // field's change, which the step rows wait for, would never come
+  function endTyping() {
+    if (form.contains(document.activeElement)) document.activeElement.blur();
+  }
+
   function openForm(index) {
+    endTyping();
     editing = index;
     formTitle.textContent = index >= 0 ? "Edit preset" : "New preset";
     fillForm(index >= 0 ? Presets.get().presets[index] : null);
@@ -142,6 +157,7 @@
 
   async function onSubmit(event) {
     event.preventDefault();
+    endTyping();
     const u = unit();
     const max = u === "fahrenheit" ? 572 : 300;
     const target = Number(inputs.target.value);
@@ -152,11 +168,12 @@
     else if (!(target >= 1 && target <= max)) problem = "The target should be 1 to " + max + Format.unitSymbol(u);
     else if (minimum && !(minimum >= 1 && minimum < target)) problem = "The minimum should be below the target";
     else if (!(Number.isInteger(rest) && rest >= 0 && rest <= 180)) problem = "The rest time should be 0 to 180 minutes";
+    else if (!minimum && stepRows.get().some((step) => step.temperature >= target)) problem = "Steps should be below the target";
     if (problem) {
       Controls.showNote(note, "error", new Error(problem));
       return;
     }
-    const preset = Presets.make({ name: inputs.name.value, group: inputs.group.value, type: inputs.type.value, target, minimum, rest, unit: u });
+    const preset = Presets.make({ name: inputs.name.value, group: inputs.group.value, type: inputs.type.value, target, minimum, rest, steps: stepRows.get(), unit: u });
     const list = Presets.get().presets;
     if (editing >= 0) list[editing] = preset; else list.push(preset);
     if (await save({ presets: list })) closeForm();
@@ -179,6 +196,7 @@
       '  <label class="field"><span>Target or maximum (<span class="unit-symbol"></span>)</span><input data-input="target" type="number" inputmode="numeric"></label>' +
       '  <label class="field"><span>Minimum, for a range (<span class="unit-symbol"></span>, optional)</span><input data-input="minimum" type="number" inputmode="numeric"></label>' +
       '  <label class="field"><span>Rest timer in minutes (optional, not for a range)</span><input data-input="rest" type="number" inputmode="numeric" min="0" max="180"></label>' +
+      '  <div class="field" data-steps-group><span class="field-label">Steps</span><div data-steps></div></div>' +
       '  <div class="form-buttons"><button type="submit" class="button primary">Save</button>' +
       '  <button type="button" class="button" data-cancel>Cancel</button></div>' +
       '</form>' +
@@ -196,6 +214,14 @@
     card.querySelectorAll("[data-input]").forEach((input) => { inputs[input.dataset.input] = input; });
     inputs.type.add(new Option("None", ""));
     Food.TYPES.forEach((type) => inputs.type.add(new Option(type.emoji + " " + type.label, type.key)));
+    stepsGroup = card.querySelector("[data-steps-group]");
+    stepRows = StepRows.create(card.querySelector("[data-steps]"), {
+      unit,
+      onChange: () => {},     // read when the form is saved
+      onError: (message) => Controls.showNote(note, "error", new Error(message)),
+    });
+    inputs.target.addEventListener("input", () => stepRows.setTarget(Number(inputs.target.value) || 0));
+    inputs.minimum.addEventListener("input", () => { stepsGroup.hidden = inputs.minimum.value !== "" && Number(inputs.minimum.value) > 0; });
 
     addButton.addEventListener("click", () => openForm(-1));
     card.querySelector("[data-cancel]").addEventListener("click", closeForm);

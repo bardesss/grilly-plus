@@ -67,6 +67,44 @@ class StepsTest(unittest.TestCase):
         self.assertEqual((400, "A step should be below the target"), (status, data["error"]))
 
 
+class PresetStepsTest(unittest.TestCase):
+    def setUp(self):
+        self.saved = json.loads(json.dumps(mock_api.PRESETS))
+
+    def tearDown(self):
+        mock_api.PRESETS.clear()
+        mock_api.PRESETS.update(self.saved)
+
+    def post(self, preset):
+        return mock_api.handle("POST", "/api/presets", json.dumps({"presets": [preset]}), JSON)
+
+    def test_steps_are_copied_sorted(self):
+        status, data = self.post({"name": "Brisket", "c": 95, "f": 203, "steps": [
+            {"action": "Spritz", "c": 82, "f": 180, "x": 1}, {"action": "Wrap", "c": 74, "f": 165}]})
+        self.assertEqual(200, status)
+        self.assertEqual([{"action": "Wrap", "c": 74, "f": 165}, {"action": "Spritz", "c": 82, "f": 180}],
+                         data["presets"][0]["steps"])
+        self.assertNotIn("steps", self.post({"name": "a", "c": 60, "f": 140, "steps": []})[1]["presets"][0])
+
+    def test_steps_dropped_for_a_range(self):
+        status, data = self.post({"name": "Pit", "c": 121, "f": 250, "min_c": 107, "min_f": 225,
+                                  "steps": [{"action": "Wrap", "c": 74, "f": 165}]})
+        self.assertEqual(200, status)
+        self.assertNotIn("steps", data["presets"][0])
+
+    def test_bad_steps_are_refused(self):
+        base = {"name": "a", "c": 95, "f": 203}
+        four = [{"action": a, "c": c, "f": c * 2} for a, c in (("a", 10), ("b", 20), ("c", 30), ("d", 40))]
+        self.assertEqual("steps: at most 3 (preset 1)", self.post(dict(base, steps=four))[1]["error"])
+        self.assertEqual("steps: at most 3 (preset 1)", self.post(dict(base, steps=5))[1]["error"])
+        for action in ("", "x" * 17, "a|b", "a:b", 5):
+            self.assertEqual("steps need an action of 1 to 16 characters (preset 1)",
+                             self.post(dict(base, steps=[{"action": action, "c": 74, "f": 165}]))[1]["error"])
+        for temperature in ({"c": 95, "f": 165}, {"c": 74, "f": 203}, {"c": 0, "f": 165}, {"c": 74}, {"c": 74.5, "f": 165}):
+            self.assertEqual("steps should be below c and f (preset 1)",
+                             self.post(dict(base, steps=[dict(temperature, action="Wrap")]))[1]["error"])
+
+
 class TimersTest(unittest.TestCase):
     def setUp(self):
         mock_api.TIMERS.clear()

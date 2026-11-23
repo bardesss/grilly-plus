@@ -170,7 +170,7 @@ Tap a probe card in the app to set it up:
 
 Not sure what temperature to use? Pick a food under **Food** and the target fills in. A probe that still has its default name ("Probe 3") gets the food's name.
 
-Your own presets go on top of that list. Set a probe up the way you like it and tap **Save as preset** in its editor, or add, edit and delete them under **Settings › Food presets**. A preset can be a target or a range, has an icon, optionally a group of its own and, for a target, a rest time. That card also lets you switch off built-in presets you never use, or copy one to tweak it. Up to 30 presets, kept on the grill, so every phone and browser has the same list.
+Your own presets go on top of that list. Set a probe up the way you like it and tap **Save as preset** in its editor, or add, edit and delete them under **Settings › Food presets**. A preset can be a target or a range, has an icon, optionally a group of its own and, for a target, a rest time and steps. Brisket, short ribs, pulled pork, pulled lamb shoulder and spare ribs come with "Wrap at 74 °C"; picking a food sets its steps on the probe (a food without steps clears them), and **Save as preset** keeps the probe's steps. That card also lets you switch off built-in presets you never use, or copy one to tweak it. Up to 30 presets, kept on the grill, so every phone and browser has the same list.
 
 Each probe can have an icon for what's on it: beef, lamb, pork, poultry, fish, sausage, vegetables, the pit or smoker, or other. Picking a food sets it, or choose one under **Icon** in the editor. It shows on the probe's card and on the grill's screen, next to the temperature with one probe, next to the probe number with two to four, and after the temperature with five or more.
 

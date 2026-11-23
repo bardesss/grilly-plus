@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "FoodTypes.h"
+#include "ProbeSteps.h"
 
 namespace presets {
 
@@ -27,6 +28,40 @@ bool number_in(JsonVariantConst value, float low, float high){
 
 std::string numbered(const char* text, size_t index){
     return std::string(text) + " (preset " + std::to_string(index + 1) + ")";
+}
+
+// Whole degrees, at least 1 and below top
+bool whole_below(JsonVariantConst value, float top){
+    return value.is<int>() && value.as<int>() >= 1 && value.as<int>() < top;
+}
+
+// A preset's steps: at most 3, the same actions a probe takes, whole degrees below the target in
+// both units. Copied into out sorted by c (an empty list adds nothing).
+std::string clean_steps(JsonVariantConst in, float c, float f, size_t index, JsonObject copy, bool range){
+    if(in.isNull()){ return ""; }
+    if(!in.is<JsonArrayConst>() || in.size() > steps::MAX_STEPS){ return numbered("steps: at most 3", index); }
+    JsonVariantConst sorted[steps::MAX_STEPS];
+    size_t count = 0;
+    for(JsonVariantConst step : in.as<JsonArrayConst>()){
+        if(!steps::check_action(step["action"] | (const char*)nullptr).empty()){
+            return numbered("steps need an action of 1 to 16 characters", index);
+        }
+        if(!whole_below(step["c"], c) || !whole_below(step["f"], f)){
+            return numbered("steps should be below c and f", index);
+        }
+        size_t j = count++;
+        while(j > 0 && sorted[j - 1]["c"].as<int>() > step["c"].as<int>()){ sorted[j] = sorted[j - 1]; j--; }
+        sorted[j] = step;
+    }
+    if(range || count == 0){ return ""; }
+    JsonArray out = copy["steps"].to<JsonArray>();
+    for(size_t i = 0; i < count; i++){
+        JsonObject s = out.add<JsonObject>();
+        s["action"] = sorted[i]["action"].as<const char*>();
+        s["c"] = sorted[i]["c"].as<int>();
+        s["f"] = sorted[i]["f"].as<int>();
+    }
+    return "";
 }
 
 }  // namespace
@@ -71,6 +106,11 @@ std::string clean_presets(JsonVariantConst in, JsonArray out){
             rest = item["rest"].as<int>();
         }
 
+        // Steps are checked before the copy is added, so a refused list leaves out as it was
+        JsonDocument step_copy;
+        std::string step_error = clean_steps(item["steps"], c, f, index, step_copy.to<JsonObject>(), has_min_c);
+        if(!step_error.empty()){ return step_error; }
+
         JsonObject copy = out.add<JsonObject>();
         copy["name"] = name;
         if(group[0]){ copy["group"] = group; }
@@ -83,6 +123,7 @@ std::string clean_presets(JsonVariantConst in, JsonArray out){
         } else if(rest > 0){
             copy["rest"] = rest;
         }
+        if(!step_copy["steps"].isNull()){ copy["steps"] = step_copy["steps"]; }
         index++;
     }
     return "";

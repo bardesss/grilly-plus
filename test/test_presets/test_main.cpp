@@ -51,6 +51,48 @@ void test_bad_presets_are_refused(){
                              clean("[{\"name\":\"a\",\"c\":60,\"f\":140,\"rest\":\"5\"}]", out).c_str());
 }
 
+void test_steps_are_copied_sorted(){
+    JsonDocument out;
+    std::string error = clean("[{\"name\":\"Brisket\",\"c\":95,\"f\":203,\"steps\":["
+                              "{\"action\":\"Spritz\",\"c\":82,\"f\":180,\"x\":1},{\"action\":\"Wrap\",\"c\":74,\"f\":165}]}]", out);
+    TEST_ASSERT_EQUAL_STRING("", error.c_str());
+    JsonArray steps = out[0]["steps"];
+    TEST_ASSERT_EQUAL(2, steps.size());
+    TEST_ASSERT_EQUAL_STRING("Wrap", steps[0]["action"]);
+    TEST_ASSERT_EQUAL(74, steps[0]["c"].as<int>());
+    TEST_ASSERT_EQUAL(165, steps[0]["f"].as<int>());
+    TEST_ASSERT_TRUE(steps[1]["x"].isNull());
+    // No steps or an empty list: no key
+    clean("[{\"name\":\"a\",\"c\":60,\"f\":140,\"steps\":[]}]", out);
+    TEST_ASSERT_TRUE(out[0]["steps"].isNull());
+}
+
+void test_steps_dropped_for_a_range(){
+    JsonDocument out;
+    std::string error = clean("[{\"name\":\"Pit\",\"c\":121,\"f\":250,\"min_c\":107,\"min_f\":225,"
+                              "\"steps\":[{\"action\":\"Wrap\",\"c\":74,\"f\":165}]}]", out);
+    TEST_ASSERT_EQUAL_STRING("", error.c_str());
+    TEST_ASSERT_TRUE(out[0]["steps"].isNull());
+}
+
+void test_bad_steps_are_refused(){
+    JsonDocument out;
+    TEST_ASSERT_EQUAL_STRING("steps: at most 3 (preset 1)",
+        clean("[{\"name\":\"a\",\"c\":95,\"f\":203,\"steps\":[{\"action\":\"a\",\"c\":10,\"f\":50},"
+              "{\"action\":\"b\",\"c\":20,\"f\":68},{\"action\":\"c\",\"c\":30,\"f\":86},{\"action\":\"d\",\"c\":40,\"f\":104}]}]", out).c_str());
+    const char* actions[] = {"\"\"", "\"abcdefghijklmnopq\"", "\"a|b\"", "\"a:b\"", "5"};
+    for(const char* action : actions){
+        std::string json = std::string("[{\"name\":\"a\",\"c\":95,\"f\":203,\"steps\":[{\"action\":") + action + ",\"c\":74,\"f\":165}]}]";
+        TEST_ASSERT_EQUAL_STRING("steps need an action of 1 to 16 characters (preset 1)", clean(json.c_str(), out).c_str());
+    }
+    const char* temperatures[] = {"\"c\":95,\"f\":165", "\"c\":74,\"f\":203", "\"c\":0,\"f\":165", "\"c\":74", "\"c\":74.5,\"f\":165"};
+    for(const char* temperature : temperatures){
+        std::string json = std::string("[{\"name\":\"a\",\"c\":95,\"f\":203,\"steps\":[{\"action\":\"Wrap\",") + temperature + "}]}]";
+        TEST_ASSERT_EQUAL_STRING("steps should be below c and f (preset 1)", clean(json.c_str(), out).c_str());
+    }
+    TEST_ASSERT_EQUAL_STRING("steps: at most 3 (preset 1)", clean("[{\"name\":\"a\",\"c\":95,\"f\":203,\"steps\":5}]", out).c_str());
+}
+
 void test_at_most_30(){
     std::string json = "[";
     for(int i = 0; i < 31; i++){ json += std::string(i ? "," : "") + "{\"name\":\"x\",\"c\":60,\"f\":140}"; }
@@ -73,6 +115,9 @@ int main(int argc, char** argv){
     UNITY_BEGIN();
     RUN_TEST(test_a_good_list_is_copied_clean);
     RUN_TEST(test_bad_presets_are_refused);
+    RUN_TEST(test_steps_are_copied_sorted);
+    RUN_TEST(test_steps_dropped_for_a_range);
+    RUN_TEST(test_bad_steps_are_refused);
     RUN_TEST(test_at_most_30);
     RUN_TEST(test_hidden_ids);
     return UNITY_END();

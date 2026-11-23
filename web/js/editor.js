@@ -121,6 +121,9 @@ const Editor = (() => {
       restStepper.set(Presets.rest(preset));
       fields.rest_minutes = restStepper.get();
     }
+    // The preset's steps replace the probe's, also when it has none (Steak after Brisket) or is a range
+    fields.steps = Presets.stepsFor(preset, unit(), targetStepper.get());
+    stepRows.set(fields.steps, targetStepper.get());
     setFood(fields.type_icon);
     if (Presets.shouldRename(nameInput.value, probeId)) {
       nameInput.value = preset.name;
@@ -138,6 +141,7 @@ const Editor = (() => {
       name, group: "", type: food ? food.value : "", unit: unit(),
       target: targetStepper.get(), minimum: mode() === "range" ? minStepper.get() : 0,
       rest: mode() === "target" ? restStepper.get() : 0,
+      steps: mode() === "target" ? stepRows.get() : [],
     });
     const list = Presets.get().presets;
     const index = list.findIndex((p) => p.name === preset.name);

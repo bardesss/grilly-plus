@@ -162,8 +162,32 @@ def clean_presets(value):
             return None, "min_c and min_f go together (preset %d)" % i
         if "min_c" in clean and not (clean["min_c"] < clean["c"] and clean["min_f"] < clean["f"]):
             return None, "min_c and min_f should be below c and f (preset %d)" % i
+        steps, error = clean_preset_steps(item.get("steps"), item["c"], item["f"], i)
+        if error:
+            return None, error
+        if steps and "min_c" not in clean:
+            clean["steps"] = steps
         out.append(clean)
     return out, ""
+
+
+def clean_preset_steps(steps, c, f, i):
+    """A preset's steps as the grill checks them (lib/Presets): (sorted copy, error)."""
+    if steps is None:
+        return [], ""
+    if not isinstance(steps, list) or len(steps) > 3:
+        return None, "steps: at most 3 (preset %d)" % i
+    out = []
+    whole = lambda v: isinstance(v, int) and not isinstance(v, bool)
+    for step in steps:
+        action = step.get("action") if isinstance(step, dict) else None
+        if (not isinstance(action, str) or not 1 <= len(action.encode()) <= 16
+                or any(ord(ch) < 0x20 or ch in "|:" for ch in action)):
+            return None, "steps need an action of 1 to 16 characters (preset %d)" % i
+        if not (whole(step.get("c")) and 1 <= step["c"] < c and whole(step.get("f")) and 1 <= step["f"] < f):
+            return None, "steps should be below c and f (preset %d)" % i
+        out.append({"action": action, "c": step["c"], "f": step["f"]})
+    return sorted(out, key=lambda s: s["c"]), ""
 
 
 FOOD_TYPES = ("", "beef", "lamb", "pork", "poultry", "fish", "sausage", "vegetables", "pit", "other")
