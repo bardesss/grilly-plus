@@ -1,6 +1,7 @@
 # Changelog (firmware only)
 
-## Unreleased
+## 2026-11-23
+Timers and rest timers, steps like "Wrap at 74 °C", and a cook that carries on after a restart or an empty battery. Grills on 2026-11-22 or later install it under Settings > Firmware updates with one tap.
 
 ### New
 - Timers: start one on the Grill page with **+ Timer**, a name and the minutes (quick picks 5, 10, 15, 30 and 60). Up to 6 run at once on the grill itself, so they keep going with the app closed. The grill's top bar shows the one that ends first. When one runs out the grill beeps like a probe alarm and shows TIME'S UP with its name until you press the button or mute it; the app shows it in the alarm popup. Timers carry on after a restart

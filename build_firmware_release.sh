@@ -45,11 +45,9 @@ esptool --chip esp32 merge-bin -o dist/grilly-plus-$(date +%Y-%m-%d)-full.bin \
   0x10000 .pio/build/esp32dev/firmware.bin
 
 # How to release
-# - Commit all code with correct commit comments
-# - run ./build_firmware_release.sh
-# - update changelog.md
-# - commit the updated src with version bump, changelog and new dist
-# - run git log to get the latest git commit hash
-# - git tag -a yy.mm.dd <git log hash>
-# - git push --tags
-# - prep release on github
+# - On a branch release-yy.mm.dd: run ./build_firmware_release.sh
+# - Add the release's section to changelog.md
+# - Commit the version bump, changelog and new dist, open a PR whose description is the short
+#   release notes (under ~2000 characters, grills read them)
+# - Merging the PR tags the merge commit and publishes the release with both bins
+#   (.github/workflows/release.yml)

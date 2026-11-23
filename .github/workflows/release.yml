@@ -1,0 +1,77 @@
+# Publishes a release when a release PR (branch release-*) is merged: tags the merge commit with the
+# version from src/Settings.h and creates the GitHub release with the -ota and -full bins from dist/.
+# The PR description becomes the release notes, so keep it short (grills read them, under ~2000
+# characters). The bins are built and committed by build_firmware_release.sh, as before.
+name: Release
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [master]
+
+permissions:
+  contents: write   # the tag and the release
+
+jobs:
+  release:
+    # Merged, from a release branch in this repository (never from a fork)
+    if: >-
+      github.event.pull_request.merged == true &&
+      startsWith(github.event.pull_request.head.ref, 'release-') &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          persist-credentials: false
+
+      - name: Version and files
+        id: version
+        run: |
+          version=$(sed -n 's/.*String grill_firmware_version *= *"\([0-9.]*\)";.*/\1/p' src/Settings.h)
+          if ! [[ "$version" =~ ^[0-9]{2}\.[0-9]{2}\.[0-9]{2}(\.[0-9]+)?$ ]]; then
+            echo "No release version in src/Settings.h: '$version'" >&2; exit 1
+          fi
+          # 26.11.23 -> 2026-11-23, 26.11.22.3 -> 2026-11-22.3
+          name="20${version:0:2}-${version:3:2}-${version:6}"
+          ota="dist/grilly-plus-$name-ota.bin"
+          full="dist/grilly-plus-$name-full.bin"
+          for file in "$ota" "$full"; do
+            [ -f "$file" ] || { echo "Missing $file" >&2; exit 1; }
+          done
+          # An ESP32 app image starts with 0xE9
+          [ "$(head -c1 "$ota" | od -An -tx1 | tr -d ' ')" = "e9" ] || { echo "$ota is not a firmware image" >&2; exit 1; }
+          if git ls-remote --exit-code --tags origin "refs/tags/$version" >/dev/null; then
+            echo "Tag $version already exists" >&2; exit 1
+          fi
+          {
+            echo "version=$version"
+            echo "name=$name"
+            echo "ota=$ota"
+            echo "full=$full"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Notes
+        env:
+          BODY: ${{ github.event.pull_request.body }}
+        run: |
+          printf '%s\n' "$BODY" > "$RUNNER_TEMP/notes.md"
+          size=$(wc -c < "$RUNNER_TEMP/notes.md")
+          if [ "$size" -gt 2000 ]; then echo "::warning::Release notes are $size characters; grills may fail to read over ~2000"; fi
+
+      - name: Tag and release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+          NAME: ${{ steps.version.outputs.name }}
+          OTA: ${{ steps.version.outputs.ota }}
+          FULL: ${{ steps.version.outputs.full }}
+          SHA: ${{ github.event.pull_request.merge_commit_sha }}
+        run: |
+          gh release create "$VERSION" "$OTA" "$FULL" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$SHA" \
+            --title "$NAME" \
+            --notes-file "$RUNNER_TEMP/notes.md" \
+            --latest
