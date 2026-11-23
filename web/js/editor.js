@@ -9,7 +9,7 @@ const Editor = (() => {
   };
 
   let backdrop, sheet, form, title, live, note, nameInput, modeInputs;
-  let targetGroup, targetLabel, minGroup, targetStepper, minStepper;
+  let targetGroup, targetLabel, minGroup, targetStepper, minStepper, restGroup, restStepper;
   let presetGroup, presetSelect, presetKey = null, savePresetButton, savePresetTimer = null;
   let typeSelect, typeName, customBox, offsetStepper;
   let foodGroup, foodInputs;
@@ -52,6 +52,7 @@ const Editor = (() => {
     presetGroup.hidden = current === "off";
     savePresetButton.hidden = current === "off";
     minGroup.hidden = current !== "range";
+    restGroup.hidden = current !== "target";
     targetLabel.textContent = current === "range" ? "Maximum temperature" : "Target temperature";
     targetStepper.setLabel(current === "range" ? "Maximum temperature" : "Target temperature");
   }
@@ -76,6 +77,10 @@ const Editor = (() => {
     } else {
       save({ target_temperature: value });
     }
+  }
+
+  function onRestChange(value) {
+    save({ rest_minutes: value });
   }
 
   function onMinChange(value) {
@@ -110,6 +115,10 @@ const Editor = (() => {
     targetStepper.set(Presets.target(preset, unit()));
     if (min > 0) minStepper.set(min);
     const fields = { target_temperature: targetStepper.get(), minimum_temperature: min > 0 ? minStepper.get() : 0, type_icon: preset.type || "" };
+    if (!(min > 0)) {
+      restStepper.set(Presets.rest(preset));
+      fields.rest_minutes = restStepper.get();
+    }
     setFood(fields.type_icon);
     if (Presets.shouldRename(nameInput.value, probeId)) {
       nameInput.value = preset.name;
@@ -126,6 +135,7 @@ const Editor = (() => {
     const preset = Presets.make({
       name, group: "", type: food ? food.value : "", unit: unit(),
       target: targetStepper.get(), minimum: mode() === "range" ? minStepper.get() : 0,
+      rest: mode() === "target" ? restStepper.get() : 0,
     });
     const list = Presets.get().presets;
     const index = list.findIndex((p) => p.name === preset.name);
@@ -222,6 +232,7 @@ const Editor = (() => {
     if (!Controls.isEditing(minStepper.input.parentElement.parentElement)) {
       minStepper.set(probe.minimum_temperature > 0 ? probe.minimum_temperature : Math.min(d.rangeMin, targetStepper.get() - 1));
     }
+    if (!Controls.isEditing(restStepper.input.parentElement.parentElement)) restStepper.set(probe.rest_minutes || 0);
     showMode(mode());   // follows the radios, which keep the user's choice while they're editing it
 
     if (!Controls.isEditing(typeSelect)) typeSelect.value = TYPES[probe.probe_type] ? probe.probe_type : "custom";
@@ -456,6 +467,8 @@ const Editor = (() => {
       '  <button type="button" class="link-button" id="editor-save-preset">Save as preset</button>' +
       '  <div class="field" id="editor-min-group"><span class="field-label">Minimum temperature</span><div id="editor-min"></div></div>' +
       '  <div class="field" id="editor-target-group"><span class="field-label" id="editor-target-label"></span><div id="editor-target"></div></div>' +
+      '  <div class="field" id="editor-rest-group"><span class="field-label">Rest timer</span><div id="editor-rest"></div>' +
+      '    <p class="hint">Starts when the target is reached, so you know when to slice. 0 is off.</p></div>' +
       '  <details class="probe-type"><summary><span>Probe type</span><span class="summary-value"><span id="editor-type-name"></span> <svg class="icon"><use href="#i-chevron"/></svg></span></summary>' +
       '    <label class="field"><span>Type</span><select id="editor-type"></select></label>' +
       '    <div id="editor-custom">' +
@@ -483,6 +496,7 @@ const Editor = (() => {
     targetGroup = sheet.querySelector("#editor-target-group");
     targetLabel = sheet.querySelector("#editor-target-label");
     minGroup = sheet.querySelector("#editor-min-group");
+    restGroup = sheet.querySelector("#editor-rest-group");
     presetGroup = sheet.querySelector("#editor-preset-group");
     presetSelect = sheet.querySelector("#editor-preset");
     savePresetButton = sheet.querySelector("#editor-save-preset");
@@ -505,6 +519,9 @@ const Editor = (() => {
     });
     minStepper = Controls.stepper(sheet.querySelector("#editor-min"), {
       min: 1, max: 299, label: "Minimum temperature", onChange: onMinChange,
+    });
+    restStepper = Controls.stepper(sheet.querySelector("#editor-rest"), {
+      min: 0, max: 180, label: "Rest timer in minutes", suffix: (v) => (v ? " min" : " (off)"), onChange: onRestChange,
     });
     offsetStepper = Controls.stepper(sheet.querySelector("#editor-offset"), {
       min: -10, max: 10, step: 0.1, label: "Calibration offset", suffix: "°C", onChange: onOffsetChange,

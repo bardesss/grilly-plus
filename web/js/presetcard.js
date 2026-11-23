@@ -50,7 +50,8 @@
     const own = Presets.get().presets;
     ownList.replaceChildren(...own.map((preset, index) => {
       const remove = button(deleteArmed === index ? "Tap again" : "Delete", "link-button danger", () => onDelete(index));
-      return row(Presets.optionText(preset, unit(), symbol()) + (preset.group ? " (" + preset.group + ")" : ""),
+      const rest = Presets.rest(preset);
+      return row(Presets.optionText(preset, unit(), symbol()) + (rest ? ", rest " + rest + " min" : "") + (preset.group ? " (" + preset.group + ")" : ""),
                  button("Edit", "link-button", () => openForm(index)), remove);
     }));
     if (!own.length) {
@@ -113,6 +114,7 @@
     inputs.target.value = preset ? Presets.target(preset, u) : "";
     const min = preset ? Presets.minimum(preset, u) : 0;
     inputs.minimum.value = min > 0 ? min : "";
+    inputs.rest.value = preset && Presets.rest(preset) ? Presets.rest(preset) : "";
     form.querySelectorAll(".unit-symbol").forEach((el) => { el.textContent = Format.unitSymbol(u); });
   }
 
@@ -144,15 +146,17 @@
     const max = u === "fahrenheit" ? 572 : 300;
     const target = Number(inputs.target.value);
     const minimum = inputs.minimum.value === "" ? 0 : Number(inputs.minimum.value);
+    const rest = inputs.rest.value === "" ? 0 : Number(inputs.rest.value);
     let problem = "";
     if (!inputs.name.value.trim()) problem = "Give the preset a name";
     else if (!(target >= 1 && target <= max)) problem = "The target should be 1 to " + max + Format.unitSymbol(u);
     else if (minimum && !(minimum >= 1 && minimum < target)) problem = "The minimum should be below the target";
+    else if (!(Number.isInteger(rest) && rest >= 0 && rest <= 180)) problem = "The rest time should be 0 to 180 minutes";
     if (problem) {
       Controls.showNote(note, "error", new Error(problem));
       return;
     }
-    const preset = Presets.make({ name: inputs.name.value, group: inputs.group.value, type: inputs.type.value, target, minimum, unit: u });
+    const preset = Presets.make({ name: inputs.name.value, group: inputs.group.value, type: inputs.type.value, target, minimum, rest, unit: u });
     const list = Presets.get().presets;
     if (editing >= 0) list[editing] = preset; else list.push(preset);
     if (await save({ presets: list })) closeForm();
@@ -174,6 +178,7 @@
       '  <label class="field"><span>Icon</span><select data-input="type"></select></label>' +
       '  <label class="field"><span>Target or maximum (<span class="unit-symbol"></span>)</span><input data-input="target" type="number" inputmode="numeric"></label>' +
       '  <label class="field"><span>Minimum, for a range (<span class="unit-symbol"></span>, optional)</span><input data-input="minimum" type="number" inputmode="numeric"></label>' +
+      '  <label class="field"><span>Rest timer in minutes (optional, not for a range)</span><input data-input="rest" type="number" inputmode="numeric" min="0" max="180"></label>' +
       '  <div class="form-buttons"><button type="submit" class="button primary">Save</button>' +
       '  <button type="button" class="button" data-cancel>Cancel</button></div>' +
       '</form>' +

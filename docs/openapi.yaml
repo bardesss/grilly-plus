@@ -240,6 +240,10 @@ components:
                   low" alarm waits meanwhile.
               type_icon:
                 $ref: '#/components/schemas/TypeIcon'
+              rest_minutes:
+                type: integer
+                example: 60
+                description: Minutes of the rest timer that starts when a probe in target mode reaches its target, 0 is off.
             example:
               probe_id: 1
               name: Ambient Probe
@@ -381,6 +385,15 @@ components:
           description: The reference beta coefficient value from the spec sheet - only used with type CUSTOM
         type_icon:
           $ref: '#/components/schemas/TypeIcon'
+        rest_minutes:
+          type: integer
+          minimum: 0
+          maximum: 180
+          example: 60
+          default: 0
+          description: >-
+            In target mode, a timer "Rest: <name>" this long starts when the probe reaches its target, so you
+            know when to slice. 0 is off. Not used in range mode.
         offset_celcius:
           type:
             - "number"
@@ -530,6 +543,12 @@ components:
                 type: number
                 example: 225
                 description: With min_c, makes it a range preset. 33 to f - 0.5; 0 or left out means no range.
+              rest:
+                type: integer
+                minimum: 0
+                maximum: 180
+                example: 60
+                description: Minutes of rest after the target, sets the probe's rest_minutes. Left out for 0 and for a range.
         hidden:
           type: array
           maxItems: 30

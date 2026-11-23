@@ -652,6 +652,24 @@ void record_history(){
     }
 }
 
+// A probe that just reached its target starts its rest timer ("Rest: Brisket"), unless it has no rest
+// time or its rest timer already runs
+void start_rest_timers(){
+    Probe* probes[] = {&grill::probe_1, &grill::probe_2, &grill::probe_3, &grill::probe_4,
+                       &grill::probe_5, &grill::probe_6, &grill::probe_7, &grill::probe_8};
+    for(uint8_t i = 0; i < 8; i++){
+        Probe* probe = probes[i];
+        if(!probe->reached_target){ continue; }
+        probe->reached_target = false;
+        SharedLock lock;    // the timers and the probe name
+        if(probe->rest_minutes <= 0 || probe->minimum_temperature > 0 || grill::timer_list.has_rest_for(i + 1)){ continue; }
+        String name = "Rest: " + probe->name;
+        if(grill::timer_list.start(name.c_str(), (uint32_t)probe->rest_minutes * 60000UL, i + 1, millis()) < 0){
+            Serial.printf("No room for the rest timer of probe %u, 6 timers run\n", i + 1);
+        }
+    }
+}
+
 void task_probes(void* pvParameters) {
     Serial.println("Launching task :: PROBES");
     delay(5);   //Give FreeRtos a chance to properly schedule the task
@@ -674,6 +692,7 @@ void task_probes(void* pvParameters) {
         grill::probe_6.calculate_temperature(); grill::probe_6.check_temperature_status();
         grill::probe_7.calculate_temperature(); grill::probe_7.check_temperature_status();
         grill::probe_8.calculate_temperature(); grill::probe_8.check_temperature_status();
+        start_rest_timers();
         notify::check_probes();
 
         if((long)(millis() - next_history_ms) >= 0){

@@ -114,17 +114,17 @@ def update_latest():
 PROBES = [
     {"probe_id": 1, "name": "Brisket", "target_temperature": 95.0, "minimum_temperature": 0.0, "connected": True,
      "type_icon": "beef", "probe_type": "grilleye_iris", "reference_kohm": 100, "reference_celcius": 25, "reference_beta": 4250,
-     "offset_celcius": 0.0},
+     "offset_celcius": 0.0, "rest_minutes": 60},
     {"probe_id": 2, "name": "Ribs", "target_temperature": 93.0, "minimum_temperature": 88.0, "connected": True,
      "type_icon": "pork", "probe_type": "grilleye_iris", "reference_kohm": 100, "reference_celcius": 25, "reference_beta": 4250,
-     "offset_celcius": 0.0},
+     "offset_celcius": 0.0, "rest_minutes": 0},
     {"probe_id": 3, "name": "Grill", "target_temperature": 0.0, "minimum_temperature": 0.0, "connected": True,
      "type_icon": "pit", "probe_type": "maverick_et733", "reference_kohm": 200, "reference_celcius": 25, "reference_beta": 4250,
-     "offset_celcius": 0.0},
+     "offset_celcius": 0.0, "rest_minutes": 0},
 ] + [
     {"probe_id": n, "name": "Probe %d" % n, "target_temperature": 0.0, "minimum_temperature": 0.0, "connected": False,
      "type_icon": "", "probe_type": "grilleye_iris", "reference_kohm": 100, "reference_celcius": 25, "reference_beta": 4250,
-     "offset_celcius": 0.0}
+     "offset_celcius": 0.0, "rest_minutes": 0}
     for n in range(4, 9)
 ]
 
@@ -152,7 +152,12 @@ def clean_presets(value):
             return None, "type should be empty or a food type (preset %d)" % i
         if not (number(item.get("c")) and 1 <= item["c"] <= 300 and number(item.get("f")) and 34 <= item["f"] <= 572):
             return None, "c should be 1 to 300 and f 34 to 572 (preset %d)" % i
-        clean = {k: item[k] for k in ("name", "group", "type", "c", "f", "min_c", "min_f") if item.get(k) not in (None, "", 0)}
+        rest = item.get("rest", 0)
+        if rest is None:
+            rest = 0
+        if not isinstance(rest, int) or isinstance(rest, bool) or not 0 <= rest <= 180:
+            return None, "rest should be 0 to 180 minutes (preset %d)" % i
+        clean = {k: item[k] for k in ("name", "group", "type", "c", "f", "min_c", "min_f", "rest") if item.get(k) not in (None, "", 0)}
         if ("min_c" in clean) != ("min_f" in clean):
             return None, "min_c and min_f go together (preset %d)" % i
         if "min_c" in clean and not (clean["min_c"] < clean["c"] and clean["min_f"] < clean["f"]):
@@ -293,7 +298,8 @@ def grill():
              "connected": p["connected"],
              "connected_seconds": int(time.time() - CONNECTED_AT[p["probe_id"]]) if p["connected"] else 0,
              "alarm": p["probe_id"] == ALARM_PROBE_ID, "eta_seconds": eta_seconds(p),
-             "stalled": p["probe_id"] in STALLED, "lid_open": False, "type_icon": p["type_icon"]}
+             "stalled": p["probe_id"] in STALLED, "lid_open": False, "type_icon": p["type_icon"],
+             "rest_minutes": p["rest_minutes"]}
             for p in PROBES
         ],
     }
@@ -481,6 +487,9 @@ def handle(method, path, body, headers=None, query=""):
                 offset = float(update["offset_celcius"])
                 if not -10.0 <= offset <= 10.0:
                     return 400, {"error": "offset_celcius should be between -10.0 and 10.0"}
+            rest = update.get("rest_minutes", 0)
+            if not isinstance(rest, int) or isinstance(rest, bool) or not 0 <= rest <= 180:
+                return 400, {"error": "rest_minutes should be between 0 and 180"}
             if "type_icon" in update and update["type_icon"] not in FOOD_TYPES:
                 return 400, {"error": "type_icon should be empty or one of beef, lamb, pork, poultry, fish, sausage, vegetables, pit, other"}
         for update in updates:

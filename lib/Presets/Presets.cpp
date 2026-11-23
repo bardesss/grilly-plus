@@ -62,6 +62,15 @@ std::string clean_presets(JsonVariantConst in, JsonArray out){
             return numbered("min_c and min_f should be below c and f", index);
         }
 
+        // Minutes of rest after the target, 0 or missing is none; a range has no rest
+        int rest = 0;
+        if(!item["rest"].isNull()){
+            if(!item["rest"].is<int>() || item["rest"].as<int>() < 0 || item["rest"].as<int>() > MAX_REST){
+                return numbered("rest should be 0 to 180 minutes", index);
+            }
+            rest = item["rest"].as<int>();
+        }
+
         JsonObject copy = out.add<JsonObject>();
         copy["name"] = name;
         if(group[0]){ copy["group"] = group; }
@@ -71,6 +80,8 @@ std::string clean_presets(JsonVariantConst in, JsonArray out){
         if(has_min_c){
             copy["min_c"] = item["min_c"].as<float>();
             copy["min_f"] = item["min_f"].as<float>();
+        } else if(rest > 0){
+            copy["rest"] = rest;
         }
         index++;
     }

@@ -182,8 +182,9 @@ void Probe::check_temperature_status(){
             //* Ready temperature beep + alarm. has_beeped is also set when the alarm is switched off,
             //* so switching it on later doesn't sound an alarm for a target that was already reached.
             if(Probe::temperature >= Probe::target_temperature && Probe::has_beeped == false){
-                Probe::has_beeped = true;
-                Probe::alarm      = config::beep_on_ready;
+                Probe::has_beeped     = true;
+                Probe::alarm          = config::beep_on_ready;
+                Probe::reached_target = true;   // also with the beep off: the rest timer still starts
             }
 
             //* Reset the alarm and beep if the temperature drops way too low
@@ -246,6 +247,10 @@ void Probe::set_name(String probe_name){
 void Probe::set_type_icon(String type_icon){
     SharedLock lock;    // type_icon is read by the screen, web and mqtt tasks
     Probe::type_icon = type_icon;
+}
+
+void Probe::set_rest_minutes(int minutes){
+    Probe::rest_minutes = minutes;
 }
 
 void Probe::set_offset(float offset_celcius){
