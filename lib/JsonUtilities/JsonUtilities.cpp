@@ -2,6 +2,7 @@
 #include <Preferences.h>
 #include <WiFi.h>
 #include <chrono>
+#include "esp_timer.h"
 
 #include "FoodTypes.h"
 #include "Config.h"
@@ -166,7 +167,7 @@ String read_steps(JsonVariantConst value, steps::Step* list, size_t* count, floa
 // in Probe::calculate_temperature.
 long connected_seconds(const Probe& probe){
     if(!probe.connected){ return 0; }
-    long now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    long now = (long)(esp_timer_get_time() / 1000000LL);    // not the system clock: NTP sets it
     return now - probe.connected_time;
 }
 

@@ -3,6 +3,7 @@
 #include <math.h>
 #include <algorithm>
 #include <chrono>
+#include "esp_timer.h"
 
 #include "Config.h"
 #include "Buzzer.h"
@@ -125,7 +126,7 @@ float Probe::calculate_temperature() {
         if (Probe::state_change_readings >= READINGS_TO_CHANGE_STATE) {
             Probe::state_change_readings = 0;
             Probe::connected = reading_connected;
-            if (Probe::connected){Probe::connected_time = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();}
+            if (Probe::connected){Probe::connected_time = (long)(esp_timer_get_time() / 1000000LL);}
         }
     } else {
         Probe::state_change_readings = 0;

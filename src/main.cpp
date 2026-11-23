@@ -673,6 +673,7 @@ SemaphoreHandle_t resume_mutex    = nullptr;
 volatile bool     resume_decided  = true;   // false while a loaded snapshot waits for decide_resume()
 uint32_t          last_save_s     = 0;      // probes task only, uptime seconds
 uint32_t          saved_signature = 0;      // probes task only
+uint32_t          recheck_epoch   = 0;      // probes task only: saved_epoch of a cook carried on before the clock was known
 
 uint32_t uptime_s(){ return (uint32_t)(esp_timer_get_time() / 1000000ULL); }
 
@@ -695,6 +696,34 @@ void restore_resume_flags(){
     Serial.println("Resume: found a saved cook");
 }
 
+// Probes task: undoes restore_resume_flags() (and the graph) for a saved cook that turns out to be
+// another, older one. Without it yesterday's steps would stay done on today's cook.
+void forget_resume(){
+    SharedLock lock;
+    for(int i = 0; i < 8; i++){
+        Probe* probe = resume_probe(i);
+        probe->steps.rearm();
+        probe->restore_beep_flags(0);
+        notify::restore_watch(i, notify::ProbeWatch());
+        grill::probe_history[i].clear();
+        probe->eta_seconds = history::ETA_UNKNOWN;
+        probe->stalled     = false;
+    }
+    grill::resumed_off_s = -1;
+}
+
+// Probes task: a cook carried on without knowing the time is checked again once the clock is known
+void recheck_resume(){
+    if(recheck_epoch == 0 || !grill::clock_known()){ return; }
+    uint32_t gap;
+    bool older = resume::decide(recheck_epoch, (uint32_t)time(nullptr), &gap) == resume::DISCARD;
+    recheck_epoch = 0;
+    if(!older){ return; }
+    Serial.println("Resume: the cook carried on was older than 12 hours, starting fresh");
+    forget_resume();
+    grill::resume_save_requested = true;    // the file holds the old cook too
+}
+
 // Probes task: once the clock is known, or after CLOCK_WAIT_S without it, the saved graph comes back
 // with a gap for the time the grill was off. A snapshot older than 12 hours is another cook.
 void decide_resume(){
@@ -707,6 +736,7 @@ void decide_resume(){
     if(decision == resume::DISCARD){
         Serial.println("Resume: the saved cook is older than 12 hours, starting fresh");
         resume_store::erase();
+        forget_resume();
     } else {
         // At least the time since start-up passed. With an unknown gap that is all there is, which
         // still leaves a visible break in the graph.
@@ -719,6 +749,7 @@ void decide_resume(){
             grill::probe_history[i].add_gap(now_s, off);
         }
         grill::resumed_off_s = decision == resume::RESTORE_KNOWN_GAP ? (int32_t)gap : -2;
+        if(decision == resume::RESTORE_UNKNOWN_GAP){ recheck_epoch = resume_snapshot.saved_epoch; }
         Serial.printf("Resume: carried on the cook, off for %d s\n", (int)grill::resumed_off_s);
     }
     last_save_s    = uptime;
@@ -892,6 +923,7 @@ void task_probes(void* pvParameters) {
         notify::check_probes();
 
         if(!resume_decided){ decide_resume(); }
+        else { recheck_resume(); }
 
         // No samples until a saved cook is back in, or they would land before its history
         if(resume_decided && (long)(millis() - next_history_ms) >= 0){
