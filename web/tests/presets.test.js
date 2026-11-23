@@ -84,3 +84,35 @@ test("rest times are 0 to 180 minutes, and a range has none", () => {
     { name: "Flat", type: "beef", c: 93, f: 199, rest: 45 });
   assert.equal(Presets.make({ name: "Pit", target: 121, minimum: 107, rest: 45, unit: "celcius" }).rest, undefined);
 });
+
+test("built-in wrap steps are below the target in both units", () => {
+  const withSteps = Presets.LIST.filter((p) => p.steps);
+  assert.deepEqual(withSteps.map((p) => p.label), ["Brisket", "Short ribs", "Pulled lamb shoulder", "Pulled pork", "Spare ribs"]);
+  for (const preset of withSteps) {
+    for (const step of preset.steps) {
+      assert.ok(step.c < preset.c && step.f < preset.f, preset.label);
+      assert.equal(step.action, "Wrap");
+    }
+  }
+});
+
+test("make keeps steps in both units and drops them for a range", () => {
+  const preset = Presets.make({ name: "Brisket", target: 95, unit: "celcius",
+    steps: [{ action: "Spritz", temperature: 82 }, { action: "Wrap", temperature: 74 }] });
+  assert.deepEqual(preset.steps, [{ action: "Wrap", c: 74, f: 165 }, { action: "Spritz", c: 82, f: 180 }]);
+  // in °F, and a step that would round onto the target stays below it
+  const f = Presets.make({ name: "Ribs", target: 200, unit: "fahrenheit", steps: [{ action: "Wrap", temperature: 199 }] });
+  assert.deepEqual(f.steps, [{ action: "Wrap", c: 92, f: 199 }]);
+  assert.equal(f.c, 93);
+  const range = Presets.make({ name: "Pit", target: 121, minimum: 107, unit: "celcius", steps: [{ action: "Wrap", temperature: 74 }] });
+  assert.equal(range.steps, undefined);
+  assert.equal(Presets.make({ name: "a", target: 60, unit: "celcius", steps: [] }).steps, undefined);
+});
+
+test("steps() gives the preset's steps in the unit", () => {
+  const brisket = Presets.LIST.find((p) => p.label === "Brisket");
+  assert.deepEqual(Presets.steps(brisket, "celcius"), [{ action: "Wrap", temperature: 74 }]);
+  assert.deepEqual(Presets.steps(brisket, "fahrenheit"), [{ action: "Wrap", temperature: 165 }]);
+  assert.deepEqual(Presets.steps({ c: 121, f: 250, min_c: 107, min_f: 225, steps: [{ action: "Wrap", c: 74, f: 165 }] }, "celcius"), []);
+  assert.deepEqual(Presets.steps({ c: 60, f: 140 }, "celcius"), []);
+});
