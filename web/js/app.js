@@ -82,6 +82,7 @@ const App = (() => {
       document.getElementById("offline-banner").hidden = true;
       renderHeader(status);
       renderAlarmMute(status);
+      sendClock(status);
       listeners.forEach((listener) => listener(status));
     } catch (error) {
       failures += 1;
@@ -93,6 +94,15 @@ const App = (() => {
       polling = false;
       schedule(document.hidden ? BACKGROUND_POLL_MS : 1000);
     }
+  }
+
+  // A grill without internet (on its hotspot) doesn't know the time; it needs it to tell how long it was
+  // off when a cook carries on after a restart. Sent once per page load; a 409 means it got it elsewhere.
+  let clockSent = false;
+  function sendClock(s) {
+    if (s.clock_known !== false || clockSent) return;
+    clockSent = true;
+    Api.post("/api/time", { epoch: Math.floor(Date.now() / 1000) }).catch(() => {});
   }
 
   // One request at a time: the next poll is only planned after the previous one finished

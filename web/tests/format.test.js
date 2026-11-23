@@ -91,6 +91,17 @@ test("off reason labels include the low battery switch-off", () => {
   assert.equal(Format.offReasonText("something_new"), "Unknown");
 });
 
+test("resumeText says how long the grill was off", () => {
+  assert.equal(Format.resumeText(-1), "");
+  assert.equal(Format.resumeText(undefined), "");
+  assert.equal(Format.resumeText(-2), "Carried on the cook");
+  assert.equal(Format.resumeText(0), "Carried on the cook, off for 0 min");
+  assert.equal(Format.resumeText(120), "Carried on the cook, off for 2 min");
+  assert.equal(Format.resumeText(150), "Carried on the cook, off for 3 min");
+  assert.equal(Format.resumeText(3600), "Carried on the cook, off for 1 h 0 min");
+  assert.equal(Format.resumeText(3900), "Carried on the cook, off for 1 h 5 min");
+});
+
 test("checkedAgo words", () => {
   assert.equal(Format.checkedAgo(-1), "Never checked");
   assert.equal(Format.checkedAgo(undefined), "Never checked");

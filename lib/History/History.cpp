@@ -64,6 +64,15 @@ void ProbeHistory::add(uint32_t now_s, bool connected, float celcius){
     add_value(now_s, NO_VALUE);
 }
 
+void ProbeHistory::add_gap(uint32_t now_s, uint32_t seconds){
+    bool empty = fine_count_ == 0 && coarse_count_ == 0 && slot_samples_ == 0;
+    if(empty){ return; }
+    uint32_t samples = (seconds < MAX_GAP_S ? seconds : MAX_GAP_S) / FINE_INTERVAL_S;
+    for(uint32_t k = samples; k > 0; k--){
+        add_value(now_s - (k - 1) * FINE_INTERVAL_S, NO_VALUE);
+    }
+}
+
 void ProbeHistory::add_value(uint32_t now_s, int16_t value){
     fine_[fine_head_] = value;
     fine_head_        = (fine_head_ + 1) % FINE_SIZE;

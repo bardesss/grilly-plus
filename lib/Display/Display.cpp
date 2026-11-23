@@ -4,6 +4,7 @@
 #include <utility>
 #include <WiFi.h>
 #include <chrono>
+#include "esp_timer.h"
 #include <string>
 #include <iomanip>
 #include <sstream>
@@ -809,7 +810,7 @@ std::string disp::get_connection_time(int connectedProbe) {
         break;
     }
     
-    elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count() - connected_since;
+    elapsed_seconds = (long)(esp_timer_get_time() / 1000000LL) - connected_since;    // uptime, like connected_time
     std::ostringstream oss;
 
     int hours = elapsed_seconds / 3600;   

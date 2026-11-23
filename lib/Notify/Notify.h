@@ -2,6 +2,8 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 
+#include "NotifyEvents.h"
+
 // Phone notifications through Telegram, ntfy, Pushover and a webhook. The probes and battery tasks only detect events
 // (NotifyEvents) and queue them; a short-lived task turns them into text and sends them over HTTPS,
 // checked against the Mozilla root certificates in certs/x509_crt_bundle.bin. It starts when there
@@ -12,6 +14,12 @@ namespace notify {
     // Called by the probes task for every reading, and by the battery task for every battery reading
     void check_probes();
     void check_battery(bool read_ok, int percentage, bool charging);
+
+    // What a probe (index 0-7) already notified about, for the resume snapshot. Written by the
+    // probes task; a copy taken from another task right before switching off may be a reading old.
+    ProbeWatch watch(int probe);
+    // Puts back a saved watch at start-up, before the probes task runs
+    void restore_watch(int probe, const ProbeWatch& watch);
 
     // Called by the alarm task for a timer that just ran out (probe 1-8 for a rest timer, else 0)
     void timer_done(const char* name, uint8_t probe);

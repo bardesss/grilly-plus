@@ -403,6 +403,7 @@ int request_install(const String& version, String& error){
         last_install_error   = "";
         install_error_loaded = true;
     }
+    save_resume_now();
     config::config_helper.save_off_reason("update");
     Serial.printf("Update to %s requested, restarting into the update mode\n", offer_version);
     return 202;

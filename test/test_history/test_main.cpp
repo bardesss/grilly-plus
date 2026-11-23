@@ -25,6 +25,32 @@ static void feed_unplugged(int count){
     }
 }
 
+void test_gap_adds_no_values(){
+    feed(30, 60, 0.1f);
+    int coarse_before = h.coarse_count();
+    t += 600;
+    h.add_gap(t, 600);
+    TEST_ASSERT_EQUAL(90, h.fine_count());
+    for(int i = 30; i < 90; i++){ TEST_ASSERT_EQUAL_INT16(NO_VALUE, h.fine_at(i)); }
+    TEST_ASSERT_EQUAL_UINT32(t, h.fine_newest_s());
+    TEST_ASSERT_TRUE(h.coarse_count() > coarse_before);
+    TEST_ASSERT_EQUAL_INT16(NO_VALUE, h.coarse_at(h.coarse_count() - 1));
+    // An empty history stays empty
+    h.clear();
+    h.add_gap(t, 600);
+    TEST_ASSERT_EQUAL(0, h.fine_count());
+    TEST_ASSERT_EQUAL(0, h.coarse_count());
+}
+
+void test_gap_is_capped(){
+    feed(30, 60, 0.1f);
+    t += 48 * 3600;
+    h.add_gap(t, 48 * 3600);
+    // 12 hours of 10 s samples: the coarse tier doubled to 480 s per value, 90 values
+    TEST_ASSERT_EQUAL_UINT32(480, h.coarse_interval_s());
+    TEST_ASSERT_TRUE(h.coarse_count() <= COARSE_SIZE);
+}
+
 void test_to_tenths(){
     TEST_ASSERT_EQUAL_INT16(714, to_tenths(71.44f));
     TEST_ASSERT_EQUAL_INT16(-50, to_tenths(-5.04f));
@@ -315,6 +341,8 @@ void test_lid_only_in_range_mode_with_a_pause(){
 int main(int argc, char** argv){
     UNITY_BEGIN();
     RUN_TEST(test_to_tenths);
+    RUN_TEST(test_gap_adds_no_values);
+    RUN_TEST(test_gap_is_capped);
     RUN_TEST(test_fine_keeps_the_last_180_samples);
     RUN_TEST(test_coarse_slot_averages_six_samples);
     RUN_TEST(test_coarse_merges_pairs_and_doubles_the_interval_when_full);

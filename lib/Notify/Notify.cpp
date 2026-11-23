@@ -369,6 +369,14 @@ void setup(){
     queue = xQueueCreate(QUEUE_LENGTH, sizeof(Item));
 }
 
+ProbeWatch watch(int probe){
+    return probe_watch[probe];
+}
+
+void restore_watch(int probe, const ProbeWatch& watch){
+    probe_watch[probe] = watch;
+}
+
 void check_probes(){
     bool enabled, lid_pause_on;
     int almost;

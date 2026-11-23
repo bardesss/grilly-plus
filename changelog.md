@@ -10,6 +10,7 @@
 - Steps: up to 3 moments before the target per probe, like "Wrap at 74 °C". Add them under the target in the probe editor. When the probe climbs through a step the grill beeps once (switch: **Beep at a step**) and shows it on its screen; the card says "Wrap now". Each step fires once, also when the temperature dips while you wrap
 - Steps in presets: brisket, short ribs, pulled pork, pulled lamb shoulder and spare ribs come with "Wrap at 74 °C". Picking a food sets its steps, **Save as preset** keeps them, and the preset form under Settings has them too
 - Phone notifications for steps: "🔔 Brisket: time to wrap (74 °C)", with its own switch (**A step is reached**, on by default). ntfy sends it with high priority, Pushover with normal
+- The cook carries on after a restart: an empty battery, the button, a crash or a firmware update. The grill saves the graph and what it already beeped about every 5 minutes and right before it switches itself off; started again within 12 hours, the graph goes on with a gap for the time it was off, and a probe that was already ready doesn't beep again. About says "Carried on the cook, off for 23 min". The grill gets the time from the internet on WiFi, or from the app on its hotspot. Timers don't carry on yet
 
 ### API and MQTT
 - `timers` (`id`, `name`, `remaining_s`, `length_s`, `done`, `probe`) and `alarm_timers` in `/api/grill` and the MQTT `grill` topic; `POST /api/timers` and `POST /api/timers/cancel`; a mute also clears the timers that ran out; `timers` in the capabilities
@@ -18,6 +19,7 @@
 - `steps` (`action`, `temperature`, `done`, `ignored`) and `step_alert` per probe in `/api/probes` and the MQTT `probes` topic, settable through `POST /api/probes` and `/config/probes`; `next_step`, `step_alert` and `step_alert_action` per probe in `/api/grill` and the MQTT `grill` topic; `beep_at_step` in the settings; `steps` in the capabilities
 - `notify_step` in the settings; the webhook gets `step` with a `step` object (`action`, `temperature`)
 - `notify_timer` in the settings; the webhook gets `timer_done` with a `timer` object (`name`, `probe`); Home Assistant discovery adds `next_timer`
+- `clock_known` and `resumed_off_s` in `/api/grill`; `POST /api/time` (`{"epoch": …}`) sets the grill's clock while it doesn't know the time
 
 ### Changes
 - The API and MQTT buffers for the grill status, probes and settings grew from 4 to 6 KB, so 8 probes with steps and 6 timers fit

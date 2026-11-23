@@ -2,6 +2,7 @@
 #include <Preferences.h>
 #include <WiFi.h>
 #include <chrono>
+#include "esp_timer.h"
 
 #include "FoodTypes.h"
 #include "Config.h"
@@ -166,7 +167,7 @@ String read_steps(JsonVariantConst value, steps::Step* list, size_t* count, floa
 // in Probe::calculate_temperature.
 long connected_seconds(const Probe& probe){
     if(!probe.connected){ return 0; }
-    long now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    long now = (long)(esp_timer_get_time() / 1000000LL);    // not the system clock: NTP sets it
     return now - probe.connected_time;
 }
 
@@ -267,6 +268,8 @@ void JsonUtilities::load_json_status(char *buffer){
     jsondoc["battery_millivolts"] = grill::battery_millivolts;
     jsondoc["last_reset_reason"]  = grill::last_reset_reason;
     jsondoc["last_off_reason"]    = grill::last_off_reason;
+    jsondoc["clock_known"]        = grill::clock_known();
+    jsondoc["resumed_off_s"]      = (int32_t)grill::resumed_off_s;
     jsondoc["wifi_connected"]     = grill::wifi_connected;
     jsondoc["wifi_ssid"]          = config::wifi_ssid;
     jsondoc["wifi_ip"]            = grill::wifi_ip;
@@ -838,6 +841,7 @@ jsonResult JsonUtilities::clear_json_history(char* jsondata){
 
     SharedLock lock;    // the probes task writes the history
     grill::probe_history[probe_id - 1].clear();
+    grill::resume_save_requested = true;    // or the cleared graph comes back after a restart
     probe->eta_seconds = history::ETA_UNKNOWN;
     probe->stalled = false;
     return {true, ""};
