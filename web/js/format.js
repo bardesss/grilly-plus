@@ -68,6 +68,16 @@ const Format = (() => {
     return OFF_REASON_LABELS[code] || "Unknown";
   }
 
+  // The About page's "Last start": whether the grill carried on a cook after a restart, and how long
+  // it was off (resumed_off_s: -1 not resumed, -2 the time off is unknown, else seconds)
+  function resumeText(seconds) {
+    if (!(seconds >= -2) || seconds === -1) return "";
+    if (seconds === -2) return "Carried on the cook";
+    const minutes = Math.round(seconds / 60);
+    const off = minutes >= 60 ? Math.floor(minutes / 60) + " h " + (minutes % 60) + " min" : minutes + " min";
+    return "Carried on the cook, off for " + off;
+  }
+
   // A minimum above 0 means range mode, a target above 0 without a minimum means target mode
   function alarmMode(probe) {
     if (!(probe.target_temperature > 0)) return "off";
@@ -215,7 +225,7 @@ const Format = (() => {
   }
 
   return { readyAt, progressNote, alarmMessage, timerLeft, timerMessage, stepNote, countdown, checkedAgo, updateStatus, unitSymbol, number, temperature, signal, battery, batteryDiagnostics, resetReasonText,
-           offReasonText, alarmMode, probeStatus, alarmLabel, duration, ago, eta, emptySockets, changedFields };
+           offReasonText, resumeText, alarmMode, probeStatus, alarmLabel, duration, ago, eta, emptySockets, changedFields };
 })();
 
 if (typeof module === "object" && module.exports) module.exports = Format;

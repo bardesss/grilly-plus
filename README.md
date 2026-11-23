@@ -84,6 +84,7 @@ Grilly+ is a fork of [Free-Grilly](https://github.com/epiecs/free-grilly) by [Ep
 - **Alarms** when a probe reaches its target or leaves its range, following the "Beep when ready" and "Beep outside target" settings. The label of the probe that's beeping blinks. A muted alarm stays muted when you rename a probe or change a setting.
 - **Info screen** with the grill's name, firmware, address, WiFi, and the hotspot's name and password.
 - **Low-battery protection:** at 5 % or 3.2 V (not charging, confirmed for 15 seconds) the grill beeps three times and switches itself off cleanly, before an empty battery causes brownouts.
+- **The cook carries on** after an empty battery, a switch-off or a crash: the graph and the alarms pick up where they were (see [Restarts](#restarts)).
 - **Reliable:** it starts back up by itself after an update, a crash or a factory reset. Empty probe sockets don't flicker, and the button is debounced so electrical noise can't fake a press.
 
 ### In the web app
@@ -159,6 +160,12 @@ Meat needs to rest before you slice it. Set a **Rest timer** in a probe's editor
 ### Steps
 
 For the moments before the target, like wrapping a brisket at 74 °C or saucing ribs: in a probe's editor (Target mode) tap **+ Add a step** under the target, pick or type the action (Wrap, Spritz, Sauce, Flip, Check, Baste or your own) and the temperature. Up to 3 per probe. When the probe climbs through a step the grill beeps once, like the early warning, and shows the step on its screen for 2 minutes (a short press closes it); the probe's card says "Wrap now". A step fires once: it doesn't fire again when the temperature drops while you wrap, and steps the probe has already passed when you set them up (or after a restart) don't fire at all. If the target goes below a step, the step is skipped until you raise the target again. Without steps you only see the **+ Add a step** link. Switch the beep off with **Beep at a step** under Settings. With phone notifications set up you also get "🔔 Brisket: time to wrap (74 °C)" (switch: **A step is reached**).
+
+### Restarts
+
+An empty battery, a switch-off with the button, a crash or a firmware update doesn't end the cook. The grill saves it every 5 minutes while a probe is plugged in, and right before it switches itself off. Start it again within 12 hours and the graph carries on, with a gap for the time it was off. A probe that already beeped "ready" stays quiet; one that reached its target while the grill was off beeps once, because that's news. Steps keep what they already did. **About** shows "Carried on the cook, off for 23 min".
+
+To know how long it was off, the grill needs the time: on your WiFi it gets it from the internet, on its own hotspot the app sends it when you open it. Without the time the graph comes back after 2 minutes, with a short gap. A cook older than 12 hours is gone, and so is the graph of a probe that was unplugged for more than 10 minutes. **Clear history** also clears the saved graph, and a factory reset deletes the saved cook. Timers don't carry on yet.
 
 ### Probes and alarms
 

@@ -304,8 +304,8 @@ def eta_seconds(probe):
 
 
 # The grill's clock (NTP or the app's), and how long it was off when it carried on a cook
-CLOCK_KNOWN = True
-RESUMED_OFF_S = -1      # -1 not resumed, -2 resumed with an unknown gap, else seconds
+CLOCK_KNOWN = False     # like a grill on its hotspot: the app sends its clock
+RESUMED_OFF_S = 1380    # -1 not resumed, -2 resumed with an unknown gap, else seconds
 
 
 def grill():

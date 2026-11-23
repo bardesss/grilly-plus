@@ -115,7 +115,7 @@ class TimeTest(unittest.TestCase):
     def test_the_app_sets_the_clock_once(self):
         _, grill = mock_api.handle("GET", "/api/grill", None)
         self.assertFalse(grill["clock_known"])
-        self.assertEqual(-1, grill["resumed_off_s"])
+        self.assertEqual(1380, grill["resumed_off_s"])    # the mock shows a resumed cook
         self.assertEqual(400, mock_api.handle("POST", "/api/time", json.dumps({"epoch": "soon"}), JSON)[0])
         self.assertEqual(400, mock_api.handle("POST", "/api/time", json.dumps({"epoch": 1000}), JSON)[0])  # before 2023
         self.assertEqual(415, mock_api.handle("POST", "/api/time", json.dumps({"epoch": 1795400000}), {})[0])

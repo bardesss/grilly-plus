@@ -122,6 +122,16 @@ components:
             - update
             - low_battery
             - ""
+        clock_known:
+          type: boolean
+          example: true
+          description: True once the grill knows the time, from the internet (NTP) or from POST /time.
+        resumed_off_s:
+          type: integer
+          example: 1380
+          description: >-
+            Whether this start carried on a cook saved before the restart: -1 = it didn't, -2 = it did
+            but how long the grill was off is unknown, otherwise the seconds it was off.
         wifi_connected:
           type: boolean
           example: true
@@ -1279,6 +1289,46 @@ paths:
                   error:
                     type: string
                     example: "Content-Type should be application/json"
+
+  /time:
+    post:
+      tags:
+        - grill
+      summary: Give the grill the time
+      description: >
+        Sets the grill's clock, which tells a cook that carries on after a restart how long the grill
+        was off. Only taken while `clock_known` is false (on the grill's hotspot, without internet),
+        so no admin auth is needed. The web app sends it once when it opens.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - epoch
+              properties:
+                epoch:
+                  type: integer
+                  example: 1795400000
+                  description: Seconds since 1970 (UTC), after November 2023
+      responses:
+        '200':
+          description: The clock is set
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '400':
+          description: No valid epoch in the body
+        '409':
+          description: The grill already knows the time
+        '415':
+          description: Content-Type was not application/json
 
   /presets:
     get:
