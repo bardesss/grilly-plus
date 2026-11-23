@@ -136,6 +136,15 @@ const Format = (() => {
     return { title: timer.name + ": time's up", detail: "Timer" };
   }
 
+  // The card's step line: "Wrap now" while the grill alerts a step, else "Next: wrap at 74°"
+  function stepNote(probe) {
+    if (probe.step_alert >= 0 && probe.step_alert_action) {
+      return probe.step_alert_action.charAt(0).toUpperCase() + probe.step_alert_action.slice(1) + " now";
+    }
+    if (probe.next_step) return "Next: " + probe.next_step.action.toLowerCase() + " at " + probe.next_step.temperature + "°";
+    return "";
+  }
+
   function duration(seconds) {
     if (!(seconds > 0)) return "";
     if (seconds < 60) return "<1m";
@@ -205,7 +214,7 @@ const Format = (() => {
     return Math.floor(left / 60) + ":" + String(left % 60).padStart(2, "0");
   }
 
-  return { readyAt, progressNote, alarmMessage, timerLeft, timerMessage, countdown, checkedAgo, updateStatus, unitSymbol, number, temperature, signal, battery, batteryDiagnostics, resetReasonText,
+  return { readyAt, progressNote, alarmMessage, timerLeft, timerMessage, stepNote, countdown, checkedAgo, updateStatus, unitSymbol, number, temperature, signal, battery, batteryDiagnostics, resetReasonText,
            offReasonText, alarmMode, probeStatus, alarmLabel, duration, ago, eta, emptySockets, changedFields };
 })();
 

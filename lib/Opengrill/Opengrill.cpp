@@ -13,7 +13,7 @@
 #include "SharedLock.h"
 
 // Set this to config::json_buffer_size, cant do this dynamically
-char mqtt_opengrill_buffer[4096];
+char mqtt_opengrill_buffer[6144];
 
 void Opengrill::setup(String opengrill_server, int mqtt_port){
 

@@ -227,6 +227,17 @@ body.offline .live { opacity: .4; }
   font-weight: 600; color: var(--accent-text); pointer-events: none; }
 .graph-empty { display: flex; align-items: center; justify-content: center; height: 61px;  /* graph + label row, so cards keep their height */ margin-top: 8px; border: 1px dashed var(--border); border-radius: 8px; font-size: 12px; color: var(--muted); }
 .probe-time.eta { color: var(--accent-text); font-weight: 600; }
+.probe-step { margin: 4px 0 0; font-size: 12px; color: var(--muted); }
+.probe-step.now { color: var(--accent-text); font-weight: 600; }
+.step-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 6px; }
+.field .step-row .step-action { flex: 1 1 0; width: auto; min-width: 0; }
+.step-temperature { display: flex; flex: 0 0 auto; align-items: center; gap: 4px; color: var(--muted); }
+.field .step-temperature input { width: 4.5em; padding: 8px; text-align: right; }
+.step-row .step-at { color: var(--muted); font-size: 13px; }
+.step-row.ignored > :not(.icon-button):not(.step-hint) { opacity: .5; }
+.step-row .step-hint { flex-basis: 100%; margin: 0; }
+.step-add { margin-bottom: 8px; }
+.field:has(> div > .step-rows:empty) > .field-label { display: none; }   /* just "+ Add a step" until there is one */
 /* Card for a probe currently causing a sounding alarm: a red outline that pulses, static under
    prefers-reduced-motion via the global rule above. */
 .probe-card.alarming { outline: 2px solid var(--bad); outline-offset: -2px; animation: card-alarm-pulse 1.4s ease-in-out infinite; }

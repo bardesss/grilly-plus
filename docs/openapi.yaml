@@ -244,6 +244,31 @@ components:
                 type: integer
                 example: 60
                 description: Minutes of the rest timer that starts when a probe in target mode reaches its target, 0 is off.
+              next_step:
+                type:
+                  - object
+                  - "null"
+                readOnly: true
+                description: >-
+                  The first step that isn't done or ignored, null for none or outside target mode. The full
+                  list is in GET /probes (it doesn't fit in this status).
+                properties:
+                  action:
+                    type: string
+                    example: Wrap
+                  temperature:
+                    type: integer
+                    example: 74
+              step_alert:
+                type: integer
+                readOnly: true
+                example: -1
+                description: Index of the step that fired in the last 15 minutes (until a mute or the target or steps change), -1 for none.
+              step_alert_action:
+                type: string
+                readOnly: true
+                example: ""
+                description: The action of that step ("Wrap"), "" for none. The app shows "Wrap now".
             example:
               probe_id: 1
               name: Ambient Probe
@@ -394,6 +419,44 @@ components:
           description: >-
             In target mode, a timer "Rest: <name>" this long starts when the probe reaches its target, so you
             know when to slice. 0 is off. Not used in range mode.
+        steps:
+          type: array
+          maxItems: 3
+          description: >-
+            In target mode, moments before the target: each fires once when the temperature climbs through
+            it (a short beep, a page on the grill's screen) and stays done until the target or the steps
+            change or the probe is plugged in again. Steps already passed at that moment are done without
+            firing. Sending steps replaces them all, [] clears them. Each temperature is checked against the
+            target when saving; a step the target later drops below is kept but ignored, and may be sent
+            back at the same temperature (so it doesn't block changes to the other steps). Sorted by
+            temperature, in the grill's unit (not converted when the unit changes, like the target).
+          items:
+            type: object
+            required: [action, temperature]
+            properties:
+              action:
+                type: string
+                minLength: 1
+                maxLength: 16
+                example: Wrap
+                description: 1 to 16 bytes, no control characters, "|" or ":".
+              temperature:
+                type: integer
+                minimum: 1
+                example: 74
+                description: Whole degrees, below target_temperature.
+              done:
+                type: boolean
+                readOnly: true
+              ignored:
+                type: boolean
+                readOnly: true
+                description: Not below the target, so it never fires.
+        step_alert:
+          type: integer
+          readOnly: true
+          example: -1
+          description: Index of the step that fired in the last 15 minutes, -1 for none.
         offset_celcius:
           type:
             - "number"
@@ -651,6 +714,10 @@ components:
           minimum: 0
           maximum: 100
           description: Beep when the probe reaches this amount of degrees before the target temperature
+        beep_at_step:
+          type: boolean
+          example: true
+          description: Beep (like the early warning) when a probe reaches one of its steps.
         lid_pause_minutes:
           type: integer
           example: 5
@@ -1058,7 +1125,7 @@ paths:
                     type: array
                     items:
                       type: string
-                      enum: [history, eta, clear_history, alarm_mute, alarm_probes, calibration_offset, diagnostics, ota_upload, github_update, admin_reset, timers]
+                      enum: [history, eta, clear_history, alarm_mute, alarm_probes, calibration_offset, diagnostics, ota_upload, github_update, admin_reset, timers, steps]
                     description: >
                       history = GET /history; eta = eta_seconds per probe; clear_history = POST /history/clear and
                       MQTT config/clear_history; alarm_mute = POST /alarm/mute and MQTT config/mute; alarm_probes =
@@ -1066,7 +1133,8 @@ paths:
                       off reason and battery millivolts in /grill; ota_upload = POST /update; github_update = update_available
                       in /grill and the /update/latest, /update/check and /update/install endpoints;
                       admin_reset = POST /admin/reset/start, /admin/reset/cancel and /admin/reset;
-                      timers = timers and alarm_timers in /grill, POST /timers and /timers/cancel.
+                      timers = timers and alarm_timers in /grill, POST /timers and /timers/cancel;
+                      steps = steps per probe in /probes, next_step and step_alert in /grill.
 
   /wifiscan:
     get:

@@ -21,7 +21,7 @@
 #include "Web.h"
 
 // Set this to config::json_buffer_size, cant do this dynamically
-char api_json_buffer[4096];
+char api_json_buffer[6144];
 
 void setup_api_routes()
 {
@@ -177,6 +177,10 @@ void get_api_wifiscan(){
 void post_api_alarm_mute(){
     if(!is_json_request()) { return; }
 
+    {
+        SharedLock lock;
+        grill::step_alerts.clear();     // "Wrap now" goes; the grill's button only closes the page
+    }
     config::alarm_mute = true;
     web::webserver.send(200, "application/json", "{\"success\": true}");
 }
@@ -249,7 +253,7 @@ void get_api_update_latest(){
 }
 
 // Own food presets and hidden built-in ones, kept in NVS as JSON text
-// Both lists go out in one answer through the 4096 byte buffer (and an NVS string holds about 4000)
+// Both lists go out in one answer through the 6144 byte buffer (and an NVS string holds about 4000)
 const size_t PRESETS_STORE_MAX = 3000;
 const size_t HIDDEN_STORE_MAX  = 900;
 

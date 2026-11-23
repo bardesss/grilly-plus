@@ -432,6 +432,7 @@ void task_alarm(void* pvParameters) {
 
         int alarm = 0;          // Counter for easy checks to see if there is an alarm
         bool warn_before = false;   // A probe is getting close to its target
+        bool step = false;          // A probe reached one of its steps
 
         //* Check for alarms and early warnings
         Probe* probes[] = {&grill::probe_1, &grill::probe_2, &grill::probe_3, &grill::probe_4,
@@ -445,6 +446,10 @@ void task_alarm(void* pvParameters) {
             if(probe->warn_before){
                 probe->warn_before = false;
                 warn_before = true;
+            }
+            if(probe->step_fired){
+                probe->step_fired = 0;
+                step = true;
             }
         }
 
@@ -483,15 +488,19 @@ void task_alarm(void* pvParameters) {
 
             alarm_beep_todo = 0;
             warn_before = false;
+            step = false;
             config::alarm_mute = false;
             {
-                SharedLock lock;    // the timers
+                // Step alerts stay: a press only closes the step page (the button task), a mute from
+                // the app or MQTT clears them itself. Clearing them here would also close a step page
+                // waiting behind TIME'S UP when the press that stopped the timer lands.
+                SharedLock lock;
                 grill::timer_list.clear_done();
             }
         }
 
-        //* Early warning, skipped while an alarm is sounding
-        if(warn_before && alarm_beep_todo == 0){
+        //* Early warning and steps, skipped while an alarm is sounding. A step sounds like the early warning.
+        if((warn_before || (step && config::beep_at_step)) && alarm_beep_todo == 0){
             grill::buzzer.beep(3, 400);
         }
 
@@ -599,15 +608,20 @@ void task_powerbutton(void* pvParameters) {
                 // someone else on the network doesn't cover the temperatures for 5 minutes
                 // A short press on the TIME'S UP page stops the finished timers and goes back to the page
                 // that was showing, instead of also moving on to the next page
-                bool cancelled_reset, stopped_timers;
+                // A short press on a step page closes it (all waiting step pages), the same way
+                bool cancelled_reset, stopped_timers, closed_steps;
                 {
                     SharedLock lock;
                     cancelled_reset = config::admin_reset.active(millis());
                     if(cancelled_reset){ config::admin_reset.cancel(); }
                     stopped_timers = !cancelled_reset && grill::timer_list.done_mask() != 0;
                     if(stopped_timers){ grill::timer_list.clear_done(); }
+                    uint8_t probe, step;
+                    int more;
+                    closed_steps = !cancelled_reset && !stopped_timers && grill::step_alerts.page(millis(), &probe, &step, &more);
+                    if(closed_steps){ grill::step_alerts.close_page(); }
                 }
-                if(cancelled_reset || stopped_timers){ display.wake(); display.display_update(); }
+                if(cancelled_reset || stopped_timers || closed_steps){ display.wake(); display.display_update(); }
                 else { display.switch_page(); }
             }
             else if (millis_pressed < medium_press_time) {
@@ -677,6 +691,31 @@ void start_rest_timers(){
     }
 }
 
+// Steps that the probes just climbed through: the alarm task beeps, the screen shows a page
+void check_steps(){
+    Probe* probes[] = {&grill::probe_1, &grill::probe_2, &grill::probe_3, &grill::probe_4,
+                       &grill::probe_5, &grill::probe_6, &grill::probe_7, &grill::probe_8};
+    bool wake = false;
+    for(uint8_t i = 0; i < 8; i++){
+        Probe* probe = probes[i];
+        steps::Step step;   // the highest one that fired, printed after the lock
+        {
+            SharedLock lock;    // the steps are also changed by the web and mqtt tasks
+            bool target_mode = probe->target_temperature > 0 && probe->minimum_temperature <= 0;
+            uint8_t fired = probe->steps.update(probe->connected, target_mode, probe->temperature, probe->target_temperature);
+            if(!fired){ continue; }
+            uint8_t highest = 0;
+            for(uint8_t s = 0; s < steps::MAX_STEPS; s++){ if(fired & (1 << s)){ highest = s; } }
+            step = probe->steps.at(highest);
+            probe->step_fired |= fired;
+            grill::step_alerts.add(i, highest, millis());
+        }
+        Serial.printf("Step on probe %u: %s at %d\n", i + 1, step.action, step.temperature);
+        wake = true;
+    }
+    if(wake){ display.wake(); }    // the step page should be seen
+}
+
 void task_probes(void* pvParameters) {
     Serial.println("Launching task :: PROBES");
     delay(5);   //Give FreeRtos a chance to properly schedule the task
@@ -700,6 +739,7 @@ void task_probes(void* pvParameters) {
         grill::probe_7.calculate_temperature(); grill::probe_7.check_temperature_status();
         grill::probe_8.calculate_temperature(); grill::probe_8.check_temperature_status();
         start_rest_timers();
+        check_steps();
         notify::check_probes();
 
         if((long)(millis() - next_history_ms) >= 0){

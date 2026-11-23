@@ -34,6 +34,7 @@ namespace config{
     extern bool   beep_on_ready;
     extern int    beep_volume;
     extern int    beep_degrees_before;
+    extern bool   beep_at_step;
     extern int    lid_pause_minutes;
 
     // Notifications

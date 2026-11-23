@@ -156,6 +156,10 @@ Tap **+ Timer** on the Grill page, give it a name ("Flip the ribs") and the minu
 
 Meat needs to rest before you slice it. Set a **Rest timer** in a probe's editor (in Target mode) and a timer "Rest: Brisket" starts by itself when the probe reaches its target. Picking a food fills in a usual rest time, like 60 minutes for brisket or 5 for a steak; 0 turns it off. The grill keeps the rest time per probe, like the target.
 
+### Steps
+
+For the moments before the target, like wrapping a brisket at 74 °C or saucing ribs: in a probe's editor (Target mode) tap **+ Add a step** under the target, pick or type the action (Wrap, Spritz, Sauce, Flip, Check, Baste or your own) and the temperature. Up to 3 per probe. When the probe climbs through a step the grill beeps once, like the early warning, and shows the step on its screen for 2 minutes (a short press closes it); the probe's card says "Wrap now". A step fires once: it doesn't fire again when the temperature drops while you wrap, and steps the probe has already passed when you set them up (or after a restart) don't fire at all. If the target goes below a step, the step is skipped until you raise the target again. Without steps you only see the **+ Add a step** link. Switch the beep off with **Beep at a step** under Settings.
+
 ### Probes and alarms
 
 Tap a probe card in the app to set it up:

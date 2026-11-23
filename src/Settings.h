@@ -6,6 +6,7 @@
 #include "Probe.h"
 #include "History.h"
 #include "Timers.h"
+#include "ProbeSteps.h"
 #include "Buzzer.h"
 #include "Mqtt.h"
 #include "Opengrill.h"
@@ -74,6 +75,7 @@ namespace config{
     bool beep_outside_target            = true;
     int  beep_volume                    = 5;
     int  beep_degrees_before            = 5;
+    bool beep_at_step                   = true;
     int  lid_pause_minutes              = 5;     // range mode: minutes the "too low" alarm waits after a sharp drop, 0 = off
 
     // ***********************************
@@ -98,9 +100,10 @@ namespace config{
     // * Buffers
     // ***********************************
 
-    int json_buffer_size                = 4096;
-    int mqtt_buffer_size                = 4096;
-    int opengrill_buffer_size           = 4096;
+    // The grill status with 8 probes, their steps and 6 timers needs up to ~4.7 KB
+    int json_buffer_size                = 6144;
+    int mqtt_buffer_size                = 6144;
+    int opengrill_buffer_size           = 6144;
 
     // ***********************************
     // * Mqtt
@@ -228,6 +231,7 @@ namespace grill{
     volatile uint8_t alarm_probes       = 0;
     volatile uint8_t alarm_timers       = 0;
     timers::TimerList timer_list;
+    steps::StepAlerts step_alerts;
 
     // ***********************************
     // * Probes

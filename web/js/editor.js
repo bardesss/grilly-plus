@@ -9,7 +9,7 @@ const Editor = (() => {
   };
 
   let backdrop, sheet, form, title, live, note, nameInput, modeInputs;
-  let targetGroup, targetLabel, minGroup, targetStepper, minStepper, restGroup, restStepper;
+  let targetGroup, targetLabel, minGroup, targetStepper, minStepper, restGroup, restStepper, stepsGroup, stepRows;
   let presetGroup, presetSelect, presetKey = null, savePresetButton, savePresetTimer = null;
   let typeSelect, typeName, customBox, offsetStepper;
   let foodGroup, foodInputs;
@@ -53,6 +53,7 @@ const Editor = (() => {
     savePresetButton.hidden = current === "off";
     minGroup.hidden = current !== "range";
     restGroup.hidden = current !== "target";
+    stepsGroup.hidden = current !== "target";
     targetLabel.textContent = current === "range" ? "Maximum temperature" : "Target temperature";
     targetStepper.setLabel(current === "range" ? "Maximum temperature" : "Target temperature");
   }
@@ -71,6 +72,7 @@ const Editor = (() => {
   }
 
   function onTargetChange(value) {
+    stepRows.setTarget(value);
     if (mode() === "range") {
       if (minStepper.get() >= value) minStepper.set(value - 1);
       save({ target_temperature: value, minimum_temperature: minStepper.get() });
@@ -233,6 +235,9 @@ const Editor = (() => {
       minStepper.set(probe.minimum_temperature > 0 ? probe.minimum_temperature : Math.min(d.rangeMin, targetStepper.get() - 1));
     }
     if (!Controls.isEditing(restStepper.input.parentElement.parentElement)) restStepper.set(probe.rest_minutes || 0);
+    // Only /api/probes has the full steps; /api/grill has just the next one
+    if (Array.isArray(probe.steps)) stepRows.set(probe.steps, targetStepper.get());
+    else stepRows.setTarget(targetStepper.get());
     showMode(mode());   // follows the radios, which keep the user's choice while they're editing it
 
     if (!Controls.isEditing(typeSelect)) typeSelect.value = TYPES[probe.probe_type] ? probe.probe_type : "custom";
@@ -372,6 +377,16 @@ const Editor = (() => {
     }
   }
 
+  async function refill(id) {
+    try {
+      const probes = await Api.get("/api/probes", 5000);
+      const probe = probes.find((p) => p.probe_id === id);
+      if (probe && probeId === id && !saver.hasPending()) fill(probe);
+    } catch (error) {
+      // Offline: the note already says the change wasn't saved
+    }
+  }
+
   async function open(id, trigger) {
     if (probeId !== null && probeId !== id) saver.flush();
     probeId = id;
@@ -467,6 +482,7 @@ const Editor = (() => {
       '  <button type="button" class="link-button" id="editor-save-preset">Save as preset</button>' +
       '  <div class="field" id="editor-min-group"><span class="field-label">Minimum temperature</span><div id="editor-min"></div></div>' +
       '  <div class="field" id="editor-target-group"><span class="field-label" id="editor-target-label"></span><div id="editor-target"></div></div>' +
+      '  <div class="field" id="editor-steps-group"><span class="field-label">Steps</span><div id="editor-steps"></div></div>' +
       '  <div class="field" id="editor-rest-group"><span class="field-label">Rest timer</span><div id="editor-rest"></div>' +
       '    <p class="hint">Starts when the target is reached, so you know when to slice. 0 is off.</p></div>' +
       '  <details class="probe-type"><summary><span>Probe type</span><span class="summary-value"><span id="editor-type-name"></span> <svg class="icon"><use href="#i-chevron"/></svg></span></summary>' +
@@ -497,6 +513,7 @@ const Editor = (() => {
     targetLabel = sheet.querySelector("#editor-target-label");
     minGroup = sheet.querySelector("#editor-min-group");
     restGroup = sheet.querySelector("#editor-rest-group");
+    stepsGroup = sheet.querySelector("#editor-steps-group");
     presetGroup = sheet.querySelector("#editor-preset-group");
     presetSelect = sheet.querySelector("#editor-preset");
     savePresetButton = sheet.querySelector("#editor-save-preset");
@@ -520,6 +537,11 @@ const Editor = (() => {
     minStepper = Controls.stepper(sheet.querySelector("#editor-min"), {
       min: 1, max: 299, label: "Minimum temperature", onChange: onMinChange,
     });
+    stepRows = StepRows.create(sheet.querySelector("#editor-steps"), {
+      unit,
+      onChange: (list) => save({ steps: list }, { immediate: true }),
+      onError: (message) => Controls.showNote(note, "error", { message }),
+    });
     restStepper = Controls.stepper(sheet.querySelector("#editor-rest"), {
       min: 0, max: 180, label: "Rest timer in minutes", suffix: (v) => (v ? " min" : " (off)"), onChange: onRestChange,
     });
@@ -535,6 +557,8 @@ const Editor = (() => {
         if (state === "saved" && Array.isArray(detail) && probeId !== null && !saver.hasPending()) {
           fill(detail.find((p) => p.probe_id === probeId));
         }
+        // A refused change isn't on the grill: show what is, so the steps don't look saved
+        if (state === "error" && probeId !== null && !saver.hasPending()) refill(probeId);
       },
     });
 
