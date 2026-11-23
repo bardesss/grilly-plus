@@ -17,7 +17,9 @@ const size_t ID_LENGTH      = 24;
 
 // Checks a presets array and writes a clean copy (only the known keys) into out.
 // A preset: {"name", "group" (optional), "type" (optional food type), "c", "f",
-//            "min_c" and "min_f" (optional, both or neither, for a range)}
+//            "min_c" and "min_f" (optional, both or neither, for a range), "rest" (optional minutes),
+//            "steps" (optional, at most 3 of {"action", "c", "f"}, whole degrees below the target;
+//            dropped for a range, sorted by c)}
 // Returns "" when it is fine, otherwise why not.
 std::string clean_presets(JsonVariantConst in, JsonArray out);
 
