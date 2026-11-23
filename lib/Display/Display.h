@@ -154,6 +154,7 @@ private:
     *   @param more how many other timers are finished too
     */
     void draw_timer_done(int slot, int more);
+    void draw_step_page(uint8_t probe, uint8_t step, int more);
     /**
     *	@brief The text cut to max_width pixels in the current font, ending in "." when it was cut
     */

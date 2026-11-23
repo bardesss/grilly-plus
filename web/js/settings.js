@@ -13,6 +13,7 @@ const Settings = (() => {
       { key: "beep_outside_target", label: "Beep outside range", type: "toggle" },
       { key: "beep_degrees_before", label: "Early warning", type: "stepper", min: 0, max: 100,
         suffix: (v) => (v === 0 ? "off" : "° before") },
+      { key: "beep_at_step", label: "Beep at a step", type: "toggle" },
       { key: "lid_pause_minutes", label: "Lid open pause", type: "stepper", min: 0, max: 30,
         suffix: (v) => (v === 0 ? "off" : "min") },
       { key: "cucaracha_enabled", label: "Cucaracha tune", type: "toggle" },

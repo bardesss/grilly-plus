@@ -432,6 +432,7 @@ void task_alarm(void* pvParameters) {
 
         int alarm = 0;          // Counter for easy checks to see if there is an alarm
         bool warn_before = false;   // A probe is getting close to its target
+        bool step = false;          // A probe reached one of its steps
 
         //* Check for alarms and early warnings
         Probe* probes[] = {&grill::probe_1, &grill::probe_2, &grill::probe_3, &grill::probe_4,
@@ -445,6 +446,10 @@ void task_alarm(void* pvParameters) {
             if(probe->warn_before){
                 probe->warn_before = false;
                 warn_before = true;
+            }
+            if(probe->step_fired){
+                probe->step_fired = 0;
+                step = true;
             }
         }
 
@@ -483,15 +488,17 @@ void task_alarm(void* pvParameters) {
 
             alarm_beep_todo = 0;
             warn_before = false;
+            step = false;
             config::alarm_mute = false;
             {
-                SharedLock lock;    // the timers
+                SharedLock lock;    // the timers and steps
                 grill::timer_list.clear_done();
+                grill::step_alerts.clear();
             }
         }
 
-        //* Early warning, skipped while an alarm is sounding
-        if(warn_before && alarm_beep_todo == 0){
+        //* Early warning and steps, skipped while an alarm is sounding. A step sounds like the early warning.
+        if((warn_before || (step && config::beep_at_step)) && alarm_beep_todo == 0){
             grill::buzzer.beep(3, 400);
         }
 
@@ -599,15 +606,20 @@ void task_powerbutton(void* pvParameters) {
                 // someone else on the network doesn't cover the temperatures for 5 minutes
                 // A short press on the TIME'S UP page stops the finished timers and goes back to the page
                 // that was showing, instead of also moving on to the next page
-                bool cancelled_reset, stopped_timers;
+                // A short press on a step page closes it (all waiting step pages), the same way
+                bool cancelled_reset, stopped_timers, closed_steps;
                 {
                     SharedLock lock;
                     cancelled_reset = config::admin_reset.active(millis());
                     if(cancelled_reset){ config::admin_reset.cancel(); }
                     stopped_timers = !cancelled_reset && grill::timer_list.done_mask() != 0;
                     if(stopped_timers){ grill::timer_list.clear_done(); }
+                    uint8_t probe, step;
+                    int more;
+                    closed_steps = !cancelled_reset && !stopped_timers && grill::step_alerts.page(millis(), &probe, &step, &more);
+                    if(closed_steps){ grill::step_alerts.close_page(); }
                 }
-                if(cancelled_reset || stopped_timers){ display.wake(); display.display_update(); }
+                if(cancelled_reset || stopped_timers || closed_steps){ display.wake(); display.display_update(); }
                 else { display.switch_page(); }
             }
             else if (millis_pressed < medium_press_time) {

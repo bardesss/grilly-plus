@@ -434,6 +434,7 @@ void JsonUtilities::load_json_settings(char* buffer){
     jsondoc["beep_enabled"]              = config::beep_enabled;
     jsondoc["beep_volume"]               = config::beep_volume;
     jsondoc["beep_degrees_before"]       = config::beep_degrees_before;
+    jsondoc["beep_at_step"]              = config::beep_at_step;
     jsondoc["lid_pause_minutes"]         = config::lid_pause_minutes;
     jsondoc["beep_outside_target"]       = config::beep_outside_target;
     jsondoc["beep_on_ready"]             = config::beep_on_ready;
@@ -519,6 +520,7 @@ jsonResult JsonUtilities::save_json_settings(char* raw_json, bool admin_authoriz
             fields.boolean("beep_enabled",              config::beep_enabled);
             fields.number("beep_volume",                config::beep_volume, 0, 5);
             fields.number("beep_degrees_before",        config::beep_degrees_before, 0, 100);
+            fields.boolean("beep_at_step",              config::beep_at_step);
             fields.number("lid_pause_minutes",          config::lid_pause_minutes, 0, 30);
             fields.boolean("beep_outside_target",       config::beep_outside_target);
             fields.boolean("beep_on_ready",             config::beep_on_ready);

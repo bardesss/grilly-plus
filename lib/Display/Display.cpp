@@ -186,6 +186,50 @@ void disp::draw_timer_done(int slot, int more){
     }
 }
 
+// "Brisket / WRAP / 74°C / Press to close": a probe reached one of its steps
+void disp::draw_step_page(uint8_t probe, uint8_t step, int more){
+    static Probe* probes[] = {&grill::probe_1, &grill::probe_2, &grill::probe_3, &grill::probe_4,
+                              &grill::probe_5, &grill::probe_6, &grill::probe_7, &grill::probe_8};
+    if (probe >= 8 || step >= probes[probe]->steps.count()) { return; }
+    const steps::Step& s = probes[probe]->steps.at(step);
+    // The screen stays on while the page shows
+    millis_backlight_timeout = millis();
+    millis_screen_timeout = millis();
+
+    screen.setFont(u8g2_font_4x6_tr);
+    screen.drawStr(2, 6, "Step");
+    screen.setFont(u8g2_font_profont12_tr);
+    String name = fit(probes[probe]->name, 124);
+    screen.drawStr((128 - screen.getStrWidth(name.c_str())) / 2, 21, name.c_str());
+
+    // The action in capitals, without what the ASCII font can't draw
+    String action;
+    for (const char* p = s.action; *p; p++) {
+        unsigned char c = (unsigned char)*p;
+        if (c >= 0x20 && c < 0x7f) { action += (char)toupper(c); }
+    }
+    screen.setFont(u8g2_font_profont22_tr);
+    action = fit(action, 124);
+    screen.drawStr((128 - screen.getStrWidth(action.c_str())) / 2, 42, action.c_str());
+
+    screen.setFont(u8g2_font_profont10_tr);
+    String temperature = String(s.temperature);
+    int temperature_width = screen.getStrWidth(temperature.c_str()) + 9;
+    int x = (128 - temperature_width) / 2;
+    screen.drawStr(x, 52, temperature.c_str());
+    x += screen.getStrWidth(temperature.c_str()) + 1;
+    screen.drawXBMP(x, 45, 3, 3, degrees);
+    screen.drawStr(x + 4, 52, config::temperature_unit == "celcius" ? "C" : "F");
+
+    const char* hint = "Press to close";
+    screen.drawStr((128 - screen.getStrWidth(hint)) / 2, 61, hint);
+    if (more > 0) {
+        char extra[6];
+        snprintf(extra, sizeof(extra), "+%d", more);
+        screen.drawStr(125 - screen.getStrWidth(extra), 61, extra);
+    }
+}
+
 void disp::draw_screen_reset_code(const char* code, uint32_t seconds_left){
     screen.setFont(u8g2_font_4x6_tr);
     screen.drawStr(2, 6, "Password reset");
@@ -321,7 +365,10 @@ bool disp::display_update(void) {
         SharedLock lock;
         const char* reset_code = config::admin_reset.code(millis());
         uint8_t done = grill::timer_list.done_mask();
-        if(reset_code[0] == '\0' && done == 0) {draw_timer_bar();}
+        uint8_t step_probe, step_index;
+        int step_more;
+        bool step_page = done == 0 && grill::step_alerts.page(millis(), &step_probe, &step_index, &step_more);
+        if(reset_code[0] == '\0' && done == 0 && !step_page) {draw_timer_bar();}
         if(reset_code[0] != '\0') {draw_screen_reset_code(reset_code, config::admin_reset.seconds_left(millis()));}
         else if(done != 0) {
             int first = -1, count = 0;
@@ -330,6 +377,7 @@ bool disp::display_update(void) {
             }
             draw_timer_done(first, count - 1);
         }
+        else if(step_page) {draw_step_page(step_probe, step_index, step_more);}
         else if(current_screen_page == 0) {draw_screen_temp();}
         else if (current_screen_page > 0 and current_screen_page < 9) {
             screen.setFont(u8g2_font_4x6_tr);

@@ -60,6 +60,7 @@ void GrillConfig::load_settings(){
     config::cucaracha_enabled         = config::settings_storage.getBool("cucaracha", false);
     config::beep_volume               = config::settings_storage.getInt("beep_volume");
     config::beep_degrees_before       = config::settings_storage.getInt("beep_before");
+    config::beep_at_step              = config::settings_storage.getBool("beep_step", true);
     config::lid_pause_minutes         = config::settings_storage.getInt("lid_pause", 5);
 
     config::telegram_token            = config::settings_storage.getString("tg_token", "");
@@ -134,6 +135,7 @@ void GrillConfig::save_settings(){
         config::settings_storage.putBool("cucaracha", config::cucaracha_enabled);
         config::settings_storage.putInt("beep_volume", config::beep_volume);
         config::settings_storage.putInt("beep_before", config::beep_degrees_before);
+        config::settings_storage.putBool("beep_step", config::beep_at_step);
         config::settings_storage.putInt("lid_pause", config::lid_pause_minutes);
         config::settings_storage.putString("tg_token", config::telegram_token);
         config::settings_storage.putString("tg_chat", config::telegram_chat_id);
@@ -241,6 +243,7 @@ void GrillConfig::initialize_settings(){
     config::settings_storage.putBool("cucaracha", config::cucaracha_enabled);
     config::settings_storage.putInt("beep_volume", config::beep_volume);
     config::settings_storage.putInt("beep_before", config::beep_degrees_before);
+    config::settings_storage.putBool("beep_step", config::beep_at_step);
     config::settings_storage.putInt("lid_pause", config::lid_pause_minutes);
     config::settings_storage.putString("tg_token", config::telegram_token);
     config::settings_storage.putString("tg_chat", config::telegram_chat_id);

@@ -58,7 +58,7 @@ def start_timer(body):
 
 SETTINGS = {
     "name": "Big Green Egg", "uuid": "43c62ed2-4dc0-41a5-8f71-16db60155739", "firmware_version": "26.09.27",
-    "temperature_unit": "celcius", "beep_enabled": True, "beep_volume": 4, "beep_degrees_before": 5, "lid_pause_minutes": 5,
+    "temperature_unit": "celcius", "beep_enabled": True, "beep_volume": 4, "beep_degrees_before": 5, "beep_at_step": True, "lid_pause_minutes": 5,
     "telegram_token_set": False, "telegram_chat_id": "",
     "ntfy_url_set": False, "ntfy_server": "", "ntfy_token_set": False,
     "pushover_user_set": False, "pushover_token_set": False, "webhook_url_set": False, "webhook_server": "", "notify_ready": True, "notify_almost": True,
