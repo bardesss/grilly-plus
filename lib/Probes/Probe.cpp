@@ -323,3 +323,13 @@ void Probe::set_temperature(float target_temperature, float minimum_temperature)
         Probe::has_beeped_outside = false;
     }
 }
+
+uint8_t Probe::beep_flags() const {
+    return (has_beeped ? 1 : 0) | (has_beeped_before ? 2 : 0) | (has_beeped_outside ? 4 : 0);
+}
+
+void Probe::restore_beep_flags(uint8_t flags){
+    has_beeped         = flags & 1;
+    has_beeped_before  = flags & 2;
+    has_beeped_outside = flags & 4;
+}

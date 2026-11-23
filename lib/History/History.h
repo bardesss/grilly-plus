@@ -16,6 +16,7 @@ constexpr uint32_t COARSE_START_INTERVAL_S = 60;
 constexpr uint32_t RESET_AFTER_UNPLUGGED_S = 600;        // a probe unplugged this long starts fresh
 constexpr int16_t  NO_VALUE                = INT16_MIN;  // a gap: the probe was unplugged
 constexpr int32_t  ETA_UNKNOWN             = -1;
+constexpr uint32_t MAX_GAP_S               = 12 * 3600;  // add_gap() adds at most this much
 
 // Tenths of a degree, NO_VALUE for NaN or infinity, clamped to the int16 range
 int16_t to_tenths(float celcius);
@@ -25,6 +26,10 @@ public:
     // Adds one sample. Call every FINE_INTERVAL_S seconds with the seconds since boot.
     void add(uint32_t now_s, bool connected, float celcius);
     void clear();
+
+    // The grill was off for `seconds` (at most MAX_GAP_S): adds NO_VALUE samples for that time, the
+    // last one at now_s, so the graph shows a gap. An empty history stays empty.
+    void add_gap(uint32_t now_s, uint32_t seconds);
 
     int      fine_count() const        { return fine_count_; }
     int16_t  fine_at(int i) const;     // i = 0 is the oldest

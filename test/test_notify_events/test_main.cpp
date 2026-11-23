@@ -26,6 +26,15 @@ static uint8_t feed(const ProbeInput& in, int seconds = 1){
     return events;
 }
 
+void test_restored_watch_does_not_repeat_ready(){
+    TEST_ASSERT_EQUAL(READY, feed(target_mode(95)) & READY);
+    ProbeWatch restored;
+    memcpy(&restored, &watch, sizeof(watch));        // what the snapshot does
+    TEST_ASSERT_EQUAL(0, restored.update(target_mode(96), now_ms));
+    ProbeWatch fresh;
+    TEST_ASSERT_EQUAL(READY, fresh.update(target_mode(96), now_ms) & READY);
+}
+
 void test_almost_then_ready_once(){
     TEST_ASSERT_EQUAL(0, feed(target_mode(80)));
     TEST_ASSERT_EQUAL(ALMOST, feed(target_mode(88)));
@@ -281,6 +290,7 @@ void test_step_priorities(){
 int main(int argc, char** argv){
     UNITY_BEGIN();
     RUN_TEST(test_almost_then_ready_once);
+    RUN_TEST(test_restored_watch_does_not_repeat_ready);
     RUN_TEST(test_step_priorities);
     RUN_TEST(test_straight_past_almost_only_says_ready);
     RUN_TEST(test_ready_again_only_after_dropping_by_the_hysteresis);

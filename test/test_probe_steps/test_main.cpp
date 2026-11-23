@@ -196,9 +196,35 @@ void test_alerts_page_and_card(){
     TEST_ASSERT_EQUAL_UINT8(0, probe);
 }
 
+void test_restore_done_mask(){
+    StepList s = make({{74, "Wrap"}, {82, "Spritz"}});
+    s.update(true, true, 60, 95);
+    TEST_ASSERT_EQUAL_UINT8(1, s.update(true, true, 75, 95));
+    TEST_ASSERT_EQUAL_UINT8(0b01, s.done_mask());
+
+    // After a restart: the same steps, Wrap was done. The probe reads "not connected" for a moment.
+    StepList after = make({{74, "Wrap"}, {82, "Spritz"}});
+    after.restore(0b01);
+    TEST_ASSERT_EQUAL_UINT8(0, after.update(false, true, 0, 95));
+    TEST_ASSERT_EQUAL_UINT8(0b01, after.done_mask());
+    TEST_ASSERT_EQUAL_UINT8(0, after.update(true, true, 76, 95));    // Wrap stays done
+    TEST_ASSERT_EQUAL_UINT8(2, after.update(true, true, 83, 95));    // Spritz fires once
+    TEST_ASSERT_EQUAL_UINT8(0, after.update(true, true, 84, 95));
+
+    // Spritz passed while the grill was off: news, it fires on the first reading
+    StepList crossed = make({{74, "Wrap"}, {82, "Spritz"}});
+    crossed.restore(0b01);
+    TEST_ASSERT_EQUAL_UINT8(2, crossed.update(true, true, 85, 95));
+
+    // Once it has been connected, a replug is a new start again
+    after.update(false, true, 0, 95);
+    TEST_ASSERT_EQUAL_UINT8(0, after.done_mask());
+}
+
 int main(int argc, char** argv){
     UNITY_BEGIN();
     RUN_TEST(test_fires_once_on_the_way_up);
+    RUN_TEST(test_restore_done_mask);
     RUN_TEST(test_two_steps_in_one_reading);
     RUN_TEST(test_reconnect_above_a_step_is_silent);
     RUN_TEST(test_late_step_is_silent);

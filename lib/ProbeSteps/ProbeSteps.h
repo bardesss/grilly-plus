@@ -47,6 +47,14 @@ public:
     // All steps not done; the next reading decides which are already passed
     void rearm();
 
+    // Bit i = step i is done
+    uint8_t done_mask() const;
+
+    // After a restart: these steps were done. Armed, so a step passed while the grill was off fires
+    // on the first reading. Kept while the probe still reads "not connected" right after the start;
+    // once it was connected, a replug re-arms as usual.
+    void restore(uint8_t done_mask);
+
     // Call for every reading. Returns a mask of the steps that fire now (bit i = step i).
     uint8_t update(bool connected, bool target_mode, float temperature, float target);
 
@@ -65,6 +73,7 @@ private:
     Step   steps_[MAX_STEPS];
     size_t count_ = 0;
     bool   armed_ = false;     // false: the next reading only marks the passed steps done
+    bool   holding_ = false;   // restored: a disconnect doesn't re-arm until the first connected reading
 };
 
 // Steps that fired lately, one per probe: for the grill's screen page and "Wrap now" in the app

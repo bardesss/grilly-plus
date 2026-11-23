@@ -67,11 +67,28 @@ bool StepList::set(const Step* list, size_t count){
 
 void StepList::rearm(){
     for(size_t i = 0; i < count_; i++){ steps_[i].done = false; }
-    armed_ = false;
+    armed_   = false;
+    holding_ = false;
+}
+
+uint8_t StepList::done_mask() const {
+    uint8_t mask = 0;
+    for(size_t i = 0; i < count_; i++){ if(steps_[i].done){ mask |= (uint8_t)(1 << i); } }
+    return mask;
+}
+
+void StepList::restore(uint8_t done_mask){
+    for(size_t i = 0; i < count_; i++){ steps_[i].done = (done_mask & (1 << i)) != 0; }
+    armed_   = true;
+    holding_ = true;
 }
 
 uint8_t StepList::update(bool connected, bool target_mode, float temperature, float target){
-    if(!connected){ rearm(); return 0; }
+    if(!connected){
+        if(!holding_){ rearm(); }
+        return 0;
+    }
+    holding_ = false;
     if(!target_mode){ return 0; }
 
     if(!armed_){

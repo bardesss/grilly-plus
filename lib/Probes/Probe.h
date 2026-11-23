@@ -48,6 +48,11 @@ public:
 	String type_icon = "";								// Food type for the icon ("beef", ...), "" = none
 	steps::StepList steps;								// Target mode: "Wrap at 74", see ProbeSteps.h
 	volatile uint8_t step_fired = 0;					// Steps that just fired, set by the probes task, played by the alarm task
+	// What it already beeped for (bit 0 the target, 1 almost, 2 outside the range), saved so a
+	// restart doesn't beep and start the rest timer again for a target that was already reached
+	uint8_t beep_flags() const;
+	void restore_beep_flags(uint8_t flags);
+
 	int rest_minutes = 0;								// Target mode: a rest timer this long starts at the target, 0 = off
 	bool reached_target = false;						// Set by check_temperature_status when the target is reached,
 														// cleared by the probes task once it started the rest timer
