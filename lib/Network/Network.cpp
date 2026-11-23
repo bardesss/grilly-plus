@@ -141,6 +141,9 @@ void event_wifi_connected(WiFiEvent_t event, WiFiEventInfo_t info)
 {
     grill::wifi_connected = true;
 
+    // UTC only: the clock tells a resumed cook how long the grill was off (main.cpp decide_resume())
+    configTime(0, 0, "pool.ntp.org", "time.google.com");
+
     Serial.println("Connected to wifi");
     print_wifi_connection();
 }

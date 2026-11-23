@@ -1,6 +1,8 @@
 #pragma once
 
 #include <Arduino.h>
+#include <time.h>
+#include "esp_timer.h"
 #include "History.h"
 #include "Timers.h"
 #include "ProbeSteps.h"
@@ -62,4 +64,22 @@ namespace grill {
     // Temperature history per probe, index = probe_id - 1. Written by the probes task, read by the
     // webserver and mqtt tasks, so only touch it under the SharedLock.
     extern history::ProbeHistory probe_history[8];
+
+    // The history's clock: seconds since start-up plus history_base_s. A cook that carries on after a
+    // restart moves the base on, so the saved samples and the new ones share one time axis. Set once
+    // by the probes task. esp_timer_get_time() instead of millis(), which wraps at ~49.7 days.
+    extern volatile uint32_t history_base_s;
+    inline uint32_t history_now_s(){ return (uint32_t)(esp_timer_get_time() / 1000000ULL) + history_base_s; }
+
+    // -1 = this start didn't carry on a cook, -2 = it did but how long the grill was off is unknown,
+    // else the seconds it was off
+    extern volatile int32_t resumed_off_s;
+    // Set by Clear history so the probes task saves the cook soon
+    extern volatile bool resume_save_requested;
+
+    // True once NTP or the app (POST /api/time) set the clock
+    inline bool clock_known(){ return time(nullptr) > 1700000000; }
 }
+
+// Saves the cook right away (main.cpp), before the grill switches itself off or restarts for an update
+void save_resume_now();

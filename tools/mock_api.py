@@ -303,6 +303,11 @@ def eta_seconds(probe):
     return -1 if eta > 86400 else eta
 
 
+# The grill's clock (NTP or the app's), and how long it was off when it carried on a cook
+CLOCK_KNOWN = True
+RESUMED_OFF_S = -1      # -1 not resumed, -2 resumed with an unknown gap, else seconds
+
+
 def grill():
     return {
         "name": SETTINGS["name"], "unique_id": SETTINGS["uuid"], "firmware_version": SETTINGS["firmware_version"],
@@ -310,6 +315,7 @@ def grill():
         "hostname": "grilly-plus-%s.local" % SETTINGS["uuid"].replace("-", "")[:8].lower(),
         "battery_percentage": 82, "battery_charging": True, "battery_millivolts": 3950,
         "last_reset_reason": "software", "last_off_reason": "update",
+        "clock_known": CLOCK_KNOWN, "resumed_off_s": RESUMED_OFF_S,
         "wifi_connected": True, "wifi_ssid": SETTINGS["wifi_ssid"],
         "wifi_ip": "192.168.1.50", "wifi_signal": -58,
         "local_ap_ssid": SETTINGS["local_ap_ssid"], "local_ap_ip": SETTINGS["local_ap_ip"], "temperature_unit": SETTINGS["temperature_unit"],
@@ -403,7 +409,7 @@ WIFI_SCAN = [
 
 def handle(method, path, body, headers=None, query=""):
     """Returns (status, json_body) for an /api request."""
-    global ADMIN_PASSWORD, ALARM_SOUNDING, ALARM_PROBE_ID, NTFY_URL, WEBHOOK_URL
+    global ADMIN_PASSWORD, ALARM_SOUNDING, ALARM_PROBE_ID, NTFY_URL, WEBHOOK_URL, CLOCK_KNOWN
     global UPDATE_CHECKED_AT, UPDATE_CHECKING_UNTIL, LAST_CHECK_REQUEST, INSTALL_DONE_AT
     global RESET_STARTED_AT, RESET_ACTIVE, RESET_ATTEMPTS, RESET_WRONG_TOTAL
     headers = headers or {}
@@ -496,6 +502,19 @@ def handle(method, path, body, headers=None, query=""):
         if not 1 <= probe_id <= 8:
             return 400, {"error": "probe_id should be between 1 and 8"}
         CLEARED_AT[probe_id] = time.time()
+        return 200, {"success": True}
+    if method == "POST" and path == "/api/time":
+        if not headers.get("Content-Type", "").startswith("application/json"):
+            return 415, {"error": "Content-Type should be application/json"}
+        try:
+            epoch = json.loads(body or "{}").get("epoch")
+        except (ValueError, AttributeError):
+            epoch = None
+        if not isinstance(epoch, int) or isinstance(epoch, bool) or epoch <= 1700000000:
+            return 400, {"error": "epoch should be the seconds since 1970"}
+        if CLOCK_KNOWN:
+            return 409, {"error": "The grill already knows the time"}
+        CLOCK_KNOWN = True
         return 200, {"success": True}
     if method == "POST" and path == "/api/alarm/mute":
         if not (headers or {}).get("Content-Type", "").startswith("application/json"):

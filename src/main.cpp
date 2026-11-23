@@ -7,6 +7,7 @@
 
 #include "Api.h"
 #include "Buzzer.h"
+#include "Grill.h"
 #include "GrillConfig.h"
 #include "History.h"
 #include "JsonUtilities.h"
@@ -14,6 +15,8 @@
 #include "Network.h"
 #include "Opengrill.h"
 #include "Power.h"
+#include "Resume.h"
+#include "ResumeStore.h"
 #include "LowBattery.h"
 #include "Preferences.h"
 #include "Website.h"
@@ -41,6 +44,9 @@ void task_probes(void* pvParameters);
 void task_screen(void* pvParameters);
 void task_webserver(void* pvParameters);
 void task_stackmonitor(void* pvParameters);
+
+void restore_resume_flags();
+void save_resume_now();
 
 void setup() {
 
@@ -140,6 +146,10 @@ void setup() {
     // or the web server starts, because the download needs the memory they use. Never returns then.
     updater::run_update_mode_if_requested();
 
+    // A cook that was going before the restart: its alarm flags come back now, its graph once the
+    // probes task knows how long the grill was off (see decide_resume())
+    restore_resume_flags();
+
     // ***********************************
     // * Startup Buzzer
     // ***********************************
@@ -155,16 +165,6 @@ void setup() {
     SPI.beginTransaction(spiSettings);
 
     pinMode(gpio::hspi_probes_cs, OUTPUT); // Prep CS line for data reading
-
-    // ***********************************
-    // * NTP
-    // ***********************************
-
-    // configTzTime(get_timezone_code(timezone).c_str(),
-    //     ntp_server_1.c_str(),
-    //     ntp_server_2.c_str(),
-    //     ntp_server_3.c_str()
-    // );
 
     // ***********************************
     // * Launch DEVICE tasks
@@ -630,6 +630,7 @@ void task_powerbutton(void* pvParameters) {
             }
             else if (millis_pressed < long_press_time) {
                 Serial.println("Button pressed 3-10 seconds");
+                save_resume_now();
                 config::config_helper.save_off_reason("button");
                 power.shutdown();
             }
@@ -649,12 +650,151 @@ void task_powerbutton(void* pvParameters) {
 
 history::LidWatch lid_watch[8];   // only used by record_history(), in the probes task
 
+// ***********************************
+// * Resume a cook after a restart
+// ***********************************
+
+// The probes, by index 0-7
+Probe* resume_probe(int i){
+    static Probe* probes[] = {&grill::probe_1, &grill::probe_2, &grill::probe_3, &grill::probe_4,
+                              &grill::probe_5, &grill::probe_6, &grill::probe_7, &grill::probe_8};
+    return probes[i];
+}
+
+constexpr uint32_t SAVE_EVERY_S   = 300;   // while a probe is connected: at most 5 minutes lost after a crash
+constexpr uint32_t SAVE_MIN_GAP_S = 10;    // a change of alarm state is saved, but not more often than this
+constexpr uint32_t CLOCK_WAIT_S   = 120;   // how long a saved cook waits for the clock before it carries on
+
+// The snapshot read at start-up, kept until decide_resume(); after that the copy each save takes.
+// Too big for a stack. resume_mutex guards it and the file: the button, battery, web and probes
+// tasks all save.
+resume::Snapshot  resume_snapshot;
+SemaphoreHandle_t resume_mutex    = nullptr;
+volatile bool     resume_decided  = true;   // false while a loaded snapshot waits for decide_resume()
+uint32_t          last_save_s     = 0;      // probes task only, uptime seconds
+uint32_t          saved_signature = 0;      // probes task only
+
+uint32_t uptime_s(){ return (uint32_t)(esp_timer_get_time() / 1000000ULL); }
+
+// Setup, before the tasks start: mounts the store and puts back what a saved cook already beeped and
+// notified about, where the probe still has the same target. The steps keep their done flags.
+void restore_resume_flags(){
+    resume_mutex = xSemaphoreCreateMutex();
+    if(!resume_store::begin()){ return; }
+    if(!resume_store::load(resume_snapshot)){ return; }
+
+    resume_decided = false;
+    for(int i = 0; i < 8; i++){
+        const resume::ProbeState& state = resume_snapshot.probes[i];
+        Probe* probe = resume_probe(i);
+        if(!resume::flags_apply(state, probe->target_temperature, probe->minimum_temperature)){ continue; }
+        probe->restore_beep_flags(state.beep_flags);
+        notify::restore_watch(i, state.watch);
+        probe->steps.restore(resume::steps_done_for(state, probe->steps));
+    }
+    Serial.println("Resume: found a saved cook");
+}
+
+// Probes task: once the clock is known, or after CLOCK_WAIT_S without it, the saved graph comes back
+// with a gap for the time the grill was off. A snapshot older than 12 hours is another cook.
+void decide_resume(){
+    uint32_t uptime = uptime_s();
+    bool known = grill::clock_known();
+    if(!known && uptime < CLOCK_WAIT_S){ return; }
+
+    uint32_t gap = 0;
+    resume::Decision decision = resume::decide(resume_snapshot.saved_epoch, known ? (uint32_t)time(nullptr) : 0, &gap);
+    if(decision == resume::DISCARD){
+        Serial.println("Resume: the saved cook is older than 12 hours, starting fresh");
+        resume_store::erase();
+    } else {
+        // At least the time since start-up passed. With an unknown gap that is all there is, which
+        // still leaves a visible break in the graph.
+        uint32_t off = gap > uptime ? gap : uptime;
+        SharedLock lock;
+        grill::history_base_s = resume_snapshot.history_clock_s + off - uptime;
+        uint32_t now_s = grill::history_now_s();
+        for(int i = 0; i < 8; i++){
+            grill::probe_history[i] = resume_snapshot.probes[i].history;
+            grill::probe_history[i].add_gap(now_s, off);
+        }
+        grill::resumed_off_s = decision == resume::RESTORE_KNOWN_GAP ? (int32_t)gap : -2;
+        Serial.printf("Resume: carried on the cook, off for %d s\n", (int)grill::resumed_off_s);
+    }
+    last_save_s    = uptime;
+    resume_decided = true;
+}
+
+// Copies the cook into resume_snapshot. Holding resume_mutex.
+void capture_resume(){
+    SharedLock lock;    // the history and the steps
+    resume_snapshot.saved_epoch     = grill::clock_known() ? (uint32_t)time(nullptr) : 0;
+    resume_snapshot.history_clock_s = grill::history_now_s();
+    for(int i = 0; i < 8; i++){
+        resume::ProbeState& state = resume_snapshot.probes[i];
+        Probe* probe = resume_probe(i);
+        state.history    = grill::probe_history[i];
+        state.watch      = notify::watch(i);
+        state.beep_flags = probe->beep_flags();
+        state.target     = probe->target_temperature;
+        state.minimum    = probe->minimum_temperature;
+        state.step_count = (uint8_t)probe->steps.count();
+        for(size_t s = 0; s < steps::MAX_STEPS; s++){
+            state.step_temperatures[s] = s < probe->steps.count() ? probe->steps.at(s).temperature : 0;
+        }
+        state.step_done  = probe->steps.done_mask();
+    }
+}
+
+void save_resume_now(){
+    // Not before decide_resume(): the file still holds the cook that may come back
+    if(!resume_decided || resume_mutex == nullptr){ return; }
+    xSemaphoreTake(resume_mutex, portMAX_DELAY);
+    capture_resume();                                   // under the SharedLock
+    bool saved = resume_store::save(resume_snapshot);   // the file write outside it
+    xSemaphoreGive(resume_mutex);
+    if(!saved){ Serial.println("Resume: saving the cook failed"); }
+}
+
+// Changes when something worth saving soon changes: the alarm flags, step done flags and notify state
+uint32_t resume_signature(){
+    uint8_t bytes[8 * (2 + sizeof(notify::ProbeWatch))];
+    size_t n = 0;
+    SharedLock lock;    // the steps
+    for(int i = 0; i < 8; i++){
+        Probe* probe = resume_probe(i);
+        bytes[n++] = probe->beep_flags();
+        bytes[n++] = probe->steps.done_mask();
+        notify::ProbeWatch watch = notify::watch(i);
+        memcpy(bytes + n, &watch, sizeof(watch));
+        n += sizeof(watch);
+    }
+    return resume::crc32(bytes, n);
+}
+
+// Probes task, after each history sample: every SAVE_EVERY_S while a probe is connected, and soon
+// after the alarm state changed or the history was cleared
+void save_resume_when_due(){
+    uint32_t now = uptime_s();
+    uint32_t signature = resume_signature();
+    bool connected = false;
+    for(int i = 0; i < 8; i++){ connected = connected || resume_probe(i)->connected; }
+
+    bool periodic = connected && now - last_save_s >= SAVE_EVERY_S;
+    bool changed  = (signature != saved_signature || grill::resume_save_requested) && now - last_save_s >= SAVE_MIN_GAP_S;
+    if(!periodic && !changed){ return; }
+
+    grill::resume_save_requested = false;
+    saved_signature = signature;
+    last_save_s     = now;
+    save_resume_now();
+}
+
 // Adds a history sample for every probe and refreshes its time-to-target estimate, the stall and the lid
 void record_history(){
     Probe* probes[] = {&grill::probe_1, &grill::probe_2, &grill::probe_3, &grill::probe_4,
                        &grill::probe_5, &grill::probe_6, &grill::probe_7, &grill::probe_8};
-    // esp_timer_get_time() instead of millis(), which wraps at ~49.7 days; must match get_api_history()'s clock.
-    uint32_t now_s = (uint32_t)(esp_timer_get_time() / 1000000ULL);
+    uint32_t now_s = grill::history_now_s();    // must match get_api_history()'s clock
 
     SharedLock lock;    // the history is read by the webserver and mqtt tasks, temperature_unit can change
     bool fahrenheit = config::temperature_unit == "fahrenheit";
@@ -751,8 +891,12 @@ void task_probes(void* pvParameters) {
         check_steps();
         notify::check_probes();
 
-        if((long)(millis() - next_history_ms) >= 0){
+        if(!resume_decided){ decide_resume(); }
+
+        // No samples until a saved cook is back in, or they would land before its history
+        if(resume_decided && (long)(millis() - next_history_ms) >= 0){
             record_history();
+            save_resume_when_due();
             next_history_ms += history::FINE_INTERVAL_S * 1000;
             // Fell behind by more than one sample (should not happen): resync instead of catching up
             if((long)(millis() - next_history_ms) >= 0){ next_history_ms = millis() + history::FINE_INTERVAL_S * 1000; }
@@ -784,6 +928,7 @@ void task_battery(void* pvParameters) {
         if (low_battery.update(read_ok, grill::battery_percentage, grill::battery_millivolts, grill::battery_charging)) {
             Serial.printf("Battery empty (%d%%, %d mV), switching off\n", grill::battery_percentage, grill::battery_millivolts);
             grill::buzzer.beep(3, 300);
+            save_resume_now();
             config::config_helper.save_off_reason("low_battery");
             power.shutdown();
         }

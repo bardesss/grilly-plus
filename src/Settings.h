@@ -248,6 +248,9 @@ namespace grill{
     Probe probe_8 = Probe(8);
 
     history::ProbeHistory probe_history[8];
+    volatile uint32_t history_base_s       = 0;
+    volatile int32_t  resumed_off_s        = -1;
+    volatile bool     resume_save_requested = false;
 }
 
 namespace web{

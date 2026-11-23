@@ -6,6 +6,7 @@
 #include <UUID.h>
 
 #include <nvs_flash.h>
+#include "ResumeStore.h"
 
 #include "Buzzer.h"
 #include "Display.h"
@@ -819,6 +820,7 @@ void GrillConfig::factory_reset() {
 
     config::settings_storage.putBool("initialized", false);
     Serial.println("Nvram erased");
+    resume_store::erase();
 
     // Written after the erase, or it would be wiped along with everything else
     save_off_reason("factory_reset");

@@ -3,6 +3,7 @@
 #include <WiFi.h>
 #include <Update.h>
 #include "esp_timer.h"
+#include <sys/time.h>
 
 #include "Probe.h"
 #include "Buzzer.h"
@@ -40,6 +41,9 @@ void setup_api_routes()
 
     web::webserver.on("/api/alarm/mute", HTTP_POST, post_api_alarm_mute);
     web::webserver.on("/api/alarm/mute", HTTP_OPTIONS, cors_api_alarm_mute);
+
+    web::webserver.on("/api/time", HTTP_POST, post_api_time);
+    web::webserver.on("/api/time", HTTP_OPTIONS, cors_api_alarm_mute);
 
     web::webserver.on("/api/history", HTTP_GET, get_api_history);
     web::webserver.on("/api/history/clear", HTTP_POST, post_api_history_clear);
@@ -182,6 +186,25 @@ void post_api_alarm_mute(){
         grill::step_alerts.clear();     // "Wrap now" goes; the grill's button only closes the page
     }
     config::alarm_mute = true;
+    web::webserver.send(200, "application/json", "{\"success\": true}");
+}
+
+// The app's clock, for a grill without internet (hotspot mode): {"epoch": 1795400000}. Only taken
+// while the grill doesn't know the time, so it needs no admin auth: NTP or the first app wins.
+void post_api_time(){
+    if(!is_json_request()) { return; }
+    JsonDocument body;
+    if(deserializeJson(body, web::webserver.arg("plain")) || !body["epoch"].is<uint32_t>()
+       || body["epoch"].as<uint32_t>() <= 1700000000){
+        web::webserver.send(400, "application/json", "{\"error\": \"epoch should be the seconds since 1970\"}");
+        return;
+    }
+    if(grill::clock_known()){
+        web::webserver.send(409, "application/json", "{\"error\": \"The grill already knows the time\"}");
+        return;
+    }
+    struct timeval now = { (time_t)body["epoch"].as<uint32_t>(), 0 };
+    settimeofday(&now, nullptr);
     web::webserver.send(200, "application/json", "{\"success\": true}");
 }
 
@@ -620,6 +643,7 @@ void post_api_update(){
     web::webserver.send(200, "application/json", "{\"success\": true}");
     Serial.println("Firmware update installed, restarting");
     config::settings_storage.remove("upd_err");     // a manual update clears an old GitHub install error
+    save_resume_now();
     config::config_helper.save_off_reason("update");
     delay(1000);    // Let the response reach the browser
     ESP.restart();
@@ -694,8 +718,7 @@ void get_api_history(){
             SharedLock lock;    // the probes task writes the history
             connected        = probe_by_id(probe_id)->connected;
             history_snapshot = grill::probe_history[probe_id - 1];
-            // Same clock as record_history(): esp_timer_get_time() doesn't wrap at ~49.7 days like millis() does.
-            now_s            = (uint32_t)(esp_timer_get_time() / 1000000ULL);
+            now_s            = grill::history_now_s();     // same clock as record_history()
         }
         if(!connected){ continue; }
 
