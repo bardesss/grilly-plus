@@ -26,7 +26,7 @@ constexpr uint32_t WIFI_WAIT_MS    = 60000;   // how long a message waits for th
 constexpr size_t   TEXT_SIZE       = 220;
 constexpr uint32_t TEST_GAP_MS     = 10000;   // the test needs no password, so it can't flood the chat
 
-enum Kind : uint8_t { PROBE, BATTERY, TEST, TIMER };
+enum Kind : uint8_t { PROBE, BATTERY, TEST, TIMER, STEP };
 
 // Small, so the probes task only copies numbers. The text is made by the send task.
 struct Item {
@@ -38,6 +38,8 @@ struct Item {
     float   minimum;
     int     percentage;
     char    timer[timers::NAME_LENGTH + 1];   // TIMER: its name
+    char    step_action[steps::ACTION_LENGTH + 1];   // STEP: the step
+    int     step_temperature;
 };
 
 // The services, in the order they are sent to and listed in GET /api/notify
@@ -142,7 +144,7 @@ void make_message(const Item& item, Message& message){
     {
         SharedLock lock;    // names can be changed by the web, mqtt and opengrill tasks
         message.fahrenheit = config::temperature_unit == "fahrenheit";
-        if(item.kind == PROBE){ message.probe_name = probe_at(item.probe)->name; }
+        if(item.kind == PROBE || item.kind == STEP){ message.probe_name = probe_at(item.probe)->name; }
     }
     const char* grill = message.grill_name.c_str();
     switch(item.kind){
@@ -158,6 +160,10 @@ void make_message(const Item& item, Message& message){
             break;
         case TIMER:
             timer_message(message.text, TEXT_SIZE, grill, item.timer, item.probe);
+            break;
+        case STEP:
+            step_message(message.text, TEXT_SIZE, grill, message.probe_name.c_str(), item.step_action,
+                         item.step_temperature, message.fahrenheit ? "\u00B0F" : "\u00B0C");
             break;
     }
 }
@@ -231,7 +237,8 @@ String send_ntfy(const Targets& t, const Item& item, const Message& m, bool* per
     body["topic"]    = topic;
     body["title"]    = m.grill_name;
     body["message"]  = m.text;
-    body["priority"] = item.kind == PROBE ? ntfy_priority(item.event) : item.kind == TIMER ? TIMER_NTFY_PRIORITY : 3;
+    body["priority"] = item.kind == PROBE ? ntfy_priority(item.event) : item.kind == TIMER ? TIMER_NTFY_PRIORITY
+                     : item.kind == STEP ? STEP_NTFY_PRIORITY : 3;
     String payload, answer;
     serializeJson(body, payload);
 
@@ -250,7 +257,8 @@ String send_pushover(const Targets& t, const Item& item, const Message& m, bool*
     body["user"]     = t.pushover_user;
     body["title"]    = m.grill_name;
     body["message"]  = m.text;
-    body["priority"] = item.kind == PROBE ? pushover_priority(item.event) : item.kind == TIMER ? TIMER_PUSHOVER_PRIORITY : 0;
+    body["priority"] = item.kind == PROBE ? pushover_priority(item.event) : item.kind == TIMER ? TIMER_PUSHOVER_PRIORITY
+                     : item.kind == STEP ? STEP_PUSHOVER_PRIORITY : 0;
     String payload, answer;
     serializeJson(body, payload);
 
@@ -265,13 +273,15 @@ String send_pushover(const Targets& t, const Item& item, const Message& m, bool*
 
 String send_webhook(const Targets& t, const Item& item, const Message& m, bool* permanent){
     const char* event = item.kind == PROBE ? webhook_event_name(item.event)
-                      : item.kind == BATTERY ? "battery_low" : item.kind == TIMER ? "timer_done" : "test";
+                      : item.kind == BATTERY ? "battery_low" : item.kind == TIMER ? "timer_done"
+                      : item.kind == STEP ? "step" : "test";
     JsonDocument body;
     webhook_payload(body, WebhookInput{event, m.grill_name.c_str(), m.text, m.fahrenheit ? "fahrenheit" : "celcius",
-                                       item.kind == PROBE ? item.probe + 1 : 0, m.probe_name.c_str(),
+                                       item.kind == PROBE || item.kind == STEP ? item.probe + 1 : 0, m.probe_name.c_str(),
                                        item.temperature, item.target, item.minimum,
                                        item.kind == BATTERY ? item.percentage : -1,
-                                       item.kind == TIMER ? item.timer : nullptr, item.kind == TIMER ? item.probe : 0});
+                                       item.kind == TIMER ? item.timer : nullptr, item.kind == TIMER ? item.probe : 0,
+                                       item.kind == STEP ? item.step_action : nullptr, item.step_temperature});
     String payload, answer;
     serializeJson(body, payload);
 
@@ -401,6 +411,16 @@ void timer_done(const char* name, uint8_t probe){
     }
     Item item{TIMER, probe, READY, 0, 0, 0, 0, {}};
     strncpy(item.timer, name, sizeof(item.timer) - 1);
+    enqueue(item);
+}
+
+void step_reached(uint8_t probe, const char* action, int step_temperature, float temperature, float target){
+    {
+        SharedLock lock;
+        if(!any_set_up() || !config::notify_step){ return; }
+    }
+    Item item{STEP, probe, READY, temperature, target, 0, 0, {}, {}, step_temperature};
+    strncpy(item.step_action, action, sizeof(item.step_action) - 1);
     enqueue(item);
 }
 

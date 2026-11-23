@@ -9,12 +9,14 @@
 - Home Assistant: a **Next timer** sensor, the time the first running timer ends
 - Steps: up to 3 moments before the target per probe, like "Wrap at 74 °C". Add them under the target in the probe editor. When the probe climbs through a step the grill beeps once (switch: **Beep at a step**) and shows it on its screen; the card says "Wrap now". Each step fires once, also when the temperature dips while you wrap
 - Steps in presets: brisket, short ribs, pulled pork, pulled lamb shoulder and spare ribs come with "Wrap at 74 °C". Picking a food sets its steps, **Save as preset** keeps them, and the preset form under Settings has them too
+- Phone notifications for steps: "🔔 Brisket: time to wrap (74 °C)", with its own switch (**A step is reached**, on by default). ntfy sends it with high priority, Pushover with normal
 
 ### API and MQTT
 - `timers` (`id`, `name`, `remaining_s`, `length_s`, `done`, `probe`) and `alarm_timers` in `/api/grill` and the MQTT `grill` topic; `POST /api/timers` and `POST /api/timers/cancel`; a mute also clears the timers that ran out; `timers` in the capabilities
 - `rest_minutes` (0 to 180) on each probe in `/api/grill`, `/api/probes` and the MQTT topics, settable through `POST /api/probes` and `/config/probes`; presets can have `rest`
 - Presets can have `steps` (`action`, `c`, `f`, at most 3, below the target)
 - `steps` (`action`, `temperature`, `done`, `ignored`) and `step_alert` per probe in `/api/probes` and the MQTT `probes` topic, settable through `POST /api/probes` and `/config/probes`; `next_step`, `step_alert` and `step_alert_action` per probe in `/api/grill` and the MQTT `grill` topic; `beep_at_step` in the settings; `steps` in the capabilities
+- `notify_step` in the settings; the webhook gets `step` with a `step` object (`action`, `temperature`)
 - `notify_timer` in the settings; the webhook gets `timer_done` with a `timer` object (`name`, `probe`); Home Assistant discovery adds `next_timer`
 
 ### Changes

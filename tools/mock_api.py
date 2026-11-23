@@ -62,7 +62,7 @@ SETTINGS = {
     "telegram_token_set": False, "telegram_chat_id": "",
     "ntfy_url_set": False, "ntfy_server": "", "ntfy_token_set": False,
     "pushover_user_set": False, "pushover_token_set": False, "webhook_url_set": False, "webhook_server": "", "notify_ready": True, "notify_almost": True,
-    "notify_outside": True, "notify_stall": True, "notify_battery": True, "notify_timer": True,
+    "notify_outside": True, "notify_stall": True, "notify_battery": True, "notify_timer": True, "notify_step": True,
     "beep_outside_target": True, "beep_on_ready": True, "cucaracha_enabled": False,
     "screen_timeout_minutes": 0, "backlight_timeout_minutes": 5, "backlight_brightness": 4,
     "opengrill_server": "", "mqtt_broker": "192.168.1.10", "mqtt_port": 1883, "mqtt_topic": "grilly-plus",

@@ -55,6 +55,7 @@ const Settings = (() => {
       { key: "notify_almost", label: "Almost ready (early warning)", type: "toggle" },
       { key: "notify_outside", label: "Too hot or too cold", type: "toggle" },
       { key: "notify_stall", label: "In the stall", type: "toggle" },
+      { key: "notify_step", label: "A step is reached", type: "toggle" },
       { key: "notify_battery", label: "Battery at 20 % and 10 %", type: "toggle" },
       { key: "notify_timer", label: "A timer runs out", type: "toggle" },
     ] },

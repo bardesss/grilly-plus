@@ -80,6 +80,16 @@ void battery_message(char* out, size_t size, const char* grill_name, int percent
 // named "Rest: Brisket") "⏰ Brisket: time to slice (Grill)"
 void timer_message(char* out, size_t size, const char* grill_name, const char* timer_name, int probe);
 
+// A probe reached one of its steps: "🔔 Brisket: time to wrap (74 °C) (Grill)". The action's ASCII
+// letters are lower-cased, the rest is kept as typed.
+void step_message(char* out, size_t size, const char* grill_name, const char* probe_name, const char* action,
+                  int temperature, const char* unit);
+
+// ntfy and Pushover priority for a step: high on ntfy so it stands out, normal on Pushover (no
+// quiet-hours bypass for a step)
+const int STEP_NTFY_PRIORITY     = 4;
+const int STEP_PUSHOVER_PRIORITY = 0;
+
 // ntfy and Pushover priority for a timer that ran out: like a probe that is ready
 const int TIMER_NTFY_PRIORITY     = 4;
 const int TIMER_PUSHOVER_PRIORITY = 1;
@@ -116,7 +126,7 @@ bool webhook_url_ok(const char* url);
 std::string url_server_of(const char* url);
 
 // What a webhook gets: a fixed JSON shape, so Home Assistant, Node-RED and friends can act on it.
-// event is "ready", "almost_ready", "too_hot", "too_cold", "stall", "battery_low", "timer_done" or "test".
+// event is "ready", "almost_ready", "too_hot", "too_cold", "stall", "battery_low", "timer_done", "step" or "test".
 struct WebhookInput {
     const char* event;
     const char* grill_name;
@@ -130,6 +140,8 @@ struct WebhookInput {
     int         battery;       // percentage, -1 = not about the battery
     const char* timer_name;    // timer_done: the timer, nullptr = not about a timer
     int         timer_probe;   // timer_done: 1-8 for a rest timer, 0 for a timer of its own
+    const char* step_action;   // step: the step's action, nullptr = not about a step
+    int         step_temperature;
 };
 void webhook_payload(JsonDocument& doc, const WebhookInput& in);
 

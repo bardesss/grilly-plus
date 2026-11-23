@@ -698,19 +698,28 @@ void check_steps(){
     bool wake = false;
     for(uint8_t i = 0; i < 8; i++){
         Probe* probe = probes[i];
-        steps::Step step;   // the highest one that fired, printed after the lock
+        steps::Step fired_steps[steps::MAX_STEPS];   // copied under the lock, sent and printed after it
+        size_t fired_count = 0;
+        float temperature, target;
         {
             SharedLock lock;    // the steps are also changed by the web and mqtt tasks
             bool target_mode = probe->target_temperature > 0 && probe->minimum_temperature <= 0;
             uint8_t fired = probe->steps.update(probe->connected, target_mode, probe->temperature, probe->target_temperature);
             if(!fired){ continue; }
             uint8_t highest = 0;
-            for(uint8_t s = 0; s < steps::MAX_STEPS; s++){ if(fired & (1 << s)){ highest = s; } }
-            step = probe->steps.at(highest);
+            for(uint8_t s = 0; s < steps::MAX_STEPS; s++){
+                if(fired & (1 << s)){ highest = s; fired_steps[fired_count++] = probe->steps.at(s); }
+            }
+            temperature = probe->temperature;
+            target      = probe->target_temperature;
             probe->step_fired |= fired;
             grill::step_alerts.add(i, highest, millis());
         }
-        Serial.printf("Step on probe %u: %s at %d\n", i + 1, step.action, step.temperature);
+        // One notification per step: two passed in one reading are two messages
+        for(size_t s = 0; s < fired_count; s++){
+            Serial.printf("Step on probe %u: %s at %d\n", i + 1, fired_steps[s].action, fired_steps[s].temperature);
+            notify::step_reached(i, fired_steps[s].action, fired_steps[s].temperature, temperature, target);
+        }
         wake = true;
     }
     if(wake){ display.wake(); }    // the step page should be seen
