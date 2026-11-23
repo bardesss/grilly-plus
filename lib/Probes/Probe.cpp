@@ -314,6 +314,8 @@ void Probe::set_temperature(float target_temperature, float minimum_temperature)
     // that already went off.
     if(!temperatures_changed){ return; }
 
+    Probe::steps.rearm();   // steps already passed are done without firing
+
     if(minimum_temperature <= 0.0){
         Probe::has_beeped        = false;
         Probe::has_beeped_before = false;

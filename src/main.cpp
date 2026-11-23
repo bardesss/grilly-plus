@@ -677,6 +677,31 @@ void start_rest_timers(){
     }
 }
 
+// Steps that the probes just climbed through: the alarm task beeps, the screen shows a page
+void check_steps(){
+    Probe* probes[] = {&grill::probe_1, &grill::probe_2, &grill::probe_3, &grill::probe_4,
+                       &grill::probe_5, &grill::probe_6, &grill::probe_7, &grill::probe_8};
+    bool wake = false;
+    for(uint8_t i = 0; i < 8; i++){
+        Probe* probe = probes[i];
+        steps::Step step;   // the highest one that fired, printed after the lock
+        {
+            SharedLock lock;    // the steps are also changed by the web and mqtt tasks
+            bool target_mode = probe->target_temperature > 0 && probe->minimum_temperature <= 0;
+            uint8_t fired = probe->steps.update(probe->connected, target_mode, probe->temperature, probe->target_temperature);
+            if(!fired){ continue; }
+            uint8_t highest = 0;
+            for(uint8_t s = 0; s < steps::MAX_STEPS; s++){ if(fired & (1 << s)){ highest = s; } }
+            step = probe->steps.at(highest);
+            probe->step_fired |= fired;
+            grill::step_alerts.add(i, highest, millis());
+        }
+        Serial.printf("Step on probe %u: %s at %d\n", i + 1, step.action, step.temperature);
+        wake = true;
+    }
+    if(wake){ display.wake(); }    // the step page should be seen
+}
+
 void task_probes(void* pvParameters) {
     Serial.println("Launching task :: PROBES");
     delay(5);   //Give FreeRtos a chance to properly schedule the task
@@ -700,6 +725,7 @@ void task_probes(void* pvParameters) {
         grill::probe_7.calculate_temperature(); grill::probe_7.check_temperature_status();
         grill::probe_8.calculate_temperature(); grill::probe_8.check_temperature_status();
         start_rest_timers();
+        check_steps();
         notify::check_probes();
 
         if((long)(millis() - next_history_ms) >= 0){

@@ -7,6 +7,54 @@ import mock_api
 JSON = {"Content-Type": "application/json"}
 
 
+class StepsTest(unittest.TestCase):
+    def setUp(self):
+        self.saved = [dict(p) for p in mock_api.PROBES]
+
+    def tearDown(self):
+        mock_api.PROBES[:] = self.saved
+
+    def post(self, update):
+        return mock_api.handle("POST", "/api/probes", json.dumps([dict(update, probe_id=1)]), JSON)
+
+    def test_steps_are_saved_and_sorted(self):
+        status, probes = self.post({"steps": [{"action": "Spritz", "temperature": 82}, {"action": "Wrap", "temperature": 74}]})
+        self.assertEqual(200, status)
+        steps = probes[0]["steps"]
+        self.assertEqual(["Wrap", "Spritz"], [s["action"] for s in steps])
+        self.assertEqual({"action", "temperature", "done", "ignored"}, set(steps[0]))
+        self.assertEqual(-1, probes[0]["step_alert"])
+        self.assertEqual([], self.post({"steps": []})[1][0]["steps"])
+
+    def test_bad_steps_are_refused(self):
+        cases = [
+            ([{"action": "a", "temperature": t} for t in (10, 20, 30, 40)], "At most 3 steps"),
+            ([{"action": "x" * 17, "temperature": 74}], "A step needs an action of 1 to 16 characters"),
+            ([{"action": "a|b", "temperature": 74}], "A step needs an action of 1 to 16 characters"),
+            ([{"action": "Wrap", "temperature": 95}], "A step should be below the target"),
+            ([{"action": "Wrap", "temperature": 0}], "A step should be 1 or more degrees"),
+        ]
+        for steps, error in cases:
+            status, data = self.post({"target_temperature": 95, "minimum_temperature": 0, "steps": steps})
+            self.assertEqual((400, error), (status, data["error"]))
+
+    def test_grill_status_has_next_step_only(self):
+        self.assertEqual(200, self.post({"target_temperature": 200, "minimum_temperature": 0,
+                                         "steps": [{"action": "Wrap", "temperature": 190}]})[0])
+        _, grill = mock_api.handle("GET", "/api/grill", None)
+        probe = grill["probes"][0]
+        self.assertNotIn("steps", probe)
+        self.assertEqual({"action": "Wrap", "temperature": 190}, probe["next_step"])
+        self.assertEqual((-1, ""), (probe["step_alert"], probe["step_alert_action"]))
+        # A lower target (from Home Assistant, say) is never refused; the step is kept but ignored
+        self.assertEqual(200, self.post({"target_temperature": 150})[0])
+        _, grill = mock_api.handle("GET", "/api/grill", None)
+        self.assertIsNone(grill["probes"][0]["next_step"])
+        _, probes = mock_api.handle("GET", "/api/probes", None)
+        self.assertTrue(probes[0]["steps"][0]["ignored"])
+        self.assertIn("steps", mock_api.handle("GET", "/api/info", None)[1]["capabilities"])
+
+
 class TimersTest(unittest.TestCase):
     def setUp(self):
         mock_api.TIMERS.clear()

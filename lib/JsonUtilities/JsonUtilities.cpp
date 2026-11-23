@@ -110,6 +110,58 @@ class FieldReader {
         }
 };
 
+// The full steps of a probe, for /api/probes and the MQTT probes topic
+void add_steps_json(JsonObject out, const Probe& probe){
+    JsonArray list = out["steps"].to<JsonArray>();
+    for(size_t i = 0; i < probe.steps.count(); i++){
+        const steps::Step& step = probe.steps.at(i);
+        JsonObject item = list.add<JsonObject>();
+        item["action"]      = (const char*)step.action;
+        item["temperature"] = step.temperature;
+        item["done"]        = step.done;
+        item["ignored"]     = probe.steps.ignored(i, probe.target_temperature);
+    }
+    out["step_alert"] = grill::step_alerts.step_of(probe.number - 1, millis());
+}
+
+// What /api/grill and the MQTT grill topic get: the next step and the one to do now. The full list
+// would take the status past its 4 KB buffer with 8 probes and 6 timers.
+void add_step_summary_json(JsonObject out, const Probe& probe){
+    bool target_mode = probe.target_temperature > 0 && probe.minimum_temperature <= 0;
+    int next = target_mode ? probe.steps.next(probe.target_temperature) : -1;
+    if(next >= 0){
+        JsonObject step = out["next_step"].to<JsonObject>();
+        step["action"]      = (const char*)probe.steps.at(next).action;
+        step["temperature"] = probe.steps.at(next).temperature;
+    } else {
+        out["next_step"] = nullptr;
+    }
+    int alert = grill::step_alerts.step_of(probe.number - 1, millis());
+    if(alert >= (int)probe.steps.count()){ alert = -1; }
+    out["step_alert"]        = alert;
+    out["step_alert_action"] = alert >= 0 ? (const char*)probe.steps.at(alert).action : "";
+}
+
+// Reads "steps" ([{"action", "temperature"}]) into list. Returns the error, or "".
+String read_steps(JsonVariantConst value, steps::Step* list, size_t* count, float target){
+    if(!value.is<JsonArrayConst>()){ return "steps should be a list"; }
+    JsonArrayConst items = value.as<JsonArrayConst>();
+    if(items.size() > steps::MAX_STEPS){ return "At most 3 steps"; }
+    *count = 0;
+    for(JsonVariantConst item : items){
+        const char* action = item["action"] | (const char*)nullptr;
+        std::string error = steps::check_action(action);
+        if(!error.empty()){ return error.c_str(); }
+        if(!item["temperature"].is<int>()){ return "A step should be 1 or more degrees"; }
+        steps::Step& step = list[(*count)++];
+        strncpy(step.action, action, steps::ACTION_LENGTH);
+        step.action[steps::ACTION_LENGTH] = 0;
+        step.temperature = item["temperature"].as<int>();
+        step.done = false;
+    }
+    return steps::check(list, *count, target).c_str();
+}
+
 // Seconds since the probe was connected, 0 when it isn't. connected_time is set from the same clock
 // in Probe::calculate_temperature.
 long connected_seconds(const Probe& probe){
@@ -154,6 +206,13 @@ String update_probe(Probe& probe, JsonObjectConst item, bool apply, bool null_is
     fields.text("type_icon", icon);
     fields.number("rest_minutes", rest, 0, 180);
     if(!fields.error.isEmpty()){ return fields.error; }
+    steps::Step step_list[steps::MAX_STEPS];
+    size_t step_count = 0;
+    bool steps_given = !item["steps"].isUnbound();
+    if(steps_given){
+        String error = read_steps(item["steps"], step_list, &step_count, target);
+        if(!error.isEmpty()){ return error; }
+    }
     if(!food::type_valid(icon.c_str())){
         return "type_icon should be empty or one of beef, lamb, pork, poultry, fish, sausage, vegetables, pit, other";
     }
@@ -167,7 +226,12 @@ String update_probe(Probe& probe, JsonObjectConst item, bool apply, bool null_is
     }
 
     if(apply){
+        bool temperatures_changed = target != probe.target_temperature || minimum != probe.minimum_temperature;
         if(target_given || minimum_given){ probe.set_temperature(target, minimum); }
+        bool steps_changed = steps_given && probe.steps.set(step_list, step_count);
+        if(((target_given || minimum_given) && temperatures_changed) || steps_changed){
+            grill::step_alerts.clear_probe(probe.number - 1);
+        }
         if(type_given){ probe.set_type(type, kohm, celcius, beta); }
         if(fields.present("name")){ probe.set_name(name); }
         if(fields.present("offset_celcius")){ probe.set_offset(offset); }
@@ -236,6 +300,7 @@ void JsonUtilities::load_json_status(char *buffer){
     probeData_0["lid_open"] = grill::probe_1.lid_open;
     probeData_0["type_icon"] = grill::probe_1.type_icon;
     probeData_0["rest_minutes"] = grill::probe_1.rest_minutes;
+    add_step_summary_json(probeData_0, grill::probe_1);
 
     JsonObject probeData_1 = probeData.add<JsonObject>();
     probeData_1["probe_id"] = 2;
@@ -251,6 +316,7 @@ void JsonUtilities::load_json_status(char *buffer){
     probeData_1["lid_open"] = grill::probe_2.lid_open;
     probeData_1["type_icon"] = grill::probe_2.type_icon;
     probeData_1["rest_minutes"] = grill::probe_2.rest_minutes;
+    add_step_summary_json(probeData_1, grill::probe_2);
 
     JsonObject probeData_2 = probeData.add<JsonObject>();
     probeData_2["probe_id"] = 3;
@@ -266,6 +332,7 @@ void JsonUtilities::load_json_status(char *buffer){
     probeData_2["lid_open"] = grill::probe_3.lid_open;
     probeData_2["type_icon"] = grill::probe_3.type_icon;
     probeData_2["rest_minutes"] = grill::probe_3.rest_minutes;
+    add_step_summary_json(probeData_2, grill::probe_3);
 
     JsonObject probeData_3 = probeData.add<JsonObject>();
     probeData_3["probe_id"] = 4;
@@ -281,6 +348,7 @@ void JsonUtilities::load_json_status(char *buffer){
     probeData_3["lid_open"] = grill::probe_4.lid_open;
     probeData_3["type_icon"] = grill::probe_4.type_icon;
     probeData_3["rest_minutes"] = grill::probe_4.rest_minutes;
+    add_step_summary_json(probeData_3, grill::probe_4);
 
     JsonObject probeData_4 = probeData.add<JsonObject>();
     probeData_4["probe_id"] = 5;
@@ -296,6 +364,7 @@ void JsonUtilities::load_json_status(char *buffer){
     probeData_4["lid_open"] = grill::probe_5.lid_open;
     probeData_4["type_icon"] = grill::probe_5.type_icon;
     probeData_4["rest_minutes"] = grill::probe_5.rest_minutes;
+    add_step_summary_json(probeData_4, grill::probe_5);
 
     JsonObject probeData_5 = probeData.add<JsonObject>();
     probeData_5["probe_id"] = 6;
@@ -311,6 +380,7 @@ void JsonUtilities::load_json_status(char *buffer){
     probeData_5["lid_open"] = grill::probe_6.lid_open;
     probeData_5["type_icon"] = grill::probe_6.type_icon;
     probeData_5["rest_minutes"] = grill::probe_6.rest_minutes;
+    add_step_summary_json(probeData_5, grill::probe_6);
 
     JsonObject probeData_6 = probeData.add<JsonObject>();
     probeData_6["probe_id"] = 7;
@@ -326,6 +396,7 @@ void JsonUtilities::load_json_status(char *buffer){
     probeData_6["lid_open"] = grill::probe_7.lid_open;
     probeData_6["type_icon"] = grill::probe_7.type_icon;
     probeData_6["rest_minutes"] = grill::probe_7.rest_minutes;
+    add_step_summary_json(probeData_6, grill::probe_7);
 
     JsonObject probeData_7 = probeData.add<JsonObject>();
     probeData_7["probe_id"] = 8;
@@ -341,6 +412,7 @@ void JsonUtilities::load_json_status(char *buffer){
     probeData_7["lid_open"] = grill::probe_8.lid_open;
     probeData_7["type_icon"] = grill::probe_8.type_icon;
     probeData_7["rest_minutes"] = grill::probe_8.rest_minutes;
+    add_step_summary_json(probeData_7, grill::probe_8);
 
     jsondoc.shrinkToFit();
     serializeJson(jsondoc, buffer, config::json_buffer_size);
@@ -584,6 +656,7 @@ void JsonUtilities::load_json_probes(char* buffer){
     doc_0["lid_open"] = grill::probe_1.lid_open;
     doc_0["type_icon"] = grill::probe_1.type_icon;
     doc_0["rest_minutes"] = grill::probe_1.rest_minutes;
+    add_steps_json(doc_0, grill::probe_1);
 
     JsonObject doc_1 = jsondoc.add<JsonObject>();
     doc_1["probe_id"] = 2;
@@ -602,6 +675,7 @@ void JsonUtilities::load_json_probes(char* buffer){
     doc_1["lid_open"] = grill::probe_2.lid_open;
     doc_1["type_icon"] = grill::probe_2.type_icon;
     doc_1["rest_minutes"] = grill::probe_2.rest_minutes;
+    add_steps_json(doc_1, grill::probe_2);
 
     JsonObject doc_2 = jsondoc.add<JsonObject>();
     doc_2["probe_id"] = 3;
@@ -620,6 +694,7 @@ void JsonUtilities::load_json_probes(char* buffer){
     doc_2["lid_open"] = grill::probe_3.lid_open;
     doc_2["type_icon"] = grill::probe_3.type_icon;
     doc_2["rest_minutes"] = grill::probe_3.rest_minutes;
+    add_steps_json(doc_2, grill::probe_3);
 
     JsonObject doc_3 = jsondoc.add<JsonObject>();
     doc_3["probe_id"] = 4;
@@ -638,6 +713,7 @@ void JsonUtilities::load_json_probes(char* buffer){
     doc_3["lid_open"] = grill::probe_4.lid_open;
     doc_3["type_icon"] = grill::probe_4.type_icon;
     doc_3["rest_minutes"] = grill::probe_4.rest_minutes;
+    add_steps_json(doc_3, grill::probe_4);
 
     JsonObject doc_4 = jsondoc.add<JsonObject>();
     doc_4["probe_id"] = 5;
@@ -656,6 +732,7 @@ void JsonUtilities::load_json_probes(char* buffer){
     doc_4["lid_open"] = grill::probe_5.lid_open;
     doc_4["type_icon"] = grill::probe_5.type_icon;
     doc_4["rest_minutes"] = grill::probe_5.rest_minutes;
+    add_steps_json(doc_4, grill::probe_5);
 
     JsonObject doc_5 = jsondoc.add<JsonObject>();
     doc_5["probe_id"] = 6;
@@ -674,6 +751,7 @@ void JsonUtilities::load_json_probes(char* buffer){
     doc_5["lid_open"] = grill::probe_6.lid_open;
     doc_5["type_icon"] = grill::probe_6.type_icon;
     doc_5["rest_minutes"] = grill::probe_6.rest_minutes;
+    add_steps_json(doc_5, grill::probe_6);
 
     JsonObject doc_6 = jsondoc.add<JsonObject>();
     doc_6["probe_id"] = 7;
@@ -692,6 +770,7 @@ void JsonUtilities::load_json_probes(char* buffer){
     doc_6["lid_open"] = grill::probe_7.lid_open;
     doc_6["type_icon"] = grill::probe_7.type_icon;
     doc_6["rest_minutes"] = grill::probe_7.rest_minutes;
+    add_steps_json(doc_6, grill::probe_7);
 
     JsonObject doc_7 = jsondoc.add<JsonObject>();
     doc_7["probe_id"] = 8;
@@ -710,6 +789,7 @@ void JsonUtilities::load_json_probes(char* buffer){
     doc_7["lid_open"] = grill::probe_8.lid_open;
     doc_7["type_icon"] = grill::probe_8.type_icon;
     doc_7["rest_minutes"] = grill::probe_8.rest_minutes;
+    add_steps_json(doc_7, grill::probe_8);
 
     jsondoc.shrinkToFit();
     serializeJson(jsondoc, buffer, config::json_buffer_size);
@@ -939,7 +1019,7 @@ void JsonUtilities::load_json_info(char* buffer){
     JsonArray capabilities = jsondoc["capabilities"].to<JsonArray>();
     for (const char* capability : {"history", "eta", "clear_history", "alarm_mute", "alarm_probes",
                                    "calibration_offset", "diagnostics", "ota_upload", "github_update", "admin_reset",
-                                   "timers"}) {
+                                   "timers", "steps"}) {
         capabilities.add(capability);
     }
 

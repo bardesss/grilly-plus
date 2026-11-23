@@ -114,17 +114,17 @@ def update_latest():
 PROBES = [
     {"probe_id": 1, "name": "Brisket", "target_temperature": 95.0, "minimum_temperature": 0.0, "connected": True,
      "type_icon": "beef", "probe_type": "grilleye_iris", "reference_kohm": 100, "reference_celcius": 25, "reference_beta": 4250,
-     "offset_celcius": 0.0, "rest_minutes": 60},
+     "offset_celcius": 0.0, "rest_minutes": 60, "steps": [{"action": "Wrap", "temperature": 74}]},
     {"probe_id": 2, "name": "Ribs", "target_temperature": 93.0, "minimum_temperature": 88.0, "connected": True,
      "type_icon": "pork", "probe_type": "grilleye_iris", "reference_kohm": 100, "reference_celcius": 25, "reference_beta": 4250,
-     "offset_celcius": 0.0, "rest_minutes": 0},
+     "offset_celcius": 0.0, "rest_minutes": 0, "steps": []},
     {"probe_id": 3, "name": "Grill", "target_temperature": 0.0, "minimum_temperature": 0.0, "connected": True,
      "type_icon": "pit", "probe_type": "maverick_et733", "reference_kohm": 200, "reference_celcius": 25, "reference_beta": 4250,
-     "offset_celcius": 0.0, "rest_minutes": 0},
+     "offset_celcius": 0.0, "rest_minutes": 0, "steps": []},
 ] + [
     {"probe_id": n, "name": "Probe %d" % n, "target_temperature": 0.0, "minimum_temperature": 0.0, "connected": False,
      "type_icon": "", "probe_type": "grilleye_iris", "reference_kohm": 100, "reference_celcius": 25, "reference_beta": 4250,
-     "offset_celcius": 0.0, "rest_minutes": 0}
+     "offset_celcius": 0.0, "rest_minutes": 0, "steps": []}
     for n in range(4, 9)
 ]
 
@@ -299,14 +299,49 @@ def grill():
              "connected_seconds": int(time.time() - CONNECTED_AT[p["probe_id"]]) if p["connected"] else 0,
              "alarm": p["probe_id"] == ALARM_PROBE_ID, "eta_seconds": eta_seconds(p),
              "stalled": p["probe_id"] in STALLED, "lid_open": False, "type_icon": p["type_icon"],
-             "rest_minutes": p["rest_minutes"]}
+             "rest_minutes": p["rest_minutes"], "next_step": next_step(p), "step_alert": -1, "step_alert_action": ""}
             for p in PROBES
         ],
     }
 
 
+def check_steps(steps, target):
+    """The grill's checks (lib/ProbeSteps), returns the error or ""."""
+    if not isinstance(steps, list):
+        return "steps should be a list"
+    if len(steps) > 3:
+        return "At most 3 steps"
+    for step in steps:
+        action = step.get("action") if isinstance(step, dict) else None
+        if (not isinstance(action, str) or not 1 <= len(action.encode()) <= 16
+                or any(ord(c) < 0x20 or c in "|:" for c in action)):
+            return "A step needs an action of 1 to 16 characters"
+        temperature = step.get("temperature")
+        if not isinstance(temperature, int) or isinstance(temperature, bool) or temperature < 1:
+            return "A step should be 1 or more degrees"
+        if temperature >= target:
+            return "A step should be below the target"
+    return ""
+
+
+def step_list(p):
+    """The steps as /api/probes shows them; done = the temperature is past it (good enough for a mock)."""
+    now = temperature(p)
+    return [{"action": s["action"], "temperature": s["temperature"],
+             "done": now >= s["temperature"], "ignored": s["temperature"] >= p["target_temperature"]}
+            for s in p["steps"]]
+
+
+def next_step(p):
+    if not (p["target_temperature"] > 0 and p["minimum_temperature"] <= 0):
+        return None
+    return next(({"action": s["action"], "temperature": s["temperature"]}
+                 for s in step_list(p) if not s["done"] and not s["ignored"]), None)
+
+
 def probes():
-    return [dict(p, temperature=temperature(p), eta_seconds=eta_seconds(p), stalled=p["probe_id"] in STALLED, lid_open=False)
+    return [dict(p, temperature=temperature(p), eta_seconds=eta_seconds(p), stalled=p["probe_id"] in STALLED, lid_open=False,
+                 steps=step_list(p), step_alert=-1)
             for p in PROBES]
 
 
@@ -490,11 +525,19 @@ def handle(method, path, body, headers=None, query=""):
             rest = update.get("rest_minutes", 0)
             if not isinstance(rest, int) or isinstance(rest, bool) or not 0 <= rest <= 180:
                 return 400, {"error": "rest_minutes should be between 0 and 180"}
+            if "steps" in update:
+                target = update.get("target_temperature", probe["target_temperature"])
+                error = check_steps(update["steps"], target)
+                if error:
+                    return 400, {"error": error}
             if "type_icon" in update and update["type_icon"] not in FOOD_TYPES:
                 return 400, {"error": "type_icon should be empty or one of beef, lamb, pork, poultry, fish, sausage, vegetables, pit, other"}
         for update in updates:
             probe = next((p for p in PROBES if p["probe_id"] == int(update["probe_id"])), None)
-            probe.update({k: v for k, v in update.items() if k != "probe_id"})
+            probe.update({k: v for k, v in update.items() if k not in ("probe_id", "steps")})
+            if "steps" in update:
+                probe["steps"] = sorted(({"action": s["action"], "temperature": s["temperature"]} for s in update["steps"]),
+                                        key=lambda s: s["temperature"])
         return 200, probes()
     if method == "GET" and path == "/api/presets":
         return 200, PRESETS
@@ -566,7 +609,7 @@ def handle(method, path, body, headers=None, query=""):
             "unique_id": SETTINGS["uuid"],
             "hostname": "grilly-plus-%s.local" % SETTINGS["uuid"].replace("-", "")[:8].lower(),
             "probe_count": 8,
-            "capabilities": ["history", "eta", "clear_history", "alarm_mute", "alarm_probes", "timers",
+            "capabilities": ["history", "eta", "clear_history", "alarm_mute", "alarm_probes", "timers", "steps",
                              "calibration_offset", "diagnostics", "ota_upload"],
         }
     if method == "GET" and path == "/api/wifiscan":

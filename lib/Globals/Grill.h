@@ -3,6 +3,7 @@
 #include <Arduino.h>
 #include "History.h"
 #include "Timers.h"
+#include "ProbeSteps.h"
 
 class Probe;
 class Buzzer;
@@ -28,6 +29,7 @@ namespace grill {
     // Countdown timers. Started from the API, run out in task_alarm, read by the screen, the API and
     // mqtt: only touch them under the SharedLock.
     extern timers::TimerList timer_list;
+    extern steps::StepAlerts step_alerts;   // under SharedLock
 
     // Wifi
     extern bool wifi_connected;
