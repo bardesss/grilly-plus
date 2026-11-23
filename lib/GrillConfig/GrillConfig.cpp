@@ -74,6 +74,7 @@ void GrillConfig::load_settings(){
     config::notify_outside            = config::settings_storage.getBool("ntf_outside", true);
     config::notify_stall              = config::settings_storage.getBool("ntf_stall", true);
     config::notify_battery            = config::settings_storage.getBool("ntf_battery", true);
+    config::notify_timer              = config::settings_storage.getBool("ntf_timer", true);
 
     config::screen_timeout_minutes    = config::settings_storage.getInt("screen_to_mins");
     config::backlight_timeout_minutes = config::settings_storage.getInt("backl_to_mins");
@@ -146,6 +147,7 @@ void GrillConfig::save_settings(){
         config::settings_storage.putBool("ntf_outside", config::notify_outside);
         config::settings_storage.putBool("ntf_stall", config::notify_stall);
         config::settings_storage.putBool("ntf_battery", config::notify_battery);
+        config::settings_storage.putBool("ntf_timer", config::notify_timer);
         config::settings_storage.putInt("screen_to_mins", config::screen_timeout_minutes);
         config::settings_storage.putInt("backl_to_mins", config::backlight_timeout_minutes);
         config::settings_storage.putInt("backl_bright", config::backlight_brightness);
@@ -252,6 +254,7 @@ void GrillConfig::initialize_settings(){
     config::settings_storage.putBool("ntf_outside", config::notify_outside);
     config::settings_storage.putBool("ntf_stall", config::notify_stall);
     config::settings_storage.putBool("ntf_battery", config::notify_battery);
+    config::settings_storage.putBool("ntf_timer", config::notify_timer);
     config::settings_storage.putInt("screen_to_mins", config::screen_timeout_minutes);
     config::settings_storage.putInt("backl_to_mins", config::backlight_timeout_minutes);
     config::settings_storage.putInt("backl_bright", config::backlight_brightness);

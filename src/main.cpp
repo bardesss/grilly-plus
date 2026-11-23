@@ -450,12 +450,19 @@ void task_alarm(void* pvParameters) {
 
         //* Timers that ran out just now sound like a probe that reached its target
         uint8_t finished;
+        timers::Timer done[timers::MAX_TIMERS];
         {
             SharedLock lock;    // the timers
             finished = grill::timer_list.update(millis());
             for(size_t i = 0; i < timers::MAX_TIMERS; i++){
-                if(finished & (1 << i)){ Serial.printf("Timer done: %s\n", grill::timer_list.at(i).name); }
+                if(finished & (1 << i)){
+                    done[i] = grill::timer_list.at(i);
+                    Serial.printf("Timer done: %s\n", done[i].name);
+                }
             }
+        }
+        for(size_t i = 0; i < timers::MAX_TIMERS; i++){
+            if(finished & (1 << i)){ notify::timer_done(done[i].name, done[i].probe); }
         }
         if(finished){
             alarm++;

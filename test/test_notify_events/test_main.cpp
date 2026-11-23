@@ -143,6 +143,12 @@ void test_messages(){
     TEST_ASSERT_EQUAL_STRING("\U0001F9CA Pit is too cold: 95 °C, below 100 °C (Grilly+)", out);
     battery_message(out, sizeof(out), "Grilly+", 10);
     TEST_ASSERT_EQUAL_STRING("\U0001FAAB Grilly+ battery at 10 %, plug in the charger", out);
+    timer_message(out, sizeof(out), "Grilly+", "Flip the ribs", 0);
+    TEST_ASSERT_EQUAL_STRING("\u23F0 Flip the ribs: time's up (Grilly+)", out);
+    timer_message(out, sizeof(out), "Grilly+", "Rest: Brisket", 2);
+    TEST_ASSERT_EQUAL_STRING("\u23F0 Brisket: time to slice (Grilly+)", out);
+    timer_message(out, sizeof(out), "Grilly+", "Rest: Brisket", 0);     // named like it, but your own
+    TEST_ASSERT_EQUAL_STRING("\u23F0 Rest: Brisket: time's up (Grilly+)", out);
 }
 
 void test_message_is_cut_not_overflowed(){
@@ -235,16 +241,23 @@ void test_webhook_urls(){
 void test_webhook_payload(){
     JsonDocument doc;
     webhook_payload(doc, WebhookInput{webhook_event_name(TOO_COLD), "Grilly+", "too cold", "celcius",
-                                      3, "Pit", 94.66f, 120, 100, -1});
+                                      3, "Pit", 94.66f, 120, 100, -1, nullptr, 0});
     TEST_ASSERT_EQUAL_STRING("too_cold", doc["event"].as<const char*>());
     TEST_ASSERT_EQUAL_STRING("Grilly+", doc["grill"].as<const char*>());
     TEST_ASSERT_EQUAL(3, doc["probe"]["id"].as<int>());
     TEST_ASSERT_EQUAL_STRING("Pit", doc["probe"]["name"].as<const char*>());
     TEST_ASSERT_TRUE(doc["probe"]["temperature"].as<float>() > 94.69f && doc["probe"]["temperature"].as<float>() < 94.71f);
     TEST_ASSERT_TRUE(doc["battery"].isNull());
-    webhook_payload(doc, WebhookInput{"battery_low", "Grilly+", "battery", "celcius", 0, "", 0, 0, 0, 20});
+    webhook_payload(doc, WebhookInput{"battery_low", "Grilly+", "battery", "celcius", 0, "", 0, 0, 0, 20, nullptr, 0});
     TEST_ASSERT_TRUE(doc["probe"].isNull());
     TEST_ASSERT_EQUAL(20, doc["battery"].as<int>());
+    TEST_ASSERT_TRUE(doc["timer"].isNull());
+    webhook_payload(doc, WebhookInput{"timer_done", "Grilly+", "time to slice", "celcius", 0, "", 0, 0, 0, -1, "Rest: Brisket", 2});
+    TEST_ASSERT_EQUAL_STRING("timer_done", doc["event"].as<const char*>());
+    TEST_ASSERT_EQUAL_STRING("Rest: Brisket", doc["timer"]["name"].as<const char*>());
+    TEST_ASSERT_EQUAL(2, doc["timer"]["probe"].as<int>());
+    TEST_ASSERT_TRUE(doc["probe"].isNull());
+    TEST_ASSERT_TRUE(doc["battery"].isNull());
 }
 
 int main(int argc, char** argv){

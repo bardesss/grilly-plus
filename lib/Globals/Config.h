@@ -49,6 +49,7 @@ namespace config{
     extern bool   notify_outside;
     extern bool   notify_stall;
     extern bool   notify_battery;
+    extern bool   notify_timer;
 
     // Buffers
     extern int json_buffer_size;

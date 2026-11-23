@@ -129,6 +129,16 @@ void battery_message(char* out, size_t size, const char* grill_name, int percent
     trim_utf8(out);
 }
 
+void timer_message(char* out, size_t size, const char* grill_name, const char* timer_name, int probe){
+    static const char REST[] = "Rest: ";
+    if(probe > 0 && strncmp(timer_name, REST, sizeof(REST) - 1) == 0){
+        snprintf(out, size, "\u23F0 %s: time to slice (%s)", timer_name + sizeof(REST) - 1, grill_name);
+    } else {
+        snprintf(out, size, "\u23F0 %s: time's up (%s)", timer_name, grill_name);
+    }
+    trim_utf8(out);
+}
+
 void telegram_error(char* out, size_t size, int status, const char* body){
     JsonDocument doc;
     const char* description = nullptr;
@@ -291,6 +301,11 @@ void webhook_payload(JsonDocument& doc, const WebhookInput& in){
         probe["minimum"]     = in.minimum;
     }
     if(in.battery >= 0){ doc["battery"] = in.battery; }
+    if(in.timer_name != nullptr){
+        JsonObject timer = doc["timer"].to<JsonObject>();
+        timer["name"]  = in.timer_name;
+        timer["probe"] = in.timer_probe;
+    }
 }
 
 }  // namespace notify

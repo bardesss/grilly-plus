@@ -383,6 +383,7 @@ void JsonUtilities::load_json_settings(char* buffer){
     jsondoc["notify_outside"]            = config::notify_outside;
     jsondoc["notify_stall"]              = config::notify_stall;
     jsondoc["notify_battery"]            = config::notify_battery;
+    jsondoc["notify_timer"]              = config::notify_timer;
 
     jsondoc["screen_timeout_minutes"]    = config::screen_timeout_minutes;
     jsondoc["backlight_timeout_minutes"] = config::backlight_timeout_minutes;
@@ -463,6 +464,7 @@ jsonResult JsonUtilities::save_json_settings(char* raw_json, bool admin_authoriz
             fields.boolean("notify_outside",            config::notify_outside);
             fields.boolean("notify_stall",              config::notify_stall);
             fields.boolean("notify_battery",            config::notify_battery);
+            fields.boolean("notify_timer",              config::notify_timer);
 
             fields.number("screen_timeout_minutes",     config::screen_timeout_minutes, 0, 10000);
             fields.number("backlight_timeout_minutes",  config::backlight_timeout_minutes, 0, 10000);

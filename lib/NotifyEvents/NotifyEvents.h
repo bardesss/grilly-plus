@@ -76,6 +76,14 @@ void probe_message(char* out, size_t size, Event event, const char* grill_name, 
                    float temperature, float target, float minimum, const char* unit);
 void battery_message(char* out, size_t size, const char* grill_name, int percentage);
 
+// A timer ran out: "⏰ Flip the ribs: time's up (Grill)", or for the rest timer of a probe (probe 1-8,
+// named "Rest: Brisket") "⏰ Brisket: time to slice (Grill)"
+void timer_message(char* out, size_t size, const char* grill_name, const char* timer_name, int probe);
+
+// ntfy and Pushover priority for a timer that ran out: like a probe that is ready
+const int TIMER_NTFY_PRIORITY     = 4;
+const int TIMER_PUSHOVER_PRIORITY = 1;
+
 // Why Telegram refused a message, from its HTTP status and answer ({"ok":false,"description":"..."})
 void telegram_error(char* out, size_t size, int status, const char* body);
 
@@ -108,7 +116,7 @@ bool webhook_url_ok(const char* url);
 std::string url_server_of(const char* url);
 
 // What a webhook gets: a fixed JSON shape, so Home Assistant, Node-RED and friends can act on it.
-// event is "ready", "almost_ready", "too_hot", "too_cold", "stall", "battery_low" or "test".
+// event is "ready", "almost_ready", "too_hot", "too_cold", "stall", "battery_low", "timer_done" or "test".
 struct WebhookInput {
     const char* event;
     const char* grill_name;
@@ -120,6 +128,8 @@ struct WebhookInput {
     float       target;
     float       minimum;
     int         battery;       // percentage, -1 = not about the battery
+    const char* timer_name;    // timer_done: the timer, nullptr = not about a timer
+    int         timer_probe;   // timer_done: 1-8 for a rest timer, 0 for a timer of its own
 };
 void webhook_payload(JsonDocument& doc, const WebhookInput& in);
 

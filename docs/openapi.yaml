@@ -739,8 +739,10 @@ components:
             webhook off. Write-only, because the URL often holds a secret id, so only webhook_url_set and
             webhook_server are returned. The body is
             {"event", "grill", "message", "unit", "probe": {"id", "name", "temperature", "target",
-            "minimum"}, "battery"}, with event one of ready, almost_ready, too_hot, too_cold, stall,
-            battery_low or test; probe is only there for a probe event, battery only for battery_low.
+            "minimum"}, "battery", "timer": {"name", "probe"}}, with event one of ready, almost_ready,
+            too_hot, too_cold, stall, battery_low, timer_done or test; probe is only there for a probe
+            event, battery only for battery_low, timer only for timer_done (its probe is 1-8 for a rest
+            timer, else 0).
         webhook_url_set:
           type: boolean
           readOnly: true
@@ -773,6 +775,10 @@ components:
           type: boolean
           example: true
           description: Notify when the battery drops to 20 % and to 10 % while not charging.
+        notify_timer:
+          type: boolean
+          example: true
+          description: Notify when a timer runs out, a rest timer included.
         screen_timeout_minutes:
           type: integer
           example: 0

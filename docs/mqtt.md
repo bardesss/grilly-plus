@@ -51,6 +51,7 @@ For the topics that Grilly+ is subscribed to (`/config/probes`, `/config/setting
 With `mqtt_ha_discovery` on (the default), the grill publishes a retained [discovery](https://www.home-assistant.io/integrations/mqtt/#mqtt-discovery) config for each of its entities to `homeassistant/<component>/grilly_plus_<uuid>/<entity>/config` every time it connects, and again when the grill name, the temperature unit or the switch changes. Home Assistant then shows one device, named after the grill, with:
 
 - `battery`, `battery_charging`, `wifi_signal`, `alarm` and `update_available`
+- `next_timer`, a timestamp of when the first running timer ends, unknown without one
 - `probe1_temperature` to `probe8_temperature`, and for every probe `_target`, `_time_to_target` (seconds), `_stalled` and `_alarm`
 - the `mute` button, which sends `mute` to `/config/mute`
 
