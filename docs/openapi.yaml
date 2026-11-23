@@ -427,7 +427,8 @@ components:
             it (a short beep, a page on the grill's screen) and stays done until the target or the steps
             change or the probe is plugged in again. Steps already passed at that moment are done without
             firing. Sending steps replaces them all, [] clears them. Each temperature is checked against the
-            target when saving; a step the target later drops below is kept but ignored. Sorted by
+            target when saving; a step the target later drops below is kept but ignored, and may be sent
+            back at the same temperature (so it doesn't block changes to the other steps). Sorted by
             temperature, in the grill's unit (not converted when the unit changes, like the target).
           items:
             type: object

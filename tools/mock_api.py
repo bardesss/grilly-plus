@@ -305,8 +305,9 @@ def grill():
     }
 
 
-def check_steps(steps, target):
-    """The grill's checks (lib/ProbeSteps), returns the error or ""."""
+def check_steps(steps, target, kept=()):
+    """The grill's checks (lib/ProbeSteps), returns the error or "". A temperature in kept (the
+    stored steps) may stay at or above the target: it was below it when it was set."""
     if not isinstance(steps, list):
         return "steps should be a list"
     if len(steps) > 3:
@@ -319,7 +320,7 @@ def check_steps(steps, target):
         temperature = step.get("temperature")
         if not isinstance(temperature, int) or isinstance(temperature, bool) or temperature < 1:
             return "A step should be 1 or more degrees"
-        if temperature >= target:
+        if temperature >= target and temperature not in kept:
             return "A step should be below the target"
     return ""
 
@@ -527,7 +528,7 @@ def handle(method, path, body, headers=None, query=""):
                 return 400, {"error": "rest_minutes should be between 0 and 180"}
             if "steps" in update:
                 target = update.get("target_temperature", probe["target_temperature"])
-                error = check_steps(update["steps"], target)
+                error = check_steps(update["steps"], target, [s["temperature"] for s in probe.get("steps", [])])
                 if error:
                     return 400, {"error": error}
             if "type_icon" in update and update["type_icon"] not in FOOD_TYPES:

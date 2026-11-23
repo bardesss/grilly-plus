@@ -491,9 +491,11 @@ void task_alarm(void* pvParameters) {
             step = false;
             config::alarm_mute = false;
             {
-                SharedLock lock;    // the timers and steps
+                // Step alerts stay: a press only closes the step page (the button task), a mute from
+                // the app or MQTT clears them itself. Clearing them here would also close a step page
+                // waiting behind TIME'S UP when the press that stopped the timer lands.
+                SharedLock lock;
                 grill::timer_list.clear_done();
-                grill::step_alerts.clear();
             }
         }
 

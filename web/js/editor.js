@@ -377,6 +377,16 @@ const Editor = (() => {
     }
   }
 
+  async function refill(id) {
+    try {
+      const probes = await Api.get("/api/probes", 5000);
+      const probe = probes.find((p) => p.probe_id === id);
+      if (probe && probeId === id && !saver.hasPending()) fill(probe);
+    } catch (error) {
+      // Offline: the note already says the change wasn't saved
+    }
+  }
+
   async function open(id, trigger) {
     if (probeId !== null && probeId !== id) saver.flush();
     probeId = id;
@@ -530,6 +540,7 @@ const Editor = (() => {
     stepRows = StepRows.create(sheet.querySelector("#editor-steps"), {
       unit,
       onChange: (list) => save({ steps: list }, { immediate: true }),
+      onError: (message) => Controls.showNote(note, "error", { message }),
     });
     restStepper = Controls.stepper(sheet.querySelector("#editor-rest"), {
       min: 0, max: 180, label: "Rest timer in minutes", suffix: (v) => (v ? " min" : " (off)"), onChange: onRestChange,
@@ -546,6 +557,8 @@ const Editor = (() => {
         if (state === "saved" && Array.isArray(detail) && probeId !== null && !saver.hasPending()) {
           fill(detail.find((p) => p.probe_id === probeId));
         }
+        // A refused change isn't on the grill: show what is, so the steps don't look saved
+        if (state === "error" && probeId !== null && !saver.hasPending()) refill(probeId);
       },
     });
 

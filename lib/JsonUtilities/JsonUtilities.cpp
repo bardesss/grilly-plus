@@ -143,7 +143,7 @@ void add_step_summary_json(JsonObject out, const Probe& probe){
 }
 
 // Reads "steps" ([{"action", "temperature"}]) into list. Returns the error, or "".
-String read_steps(JsonVariantConst value, steps::Step* list, size_t* count, float target){
+String read_steps(JsonVariantConst value, steps::Step* list, size_t* count, float target, const steps::StepList* kept){
     if(!value.is<JsonArrayConst>()){ return "steps should be a list"; }
     JsonArrayConst items = value.as<JsonArrayConst>();
     if(items.size() > steps::MAX_STEPS){ return "At most 3 steps"; }
@@ -159,7 +159,7 @@ String read_steps(JsonVariantConst value, steps::Step* list, size_t* count, floa
         step.temperature = item["temperature"].as<int>();
         step.done = false;
     }
-    return steps::check(list, *count, target).c_str();
+    return steps::check(list, *count, target, kept).c_str();
 }
 
 // Seconds since the probe was connected, 0 when it isn't. connected_time is set from the same clock
@@ -210,7 +210,7 @@ String update_probe(Probe& probe, JsonObjectConst item, bool apply, bool null_is
     size_t step_count = 0;
     bool steps_given = !item["steps"].isUnbound();
     if(steps_given){
-        String error = read_steps(item["steps"], step_list, &step_count, target);
+        String error = read_steps(item["steps"], step_list, &step_count, target, &probe.steps);
         if(!error.isEmpty()){ return error; }
     }
     if(!food::type_valid(icon.c_str())){

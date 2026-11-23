@@ -27,8 +27,13 @@ struct Step {
 // storage separators)
 std::string check_action(const char* action);
 
-// Why a list of steps can't be saved for this target, or ""
-std::string check(const Step* list, size_t count, float target);
+class StepList;
+
+// Why a list of steps can't be saved for this target, or "". A step at the temperature of one in
+// kept (the stored steps) may stay at or above the target: it was below it when it was set, and
+// it is ignored until the target goes up again. Without this one skipped step would block every
+// change to the others.
+std::string check(const Step* list, size_t count, float target, const StepList* kept = nullptr);
 
 class StepList {
 public:

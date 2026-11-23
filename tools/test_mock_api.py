@@ -54,6 +54,18 @@ class StepsTest(unittest.TestCase):
         self.assertTrue(probes[0]["steps"][0]["ignored"])
         self.assertIn("steps", mock_api.handle("GET", "/api/info", None)[1]["capabilities"])
 
+    def test_a_skipped_step_does_not_block_changes_to_the_others(self):
+        self.assertEqual(200, self.post({"target_temperature": 95, "minimum_temperature": 0,
+                                         "steps": [{"action": "Wrap", "temperature": 74}, {"action": "Spritz", "temperature": 82}]})[0])
+        self.assertEqual(200, self.post({"target_temperature": 80})[0])
+        # Spritz at 82 is above the new target but already stored: a change to Wrap is still saved
+        status, probes = self.post({"steps": [{"action": "Wrap", "temperature": 70}, {"action": "Spritz", "temperature": 82}]})
+        self.assertEqual(200, status)
+        self.assertEqual([70, 82], [s["temperature"] for s in probes[0]["steps"]])
+        # A new step above the target is still refused
+        status, data = self.post({"steps": [{"action": "Wrap", "temperature": 70}, {"action": "Sauce", "temperature": 85}]})
+        self.assertEqual((400, "A step should be below the target"), (status, data["error"]))
+
 
 class TimersTest(unittest.TestCase):
     def setUp(self):

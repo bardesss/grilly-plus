@@ -131,6 +131,16 @@ void test_check_messages(){
     TEST_ASSERT_EQUAL_STRING("", check(good, 2, 95).c_str());
 }
 
+void test_check_keeps_a_stored_step_above_the_target(){
+    // Wrap 74 and Spritz 82 were saved under target 95; the target is now 80
+    StepList stored = make({{74, "Wrap"}, {82, "Spritz"}});
+    Step edited[] = {step(70, "Wrap"), step(82, "Spritz")};
+    TEST_ASSERT_EQUAL_STRING("", check(edited, 2, 80, &stored).c_str());
+    Step added[] = {step(70, "Wrap"), step(85, "Sauce")};
+    TEST_ASSERT_EQUAL_STRING("A step should be below the target", check(added, 2, 80, &stored).c_str());
+    TEST_ASSERT_EQUAL_STRING("A step should be below the target", check(edited, 2, 80).c_str());
+}
+
 void test_serialize_and_parse_round_trip(){
     StepList s = make({{74, "Wrap"}, {82, "Spritz"}});
     TEST_ASSERT_EQUAL_STRING("74:Wrap|82:Spritz", s.serialize().c_str());
@@ -197,6 +207,7 @@ int main(int argc, char** argv){
     RUN_TEST(test_same_list_does_not_rearm);
     RUN_TEST(test_sorted_and_next);
     RUN_TEST(test_check_messages);
+    RUN_TEST(test_check_keeps_a_stored_step_above_the_target);
     RUN_TEST(test_serialize_and_parse_round_trip);
     RUN_TEST(test_parse_rejects_garbage);
     RUN_TEST(test_alerts_page_and_card);

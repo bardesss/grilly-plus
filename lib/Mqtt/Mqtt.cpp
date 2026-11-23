@@ -139,7 +139,11 @@ void Mqtt::receive_callback(char* topic, byte* payload, unsigned int length){
 
     jsonResult result = {true, ""};
     if(is_mute){
-        // Any payload mutes, same as the grill's button
+        // Any payload mutes, same as the app's mute: the step alerts go too
+        {
+            SharedLock lock;
+            grill::step_alerts.clear();
+        }
         config::alarm_mute = true;
     } else {
         result = {false, "Message is too large"};

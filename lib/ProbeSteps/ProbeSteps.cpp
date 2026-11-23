@@ -16,7 +16,15 @@ std::string check_action(const char* action){
     return "";
 }
 
-std::string check(const Step* list, size_t count, float target){
+static bool stored(const StepList* kept, int temperature){
+    if(kept == nullptr){ return false; }
+    for(size_t i = 0; i < kept->count(); i++){
+        if(kept->at(i).temperature == temperature){ return true; }
+    }
+    return false;
+}
+
+std::string check(const Step* list, size_t count, float target, const StepList* kept){
     if(count > MAX_STEPS){ return "At most 3 steps"; }
     for(size_t i = 0; i < count; i++){
         // The action array always has room for its terminator; a full one means it was cut
@@ -24,7 +32,7 @@ std::string check(const Step* list, size_t count, float target){
         std::string error = check_action(list[i].action);
         if(!error.empty()){ return error; }
         if(list[i].temperature < 1){ return "A step should be 1 or more degrees"; }
-        if(list[i].temperature >= target){ return "A step should be below the target"; }
+        if(list[i].temperature >= target && !stored(kept, list[i].temperature)){ return "A step should be below the target"; }
     }
     return "";
 }

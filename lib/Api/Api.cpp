@@ -177,6 +177,10 @@ void get_api_wifiscan(){
 void post_api_alarm_mute(){
     if(!is_json_request()) { return; }
 
+    {
+        SharedLock lock;
+        grill::step_alerts.clear();     // "Wrap now" goes; the grill's button only closes the page
+    }
     config::alarm_mute = true;
     web::webserver.send(200, "application/json", "{\"success\": true}");
 }
