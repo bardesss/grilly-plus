@@ -139,6 +139,25 @@ void test_ran_out_while_off_fires_once(){
     TEST_ASSERT_EQUAL_UINT8(0, list.update(31000));
 }
 
+// The probe reached its target again right after the restart and started a fresh rest timer before
+// the saved one came back: the saved one, with its real time left, replaces it
+void test_restored_rest_timer_replaces_a_fresh_one(){
+    TimerState saved;
+    memset(&saved, 0, sizeof(saved));
+    strcpy(saved.name, "Rest: Brisket");
+    saved.length_ms    = 60 * 60000UL;
+    saved.remaining_ms = 40 * 60000UL;
+    saved.probe        = 3;
+    TimerList list;
+    list.start("Rest: Brisket", 60 * 60000UL, 3, 1000);
+    list.start("Flip", 10 * 60000UL, 0, 1000);
+    int slot = list.restore(saved, 2000, 60000UL);
+    TEST_ASSERT_TRUE(slot >= 0);
+    TEST_ASSERT_EQUAL(2, list.count());
+    TEST_ASSERT_EQUAL_UINT32(39 * 60000UL, list.remaining_ms(slot, 2000));
+    TEST_ASSERT_TRUE(list.has_rest_for(3));
+}
+
 void test_check_start(){
     TEST_ASSERT_NULL(check_start("Flip", 20));
     TEST_ASSERT_NULL(check_start("", 1));
@@ -161,5 +180,6 @@ int main(int argc, char** argv){
     RUN_TEST(test_check_start);
     RUN_TEST(test_export_and_restore_keeps_remaining);
     RUN_TEST(test_ran_out_while_off_fires_once);
+    RUN_TEST(test_restored_rest_timer_replaces_a_fresh_one);
     return UNITY_END();
 }

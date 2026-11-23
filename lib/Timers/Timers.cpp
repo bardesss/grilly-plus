@@ -133,6 +133,12 @@ int TimerList::restore(const TimerState& state, uint32_t now_ms, uint32_t gap_ms
     char name[NAME_LENGTH + 1];
     memcpy(name, state.name, NAME_LENGTH);
     name[NAME_LENGTH] = '\0';
+    // A rest timer the probe started again before this one came back: the saved one knows the real time left
+    if(state.probe != 0){
+        for(Timer& timer : slots_){
+            if(timer.id != 0 && !timer.done && timer.probe == state.probe){ timer = Timer(); }
+        }
+    }
     // Started as long ago as it had run, plus the time the grill was off
     return start(name, state.length_ms, state.probe, now_ms - (state.length_ms - remaining) - gap_ms);
 }

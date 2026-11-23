@@ -64,7 +64,8 @@ public:
     // room for MAX_TIMERS. Returns how many.
     size_t export_running(TimerState* out, uint32_t now_ms) const;
     // Starts a saved timer again, gap_ms after it was saved. One that ran out in the meantime fires
-    // on the next update(). Returns its slot, -1 when all slots are in use.
+    // on the next update(). A running rest timer of the same probe is replaced. Returns its slot, -1
+    // when all slots are in use.
     int restore(const TimerState& state, uint32_t now_ms, uint32_t gap_ms);
 
 private:
