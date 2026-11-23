@@ -830,10 +830,11 @@ components:
             webhook off. Write-only, because the URL often holds a secret id, so only webhook_url_set and
             webhook_server are returned. The body is
             {"event", "grill", "message", "unit", "probe": {"id", "name", "temperature", "target",
-            "minimum"}, "battery", "timer": {"name", "probe"}}, with event one of ready, almost_ready,
-            too_hot, too_cold, stall, battery_low, timer_done or test; probe is only there for a probe
-            event, battery only for battery_low, timer only for timer_done (its probe is 1-8 for a rest
-            timer, else 0).
+            "minimum"}, "battery", "timer": {"name", "probe"}, "step": {"action", "temperature"}}, with
+            event one of ready, almost_ready, too_hot, too_cold, stall, battery_low, timer_done, step or
+            test; probe is only there for a probe event or a step, battery only for battery_low, timer
+            only for timer_done (its probe is 1-8 for a rest timer, else 0), step only for step (the
+            probe's temperature is then the reading, the step's temperature the step).
         webhook_url_set:
           type: boolean
           readOnly: true
@@ -862,6 +863,10 @@ components:
           type: boolean
           example: true
           description: Notify when a probe goes into the stall (see stalled).
+        notify_step:
+          type: boolean
+          example: true
+          description: Notify when a probe reaches one of its steps, one message per step.
         notify_battery:
           type: boolean
           example: true
